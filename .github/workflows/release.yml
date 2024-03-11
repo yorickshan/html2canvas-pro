@@ -1,0 +1,36 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version (major | minor | patch | premajor | preminor | prepatch | prerelease)'
+        default: 'patch'
+        required: true
+        
+jobs:
+  version:
+    name: Create version
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 16
+    - name: Npm install
+      run: npm ci
+    - name: Configure git
+      run: |
+        git config user.name "CI"
+        git config user.email "yorickshan@gmail.com"
+    - name: Create release
+      run: npm run release -- --preset eslint --release-as ${{ github.event.inputs.version }}
+    - name: Print details
+      run: |
+        cat package.json
+        cat CHANGELOG.md
+        git tag
+    - name: Push git version
+      run: git push --follow-tags origin master

@@ -1,0 +1,70 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+<html>
+  <head>
+    <title>Image tests</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="../../test.js"></script>
+    <style type="text/css">
+      /* last modified: 1 Dec 98 */
+
+      html {
+        font: 10px/1 Verdana, sans-serif;
+        background-color: blue;
+        color: white;
+      }
+
+      body {
+        margin: 1.5em;
+        border: .5em solid black;
+        padding: 0;
+        width: 48em;
+        background-color: white;
+      }
+
+      .wrap {
+        display: flex;
+        align-items: center;
+      }
+      .text {
+        color: red;
+      }
+      .img {
+        width: 100px;
+        height: 100px;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div class="wrap" style="background-color: aqua;">
+      <div class="text">fill</div>
+      <img class="img" src="../../assets/long_height.png" />
+      <img class="img" src="../../assets/long_width.png" />
+      <img class="img" src="../../assets/small.png" />
+    </div>
+    <div class="wrap" style="background-color: bisque;">
+      <div class="text">contain</div>
+      <img class="img" src="../../assets/long_height.png" style="object-fit: contain;" />
+      <img class="img" src="../../assets/long_width.png" style="object-fit: contain;" />
+      <img class="img" src="../../assets/small.png" style="object-fit: contain;" />
+    </div>
+    <div class="wrap" style="background-color: blueviolet;">
+      <div class="text">cover</div>
+      <img class="img" src="../../assets/long_height.png" style="object-fit: cover;" />
+      <img class="img" src="../../assets/long_width.png" style="object-fit: cover;" />
+      <img class="img" src="../../assets/small.png" style="object-fit: cover;" />
+    </div>
+    <div class="wrap" style="background-color:brown;">
+      <div class="text">none</div>
+      <img class="img" src="../../assets/long_height.png" style="object-fit: none;" />
+      <img class="img" src="../../assets/long_width.png" style="object-fit: none;" />
+      <img class="img" src="../../assets/small.png" style="object-fit: none;" />
+    </div>
+    <div class="wrap" style="background-color:chartreuse;">
+      <div class="text">scale-down</div>
+      <img class="img" src="../../assets/long_height.png" style="object-fit: scale-down;" />
+      <img class="img" src="../../assets/long_width.png" style="object-fit: scale-down;" />
+      <img class="img" src="../../assets/small.png" style="object-fit: scale-down;" />
+    </div>
+  </body>
+</html>
