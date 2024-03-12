@@ -8,18 +8,19 @@ html2canvas-pro has several advantages over html2canvas, including:
 - support color function "oklch"
 - Support object-fit of ```<img/>```
 
-## Install & Usage
+## Installation
 
 ```sh
 npm install html2canvas-pro
 pnpm / yarn add html2canvas-pro
 ```
 
+## Usage
 ```javascript
 import html2canvas from 'html2canvas-pro';
 ```
 
-To render an `element` with html2canvas with some (optional) [options](/configuration/), simply call `html2canvas(element, options);`
+To render an `element` with html2canvas with some (optional) [options](/docs/configuration.md), simply call `html2canvas(element, options);`
 
 ```javascript
 html2canvas(document.body).then(function(canvas) {
