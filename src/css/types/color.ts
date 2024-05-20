@@ -71,6 +71,9 @@ export const asString = (color: Color): string => {
     return alpha < 255 ? `rgba(${red},${green},${blue},${alpha / 255})` : `rgb(${red},${green},${blue})`;
 };
 
+export const isRelativeTransform = (tokens: CSSValue[]): boolean =>
+    (tokens[0].type === TokenType.IDENT_TOKEN ? tokens[0].value : 'unknown') !== 'from';
+
 export const pack = (r: number, g: number, b: number, a: number): Color =>
     ((r << 24) | (g << 16) | (b << 8) | (Math.round(a * 255) << 0)) >>> 0;
 
@@ -144,6 +147,108 @@ const hsl = (context: Context, args: CSSValue[]): number => {
     return pack(r * 255, g * 255, b * 255, a);
 };
 
+const lch = (_context: Context, args: CSSValue[]) => {
+    const tokens = args.filter(nonFunctionArgSeparator),
+        is_absolute = isRelativeTransform(tokens);
+    if (!is_absolute) {
+        return _color(_context, args);
+    }
+    const L = tokens[0],
+        C = tokens[1],
+        H = tokens[2],
+        A = tokens[4],
+        l = isLengthPercentage(L) ? L.number : 0,
+        c = isLengthPercentage(C) ? C.number : 0,
+        h = isNumberToken(H) || isDimensionToken(H) ? H.number : 0,
+        a = typeof A !== 'undefined' && isLengthPercentage(A) ? getAbsoluteValue(A, 1) : 1,
+        rgb = _srgbLinear2rgb(_xyz2rgbLinear(_lab2xyz(_lch2lab([l, c, h]))));
+
+    return pack(
+        clamp(Math.round(rgb[0] * 255), 0, 255),
+        clamp(Math.round(rgb[1] * 255), 0, 255),
+        clamp(Math.round(rgb[2] * 255), 0, 255),
+        a
+    );
+};
+
+const lab = (_context: Context, args: CSSValue[]) => {
+    const tokens = args.filter(nonFunctionArgSeparator),
+        is_absolute = isRelativeTransform(tokens);
+    if (!is_absolute) {
+        return _color(_context, args);
+    }
+    const L = tokens[0],
+        A = tokens[1],
+        B = tokens[2],
+        Alpha = tokens[4],
+        // eslint-disable-next-line prettier/prettier
+        l = L.type === TokenType.PERCENTAGE_TOKEN ? L.number / 100 : (isNumberToken(L) ? L.number : 0),
+        // eslint-disable-next-line prettier/prettier
+        a = A.type === TokenType.PERCENTAGE_TOKEN ? A.number / 100 : (isNumberToken(A) ? A.number : 0),
+        b = isNumberToken(B) || isDimensionToken(B) ? B.number : 0,
+        alpha = typeof Alpha !== 'undefined' && isLengthPercentage(Alpha) ? getAbsoluteValue(Alpha, 1) : 1,
+        rgb = _srgbLinear2rgb(_xyz2rgbLinear(_lab2xyz([l, a, b])));
+
+    return pack(
+        clamp(Math.round(rgb[0] * 255), 0, 255),
+        clamp(Math.round(rgb[1] * 255), 0, 255),
+        clamp(Math.round(rgb[2] * 255), 0, 255),
+        alpha
+    );
+};
+
+const oklab = (_context: Context, args: CSSValue[]) => {
+    const tokens = args.filter(nonFunctionArgSeparator),
+        is_absolute = isRelativeTransform(tokens);
+    if (!is_absolute) {
+        return _color(_context, args);
+    }
+    const L = tokens[0],
+        A = tokens[1],
+        B = tokens[2],
+        Alpha = tokens[4],
+        // eslint-disable-next-line prettier/prettier
+        l = L.type === TokenType.PERCENTAGE_TOKEN ? L.number / 100 : isNumberToken(L) ? L.number : 0,
+        // eslint-disable-next-line prettier/prettier
+        a = A.type === TokenType.PERCENTAGE_TOKEN ? A.number / 100 : isNumberToken(A) ? A.number : 0,
+        b = isNumberToken(B) ? B.number : isDimensionToken(B) ? B.number : 0,
+        alpha = typeof Alpha !== 'undefined' && isLengthPercentage(Alpha) ? getAbsoluteValue(Alpha, 1) : 1,
+        rgb = _srgbLinear2rgb(_xyz2rgbLinear(_oklab2xyz([l, a, b])));
+
+    return pack(
+        clamp(Math.round(rgb[0] * 255), 0, 255),
+        clamp(Math.round(rgb[1] * 255), 0, 255),
+        clamp(Math.round(rgb[2] * 255), 0, 255),
+        alpha
+    );
+};
+
+const oklch = (_context: Context, args: CSSValue[]) => {
+    const tokens = args.filter(nonFunctionArgSeparator),
+        is_absolute = isRelativeTransform(tokens);
+    if (!is_absolute) {
+        return _color(_context, args);
+    }
+    const L = tokens[0],
+        C = tokens[1],
+        H = tokens[2],
+        Alpha = tokens[4],
+        // eslint-disable-next-line prettier/prettier
+        l = L.type === TokenType.PERCENTAGE_TOKEN ? L.number / 100 : isNumberToken(L) ? L.number : 0,
+        // eslint-disable-next-line prettier/prettier
+        c = C.type === TokenType.PERCENTAGE_TOKEN ? C.number / 100 : isNumberToken(C) ? C.number : 0,
+        h = isNumberToken(H) ? H.number : isDimensionToken(H) ? H.number : 0,
+        alpha = typeof Alpha !== 'undefined' && isLengthPercentage(Alpha) ? getAbsoluteValue(Alpha, 1) : 1,
+        rgb = _srgbLinear2rgb(_xyz2rgbLinear(_oklab2xyz(_lch2lab([l, c, h]))));
+
+    return pack(
+        clamp(Math.round(rgb[0] * 255), 0, 255),
+        clamp(Math.round(rgb[1] * 255), 0, 255),
+        clamp(Math.round(rgb[2] * 255), 0, 255),
+        alpha
+    );
+};
+
 const clamp = (value: number, min: number, max: number) => {
     return Math.min(Math.max(value, min), max);
 };
@@ -163,7 +268,7 @@ const multiplyMatrices = (A: number[], B: number[]): [number, number, number] =>
  * @param c
  * @param h
  */
-const _oklch2oklab = ([l, c, h]: [number, number, number]): [number, number, number] => [
+const _lch2lab = ([l, c, h]: [number, number, number]): [number, number, number] => [
     l,
     isNaN(h) ? 0 : c * Math.cos((h * Math.PI) / 180),
     isNaN(h) ? 0 : c * Math.sin((h * Math.PI) / 180)
@@ -175,13 +280,64 @@ const _oklch2oklab = ([l, c, h]: [number, number, number]): [number, number, num
  * @param rgb
  */
 const _srgbLinear2rgb = (rgb: [number, number, number]) => {
-    return rgb.map((c: number) =>
-        Math.abs(c) > 0.0031308 ? (c < 0 ? -1 : 1) * (1.055 * Math.abs(c) ** (1 / 2.4) - 0.055) : 12.92 * c
-    );
+    return rgb.map((c: number) => {
+        const sign = c < 0 ? -1 : 1,
+            abs = Math.abs(c);
+        return abs > 0.0031308 ? sign * (1.055 * abs ** (1 / 2.4) - 0.055) : 12.92 * c;
+    });
 };
 
 /**
- * Convert OKLab to XYZ
+ * Convert A98 RGB to rgb linear
+ *
+ * @param rgb
+ */
+const _a982rgbLinear = (rgb: [number, number, number]) => {
+    return rgb.map((c: number) => {
+        const sign = c < 0 ? -1 : 1,
+            abs = Math.abs(c);
+        return sign * abs ** (563 / 256);
+    });
+};
+
+/**
+ * Convert A98 RGB to rgb linear
+ *
+ * @param rgb
+ */
+const _rec2rec2Linear = (rgb: [number, number, number]) => {
+    const a = 1.09929682680944;
+    const b = 0.018053968510807;
+    return rgb.map(function (val) {
+        if (val < b * 4.5) {
+            return val / 4.5;
+        }
+
+        return Math.pow((val + a - 1) / a, 1 / 0.45);
+    });
+};
+
+/**
+ * Convert P3 to rgb linear
+ *
+ * @param p3
+ */
+const _p32rgbLinear = (p3: [number, number, number]) => {
+    return p3.map((c: number) => {
+        const sign = c < 0 ? -1 : 1,
+            abs = c * sign;
+
+        if (abs <= 0.04045) {
+            return c / 12.92;
+        }
+
+        // eslint-disable-next-line prettier/prettier
+        return sign * (((c + 0.055) / 1.055) ** 2.4) || 0;
+    });
+};
+
+/**
+ * Convert OKLab to XYZ relative to D65
  *
  * @param lab
  */
@@ -189,11 +345,11 @@ const _oklab2xyz = (lab: [number, number, number]) => {
     const LMSg = multiplyMatrices(
             [
                 // eslint-disable-next-line prettier/prettier
-                1, 0.3963377773761749, 0.2158037573099136, 1,
+                1, 0.3963377773761749, 0.2158037573099136,
                 // eslint-disable-next-line prettier/prettier
-                -0.1055613458156586, -0.0638541728258133, 1,
+                1, -0.1055613458156586, -0.0638541728258133,
                 // eslint-disable-next-line prettier/prettier
-                -0.0894841775298119, -1.2914855480194092
+                1, -0.0894841775298119, -1.2914855480194092
             ],
             lab
         ),
@@ -213,43 +369,26 @@ const _oklab2xyz = (lab: [number, number, number]) => {
 };
 
 /**
- * Convert Lab to XYZ
+ * Convert Lab to D50-adapted XYZ
  *
  * @param lab
  */
-const _lab2ciexyz = (lab: [number, number, number]): [number, number, number] => {
-    const fHelper = (t: number, m: number) => {
-        const p = t ** 3;
-        if (p > 0.00885645167) {
-            return p * m;
-        }
-        return ((t - 16.0 / 116.0) / 7.787) * m;
-    };
+const _lab2xyz = (lab: [number, number, number]): [number, number, number] => {
     const fy = (lab[0] + 16.0) / 116.0,
-        // eslint-disable-next-line prettier/prettier
-        fx = (lab[1] / 500.0) + fy,
-        // eslint-disable-next-line prettier/prettier
-        fz = fy - (lab[2] / 200.0);
+        fx = lab[1] / 500.0 + fy,
+        fz = fy - lab[2] / 200.0,
+        k = 903.2962963,
+        e = 0.00885645167;
 
-    return [fHelper(fx, 95.047) / 100.0, fHelper(fy, 100.0) / 100.0, fHelper(fz, 108.883) / 100.0];
-};
-
-const _ciexyz2srgb = (xyz: [number, number, number]) => {
-    return multiplyMatrices(
-        [
-            // eslint-disable-next-line prettier/prettier
-            3.24071, -1.53726, -0.498571,
-            // eslint-disable-next-line prettier/prettier
-            -0.969258, 1.87599, 0.0415557,
-            // eslint-disable-next-line prettier/prettier
-            0.0556352, -0.203996, 1.05707
-        ],
-        xyz
-    );
+    return [
+        (fx ** 3 > e ? fx ** 3 : (116 * fx - 16) / k) * (0.3127 / 0.329),
+        lab[0] > k * e ? fy ** 3 : lab[0] / k,
+        (fz ** 3 > e ? fz ** 3 : (116 * fz - 16) / k) * ((1.0 - 0.3127 - 0.329) / 0.329)
+    ];
 };
 
 /**
- * Convert XYZ to RGB Linear
+ * Convert XYZ to linear-light sRGB
  *
  * @param xyz
  */
@@ -268,101 +407,140 @@ const _xyz2rgbLinear = (xyz: [number, number, number]) => {
 };
 
 /**
- * sRGB Gamma corrections
- * sRGB-Standard = Gamma 2.4 (average ~2.2)
- * Gamma correction is linear for <= 0.0031308
- * Gamma correction is nonlinear for > 0.0031308
+ * Convert linear-light display-p3 to XYZ D65
  *
- * @param linearValue
+ * @param p3
  */
-const sRrbGammaCompensate = (linearValue: number): number => {
-    if (linearValue < 0) {
-        return 0;
-    } else if (linearValue <= 0.0031308) {
-        return 12.92 * linearValue;
-    }
-
-    // eslint-disable-next-line prettier/prettier
-    return (1.055 * (linearValue ** (1.0 / 2.4))) - 0.055;
-};
-
-const lab = (_context: Context, args: CSSValue[]) => {
-    const tokens = args.filter(nonFunctionArgSeparator),
-        L = tokens[0],
-        A = tokens[1],
-        B = tokens[2],
-        // eslint-disable-next-line prettier/prettier
-        l = L.type === TokenType.PERCENTAGE_TOKEN ? L.number / 100 : (isNumberToken(L) ? L.number : 0),
-        // eslint-disable-next-line prettier/prettier
-        a = A.type === TokenType.PERCENTAGE_TOKEN ? A.number / 100 : (isNumberToken(A) ? A.number : 0),
-        b = isNumberToken(B) || isDimensionToken(B) ? B.number : 0,
-        rgb = _ciexyz2srgb(_lab2ciexyz([l, a, b]));
-
-    return pack(
-        clamp(Math.round(sRrbGammaCompensate(rgb[0]) * 255), 0, 255),
-        clamp(Math.round(sRrbGammaCompensate(rgb[1]) * 255), 0, 255),
-        clamp(Math.round(sRrbGammaCompensate(rgb[2]) * 255), 0, 255),
-        1
+const _proPhotoLinear2xyz = (p3: [number, number, number]) => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            0.79776664490064230,  0.13518129740053308,  0.03134773412839220,
+            // eslint-disable-next-line prettier/prettier
+            0.28807482881940130,  0.71183523424187300,  0.00008993693872564,
+            // eslint-disable-next-line prettier/prettier
+            0.00000000000000000,  0.00000000000000000,  0.82510460251046020
+        ],
+        p3
     );
 };
 
-const oklab = (_context: Context, args: CSSValue[]) => {
-    const tokens = args.filter(nonFunctionArgSeparator),
-        L = tokens[0],
-        A = tokens[1],
-        B = tokens[2],
-        // eslint-disable-next-line prettier/prettier
-        l = L.type === TokenType.PERCENTAGE_TOKEN ? L.number / 100 : isNumberToken(L) ? L.number : 0,
-        // eslint-disable-next-line prettier/prettier
-        a = A.type === TokenType.PERCENTAGE_TOKEN ? A.number / 100 : isNumberToken(A) ? A.number : 0,
-        b = isNumberToken(B) ? B.number : isDimensionToken(B) ? B.number : 0,
-        rgb = _srgbLinear2rgb(_xyz2rgbLinear(_oklab2xyz([l, a, b])));
-
-    return pack(
-        clamp(Math.round(rgb[0] * 255), 0, 255),
-        clamp(Math.round(rgb[1] * 255), 0, 255),
-        clamp(Math.round(rgb[2] * 255), 0, 255),
-        1
+/**
+ * Convert linear-light rec2020 to XYZ D65
+ *
+ * @param rec
+ */
+const _rec2020Linear2xyz = (rec: [number, number, number]) => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            0.6369580483012914, 0.14461690358620832,  0.1688809751641721,
+            // eslint-disable-next-line prettier/prettier
+            0.2627002120112671, 0.6779980715188708,   0.05930171646986196,
+            // eslint-disable-next-line prettier/prettier
+            0.000000000000000,  0.028072693049087428, 1.060985057710791
+        ],
+        rec
     );
 };
 
-const oklch = (_context: Context, args: CSSValue[]) => {
-    const tokens = args.filter(nonFunctionArgSeparator),
-        lightness = tokens[0],
-        chroma = tokens[1],
-        hue = tokens[2],
-        // eslint-disable-next-line prettier/prettier
-        l = lightness.type === TokenType.PERCENTAGE_TOKEN ? lightness.number / 100 : isNumberToken(lightness) ? lightness.number : 0,
-        // eslint-disable-next-line prettier/prettier
-        c = chroma.type === TokenType.PERCENTAGE_TOKEN ? chroma.number / 100 : isNumberToken(chroma) ? chroma.number : 0,
-        h = isNumberToken(hue) ? hue.number : isDimensionToken(hue) ? hue.number : 0,
-        rgb = _srgbLinear2rgb(_xyz2rgbLinear(_oklab2xyz(_oklch2oklab([l, c, h]))));
-
-    return pack(
-        clamp(Math.round(rgb[0] * 255), 0, 255),
-        clamp(Math.round(rgb[1] * 255), 0, 255),
-        clamp(Math.round(rgb[2] * 255), 0, 255),
-        1
+/**
+ * Convert D50 to D65
+ *
+ * @param xyz
+ */
+const _d50toD65 = (xyz: [number, number, number]) => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            0.955473421488075, -0.02309845494876471, 0.06325924320057072,
+            // eslint-disable-next-line prettier/prettier
+            -0.0283697093338637, 1.0099953980813041, 0.021041441191917323,
+            // eslint-disable-next-line prettier/prettier
+            0.012314014864481998, -0.020507649298898964, 1.330365926242124
+        ],
+        xyz
     );
 };
 
 const _color = (_context: Context, args: CSSValue[]) => {
     const _srgb = (args: number[]) => {
-        return pack(args[0], args[1], args[2], args[3] || 1);
+        return pack(args[0], args[1], args[2], args[3]);
     };
 
     const _srgbLinear = (args: number[]) => {
         const linear = _srgbLinear2rgb([args[0], args[1], args[2]]);
-        return _srgb([Math.round(linear[0] * 255), Math.round(linear[1] * 255), Math.round(linear[2] * 255)]);
+        return pack(
+            clamp(Math.round(linear[0] * 255), 0, 255),
+            clamp(Math.round(linear[1] * 255), 0, 255),
+            clamp(Math.round(linear[2] * 255), 0, 255),
+            args[3]
+        );
     };
 
     const _xyz = (args: number[]) => {
-        const rgb = _ciexyz2srgb([args[0], args[1], args[2]]);
+        const rgb = _srgbLinear2rgb(_xyz2rgbLinear([args[0], args[1], args[2]]));
         return pack(
-            clamp(Math.round(sRrbGammaCompensate(rgb[0]) * 255), 0, 255),
-            clamp(Math.round(sRrbGammaCompensate(rgb[1]) * 255), 0, 255),
-            clamp(Math.round(sRrbGammaCompensate(rgb[2]) * 255), 0, 255),
-            1
+            clamp(Math.round(rgb[0] * 255), 0, 255),
+            clamp(Math.round(rgb[1] * 255), 0, 255),
+            clamp(Math.round(rgb[2] * 255), 0, 255),
+            args[3]
+        );
+    };
+
+    const _xyz50 = (args: number[]) => {
+        const rgb = _srgbLinear2rgb(_xyz2rgbLinear(_d50toD65([args[0], args[1], args[2]])));
+        return pack(
+            clamp(Math.round(rgb[0] * 255), 0, 255),
+            clamp(Math.round(rgb[1] * 255), 0, 255),
+            clamp(Math.round(rgb[2] * 255), 0, 255),
+            args[3]
+        );
+    };
+
+    const _p3 = (args: number[]) => {
+        const linear = _p32rgbLinear([args[0], args[1], args[2]]),
+            rgb = _srgbLinear2rgb([linear[0], linear[1], linear[2]]);
+
+        return pack(
+            clamp(Math.round(rgb[0] * 255), 0, 255),
+            clamp(Math.round(rgb[1] * 255), 0, 255),
+            clamp(Math.round(rgb[2] * 255), 0, 255),
+            args[3]
+        );
+    };
+
+    const _a98rgb = (args: number[]) => {
+        const linear = _a982rgbLinear([args[0], args[1], args[2]]),
+            rgb = _srgbLinear2rgb([linear[0], linear[1], linear[2]]);
+
+        return pack(
+            clamp(Math.round(rgb[0] * 255), 0, 255),
+            clamp(Math.round(rgb[1] * 255), 0, 255),
+            clamp(Math.round(rgb[2] * 255), 0, 255),
+            args[3]
+        );
+    };
+
+    const _proPhoto = (args: number[]) => {
+        const rgb = _xyz2rgbLinear(_d50toD65(_proPhotoLinear2xyz([args[0], args[1], args[2]])));
+        return pack(
+            clamp(Math.round(rgb[0] * 255), 0, 255),
+            clamp(Math.round(rgb[1] * 255), 0, 255),
+            clamp(Math.round(rgb[2] * 255), 0, 255),
+            args[3]
+        );
+    };
+
+    const _rec2020 = (args: number[]) => {
+        const linear = _rec2rec2Linear([args[0], args[1], args[2]]),
+            rgb = _srgbLinear2rgb(_xyz2rgbLinear(_rec2020Linear2xyz([linear[0], linear[1], linear[2]])));
+
+        return pack(
+            clamp(Math.round(rgb[0] * 255), 0, 255),
+            clamp(Math.round(rgb[1] * 255), 0, 255),
+            clamp(Math.round(rgb[2] * 255), 0, 255),
+            args[3]
         );
     };
 
@@ -371,13 +549,18 @@ const _color = (_context: Context, args: CSSValue[]) => {
     } = {
         srgb: _srgb,
         'srgb-linear': _srgbLinear,
+        'display-p3': _p3,
+        'a98-rgb': _a98rgb,
+        'prophoto-rgb': _proPhoto,
         xyz: _xyz,
-        'xyz-d50': _xyz
+        'xyz-d50': _xyz50,
+        'xyz-d65': _xyz,
+        rec2020: _rec2020
     };
 
     const tokens = args.filter(nonFunctionArgSeparator),
         token_1_value = tokens[0].type === TokenType.IDENT_TOKEN ? tokens[0].value : 'unknown',
-        is_absolute = token_1_value !== 'from';
+        is_absolute = isRelativeTransform(tokens);
 
     if (is_absolute) {
         const color_space = token_1_value,
@@ -398,7 +581,7 @@ const _color = (_context: Context, args: CSSValue[]) => {
 
         return colorSpaceFunction([c1, c2, c3, a]);
     } else {
-        throw new Error(`Attempting to use relative color in color() function, not yet supported`);
+        throw new Error(`Attempting to use relative color function which is not yet supported`);
     }
 };
 
@@ -409,6 +592,7 @@ const SUPPORTED_COLOR_FUNCTIONS: {
     hsla: hsl,
     rgb: rgb,
     rgba: rgb,
+    lch: lch,
     oklch: oklch,
     oklab: oklab,
     lab: lab,
