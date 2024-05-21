@@ -1,5 +1,5 @@
-import {CSSValue, isDimensionToken, isNumberToken, nonFunctionArgSeparator, Parser} from '../syntax/parser';
-import {TokenType} from '../syntax/tokenizer';
+import {CSSValue, isDimensionToken, isIdentToken, isNumberToken, nonFunctionArgSeparator, Parser} from '../syntax/parser';
+import {HashToken, TokenType} from '../syntax/tokenizer';
 import {ITypeDescriptor} from '../ITypeDescriptor';
 import {angle, deg} from './angle';
 import {getAbsoluteValue, isLengthPercentage} from './length-percentage';
@@ -19,35 +19,8 @@ export const color: ITypeDescriptor<Color> = {
         }
 
         if (value.type === TokenType.HASH_TOKEN) {
-            if (value.value.length === 3) {
-                const r = value.value.substring(0, 1);
-                const g = value.value.substring(1, 2);
-                const b = value.value.substring(2, 3);
-                return pack(parseInt(r + r, 16), parseInt(g + g, 16), parseInt(b + b, 16), 1);
-            }
-
-            if (value.value.length === 4) {
-                const r = value.value.substring(0, 1);
-                const g = value.value.substring(1, 2);
-                const b = value.value.substring(2, 3);
-                const a = value.value.substring(3, 4);
-                return pack(parseInt(r + r, 16), parseInt(g + g, 16), parseInt(b + b, 16), parseInt(a + a, 16) / 255);
-            }
-
-            if (value.value.length === 6) {
-                const r = value.value.substring(0, 2);
-                const g = value.value.substring(2, 4);
-                const b = value.value.substring(4, 6);
-                return pack(parseInt(r, 16), parseInt(g, 16), parseInt(b, 16), 1);
-            }
-
-            if (value.value.length === 8) {
-                const r = value.value.substring(0, 2);
-                const g = value.value.substring(2, 4);
-                const b = value.value.substring(4, 6);
-                const a = value.value.substring(6, 8);
-                return pack(parseInt(r, 16), parseInt(g, 16), parseInt(b, 16), parseInt(a, 16) / 255);
-            }
+            const [r, g, b, a] = hash2rgb(value);
+            return pack(r, g, b, a);
         }
 
         if (value.type === TokenType.IDENT_TOKEN) {
@@ -61,6 +34,40 @@ export const color: ITypeDescriptor<Color> = {
     }
 };
 
+const hash2rgb = (token: HashToken): [number, number, number, number] => {
+    if (token.value.length === 3) {
+        const r = token.value.substring(0, 1);
+        const g = token.value.substring(1, 2);
+        const b = token.value.substring(2, 3);
+        return [parseInt(r + r, 16), parseInt(g + g, 16), parseInt(b + b, 16), 1];
+    }
+
+    if (token.value.length === 4) {
+        const r = token.value.substring(0, 1);
+        const g = token.value.substring(1, 2);
+        const b = token.value.substring(2, 3);
+        const a = token.value.substring(3, 4);
+        return [parseInt(r + r, 16), parseInt(g + g, 16), parseInt(b + b, 16), parseInt(a + a, 16) / 255];
+    }
+
+    if (token.value.length === 6) {
+        const r = token.value.substring(0, 2);
+        const g = token.value.substring(2, 4);
+        const b = token.value.substring(4, 6);
+        return [parseInt(r, 16), parseInt(g, 16), parseInt(b, 16), 1];
+    }
+
+    if (token.value.length === 8) {
+        const r = token.value.substring(0, 2);
+        const g = token.value.substring(2, 4);
+        const b = token.value.substring(4, 6);
+        const a = token.value.substring(6, 8);
+        return [parseInt(r, 16), parseInt(g, 16), parseInt(b, 16), parseInt(a, 16) / 255];
+    }
+
+    return [0, 0, 0, 1];
+};
+
 export const isTransparent = (color: Color): boolean => (0xff & color) === 0;
 
 export const asString = (color: Color): string => {
@@ -72,7 +79,7 @@ export const asString = (color: Color): string => {
 };
 
 export const isRelativeTransform = (tokens: CSSValue[]): boolean =>
-    (tokens[0].type === TokenType.IDENT_TOKEN ? tokens[0].value : 'unknown') !== 'from';
+    (tokens[0].type === TokenType.IDENT_TOKEN ? tokens[0].value : 'unknown') === 'from';
 
 export const pack = (r: number, g: number, b: number, a: number): Color =>
     ((r << 24) | (g << 16) | (b << 8) | (Math.round(a * 255) << 0)) >>> 0;
@@ -125,42 +132,50 @@ function hue2rgb(t1: number, t2: number, hue: number): number {
     }
 }
 
-const hsl = (context: Context, args: CSSValue[]): number => {
-    const tokens = args.filter(nonFunctionArgSeparator);
-    const [hue, saturation, lightness, alpha] = tokens;
-
-    const h = (hue.type === TokenType.NUMBER_TOKEN ? deg(hue.number) : angle.parse(context, hue)) / (Math.PI * 2);
-    const s = isLengthPercentage(saturation) ? saturation.number / 100 : 0;
-    const l = isLengthPercentage(lightness) ? lightness.number / 100 : 0;
-    const a = typeof alpha !== 'undefined' && isLengthPercentage(alpha) ? getAbsoluteValue(alpha, 1) : 1;
-
+const _hsl2rgb = ([h, s, l]: [number, number, number]): [number, number, number] => {
     if (s === 0) {
-        return pack(l * 255, l * 255, l * 255, 1);
+        return [l * 255, l * 255, l * 255];
     }
+    const t2 = l <= 0.5 ? l * (s + 1) : l + s - l * s,
+        t1 = l * 2 - t2,
+        r = hue2rgb(t1, t2, h + 1 / 3),
+        g = hue2rgb(t1, t2, h),
+        b = hue2rgb(t1, t2, h - 1 / 3);
 
-    const t2 = l <= 0.5 ? l * (s + 1) : l + s - l * s;
-
-    const t1 = l * 2 - t2;
-    const r = hue2rgb(t1, t2, h + 1 / 3);
-    const g = hue2rgb(t1, t2, h);
-    const b = hue2rgb(t1, t2, h - 1 / 3);
-    return pack(r * 255, g * 255, b * 255, a);
+    return [r, g, b];
 };
 
-const lch = (_context: Context, args: CSSValue[]) => {
+const _extractHslComponents = (context: Context, args: CSSValue[]): [number, number, number, number] => {
     const tokens = args.filter(nonFunctionArgSeparator),
-        is_absolute = isRelativeTransform(tokens);
-    if (!is_absolute) {
-        return _color(_context, args);
+        [hue, saturation, lightness, alpha] = tokens,
+        h = (hue.type === TokenType.NUMBER_TOKEN ? deg(hue.number) : angle.parse(context, hue)) / (Math.PI * 2),
+        s = isLengthPercentage(saturation) ? saturation.number / 100 : 0,
+        l = isLengthPercentage(lightness) ? lightness.number / 100 : 0,
+        a = typeof alpha !== 'undefined' && isLengthPercentage(alpha) ? getAbsoluteValue(alpha, 1) : 1;
+    return [h, s, l, a];
+};
+
+const packHSL = (context: Context, args: CSSValue[]) => {
+    const [h, s, l, a] = _extractHslComponents(context, args),
+        rgb = _hsl2rgb([h, s, l]);
+    return pack(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255, s === 0 ? 1 : a);
+};
+
+const _extractLchComponents = (args: CSSValue[]): [number, number, number, number] => {
+    const tokens = args.filter(nonFunctionArgSeparator),
+        l = isLengthPercentage(tokens[0]) ? tokens[0].number : 0,
+        c = isLengthPercentage(tokens[1]) ? tokens[1].number : 0,
+        h = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
+        a = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
+
+    return [l, c, h, a];
+};
+
+const packLch = (context: Context, args: CSSValue[]) => {
+    if (isRelativeTransform(args.filter(nonFunctionArgSeparator))) {
+        return _color(context, args);
     }
-    const L = tokens[0],
-        C = tokens[1],
-        H = tokens[2],
-        A = tokens[4],
-        l = isLengthPercentage(L) ? L.number : 0,
-        c = isLengthPercentage(C) ? C.number : 0,
-        h = isNumberToken(H) || isDimensionToken(H) ? H.number : 0,
-        a = typeof A !== 'undefined' && isLengthPercentage(A) ? getAbsoluteValue(A, 1) : 1,
+    const [l, c, h, a] = _extractLchComponents(args),
         rgb = _srgbLinear2rgb(_xyz2rgbLinear(_lab2xyz(_lch2lab([l, c, h]))));
 
     return pack(
@@ -171,22 +186,23 @@ const lch = (_context: Context, args: CSSValue[]) => {
     );
 };
 
-const lab = (_context: Context, args: CSSValue[]) => {
+const _extractLabComponents = (args: CSSValue[]): [number, number, number, number] => {
     const tokens = args.filter(nonFunctionArgSeparator),
-        is_absolute = isRelativeTransform(tokens);
-    if (!is_absolute) {
-        return _color(_context, args);
+        // eslint-disable-next-line prettier/prettier
+        l = tokens[0].type === TokenType.PERCENTAGE_TOKEN ? tokens[0].number / 100 : (isNumberToken(tokens[0]) ? tokens[0].number : 0),
+        // eslint-disable-next-line prettier/prettier
+        a = tokens[1].type === TokenType.PERCENTAGE_TOKEN ? tokens[1].number / 100 : (isNumberToken(tokens[1]) ? tokens[1].number : 0),
+        b = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
+        alpha = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
+
+    return [l, a, b, alpha];
+};
+
+const packLab = (context: Context, args: CSSValue[]) => {
+    if (isRelativeTransform(args.filter(nonFunctionArgSeparator))) {
+        return _color(context, args);
     }
-    const L = tokens[0],
-        A = tokens[1],
-        B = tokens[2],
-        Alpha = tokens[4],
-        // eslint-disable-next-line prettier/prettier
-        l = L.type === TokenType.PERCENTAGE_TOKEN ? L.number / 100 : (isNumberToken(L) ? L.number : 0),
-        // eslint-disable-next-line prettier/prettier
-        a = A.type === TokenType.PERCENTAGE_TOKEN ? A.number / 100 : (isNumberToken(A) ? A.number : 0),
-        b = isNumberToken(B) || isDimensionToken(B) ? B.number : 0,
-        alpha = typeof Alpha !== 'undefined' && isLengthPercentage(Alpha) ? getAbsoluteValue(Alpha, 1) : 1,
+    const [l, a, b, alpha] = _extractLabComponents(args),
         rgb = _srgbLinear2rgb(_xyz2rgbLinear(_lab2xyz([l, a, b])));
 
     return pack(
@@ -197,22 +213,11 @@ const lab = (_context: Context, args: CSSValue[]) => {
     );
 };
 
-const oklab = (_context: Context, args: CSSValue[]) => {
-    const tokens = args.filter(nonFunctionArgSeparator),
-        is_absolute = isRelativeTransform(tokens);
-    if (!is_absolute) {
-        return _color(_context, args);
+const packOkLab = (context: Context, args: CSSValue[]) => {
+    if (isRelativeTransform(args.filter(nonFunctionArgSeparator))) {
+        return _color(context, args);
     }
-    const L = tokens[0],
-        A = tokens[1],
-        B = tokens[2],
-        Alpha = tokens[4],
-        // eslint-disable-next-line prettier/prettier
-        l = L.type === TokenType.PERCENTAGE_TOKEN ? L.number / 100 : isNumberToken(L) ? L.number : 0,
-        // eslint-disable-next-line prettier/prettier
-        a = A.type === TokenType.PERCENTAGE_TOKEN ? A.number / 100 : isNumberToken(A) ? A.number : 0,
-        b = isNumberToken(B) ? B.number : isDimensionToken(B) ? B.number : 0,
-        alpha = typeof Alpha !== 'undefined' && isLengthPercentage(Alpha) ? getAbsoluteValue(Alpha, 1) : 1,
+    const [l, a, b, alpha] = _extractLabComponents(args),
         rgb = _srgbLinear2rgb(_xyz2rgbLinear(_oklab2xyz([l, a, b])));
 
     return pack(
@@ -223,22 +228,23 @@ const oklab = (_context: Context, args: CSSValue[]) => {
     );
 };
 
-const oklch = (_context: Context, args: CSSValue[]) => {
+const _extractOkLchComponents = (args: CSSValue[]): [number, number, number, number] => {
     const tokens = args.filter(nonFunctionArgSeparator),
-        is_absolute = isRelativeTransform(tokens);
-    if (!is_absolute) {
-        return _color(_context, args);
+        // eslint-disable-next-line prettier/prettier
+        l = tokens[0].type === TokenType.PERCENTAGE_TOKEN ? tokens[0].number / 100 : isNumberToken(tokens[0]) ? tokens[0].number : 0,
+        // eslint-disable-next-line prettier/prettier
+        c = tokens[1].type === TokenType.PERCENTAGE_TOKEN ? tokens[1].number / 100 : isNumberToken(tokens[1]) ? tokens[1].number : 0,
+        h = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
+        a = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
+
+    return [l, c, h, a];
+};
+
+const packOkLch = (context: Context, args: CSSValue[]) => {
+    if (isRelativeTransform(args.filter(nonFunctionArgSeparator))) {
+        return _color(context, args);
     }
-    const L = tokens[0],
-        C = tokens[1],
-        H = tokens[2],
-        Alpha = tokens[4],
-        // eslint-disable-next-line prettier/prettier
-        l = L.type === TokenType.PERCENTAGE_TOKEN ? L.number / 100 : isNumberToken(L) ? L.number : 0,
-        // eslint-disable-next-line prettier/prettier
-        c = C.type === TokenType.PERCENTAGE_TOKEN ? C.number / 100 : isNumberToken(C) ? C.number : 0,
-        h = isNumberToken(H) ? H.number : isDimensionToken(H) ? H.number : 0,
-        alpha = typeof Alpha !== 'undefined' && isLengthPercentage(Alpha) ? getAbsoluteValue(Alpha, 1) : 1,
+    const [l, c, h, alpha] = _extractOkLchComponents(args),
         rgb = _srgbLinear2rgb(_xyz2rgbLinear(_oklab2xyz(_lch2lab([l, c, h]))));
 
     return pack(
@@ -288,6 +294,20 @@ const _srgbLinear2rgb = (rgb: [number, number, number]) => {
 };
 
 /**
+ * Convert RGB to sRGB
+ *
+ * @param rgb
+ */
+const _rgb2rgbLinear = (rgb: [number, number, number]) => {
+    return rgb.map((c: number) => {
+        const sign = c < 0 ? -1 : 1,
+            abs = Math.abs(c);
+        // eslint-disable-next-line prettier/prettier
+        return abs <= 0.04045 ? c / 12.92 : sign * (((abs + 0.055) / 1.055) ** 2.4);
+    });
+};
+
+/**
  * Convert A98 RGB to rgb linear
  *
  * @param rgb
@@ -305,17 +325,30 @@ const _a982rgbLinear = (rgb: [number, number, number]) => {
  *
  * @param rgb
  */
-const _rec2rec2Linear = (rgb: [number, number, number]) => {
+const _rec20202rec2020Linear = (rgb: [number, number, number]) => {
     const a = 1.09929682680944;
     const b = 0.018053968510807;
-    return rgb.map(function (val) {
-        if (val < b * 4.5) {
-            return val / 4.5;
-        }
-
-        return Math.pow((val + a - 1) / a, 1 / 0.45);
+    return rgb.map(function (c) {
+        return c < b * 4.5 ? c / 4.5 : Math.pow((c + a - 1) / a, 1 / 0.45);
     });
 };
+
+/**
+ * Convert A98 RGB to rgb linear
+ *
+ * @param rgb
+ */
+/*const _rec2020Linear2rec2020 = (rgb: [number, number, number]) => {
+    const a = 1.09929682680944;
+    const b = 0.018053968510807;
+    return rgb.map(function (c) {
+        if (c >= b) {
+            return a * Math.pow(c, 0.45) - (a - 1);
+        }
+
+        return 4.5 * c;
+    });
+};*/
 
 /**
  * Convert P3 to P3 linear
@@ -335,6 +368,25 @@ const _p32p3Linear = (p3: [number, number, number]) => {
         return sign * (((c + 0.055) / 1.055) ** 2.4) || 0;
     });
 };
+
+/**
+ * Convert P3 Linear to P3
+ *
+ * @param p3l
+ */
+/*const _p3Linear2p3 = (p3l: [number, number, number]) => {
+    return p3l.map((c: number) => {
+        const sign = c < 0 ? -1 : 1,
+            abs = c * sign;
+
+        if (abs > 0.0031308) {
+            // eslint-disable-next-line prettier/prettier
+            return sign * (1.055 * (abs ** (1 / 2.4)) - 0.055);
+        }
+
+        return 12.92 * c;
+    });
+};*/
 
 /**
  * Convert P3 to rgb linear
@@ -418,6 +470,25 @@ const _xyz2rgbLinear = (xyz: [number, number, number]) => {
 };
 
 /**
+ * Convert XYZ to linear-light sRGB
+ *
+ * @param xyz
+ */
+const _rgbLinear2xyz = (xyz: [number, number, number]) => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            0.41239079926595934, 0.357584339383878, 0.1804807884018343,
+            // eslint-disable-next-line prettier/prettier
+            0.21263900587151027, 0.715168678767756, 0.07219231536073371,
+            // eslint-disable-next-line prettier/prettier
+            0.01933081871559182, 0.11919477979462598, 0.9505321522496607
+        ],
+        xyz
+    );
+};
+
+/**
  * Convert P3 Linear to xyz
  *
  * @param p3l
@@ -428,13 +499,31 @@ const _p3Linear2xyz = (p3l: [number, number, number]) => {
             // eslint-disable-next-line prettier/prettier
             0.4865709486482162, 0.26566769316909306, 0.1982172852343625,
             // eslint-disable-next-line prettier/prettier
-            0.2289745640697488, 0.6917385218365064,  0.079286914093745,
+            0.2289745640697488, 0.6917385218365064, 0.079286914093745,
             // eslint-disable-next-line prettier/prettier
             0.0000000000000000, 0.04511338185890264, 1.043944368900976
         ],
         p3l
     );
 };
+/**
+ * Convert P3 Linear to xyz
+ *
+ * @param xyz
+ */
+/*const _xyz2p3Linear = (xyz: [number, number, number]) => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            2.493496911941425, -0.9313836179191239, -0.40271078445071684,
+            // eslint-disable-next-line prettier/prettier
+            -0.8294889695615747, 1.7626640603183463, 0.023624685841943577,
+            // eslint-disable-next-line prettier/prettier
+            0.03584583024378447, -0.07617238926804182, 0.9568845240076872
+        ],
+        xyz
+    );
+};*/
 
 /**
  * Convert linear-light display-p3 to XYZ D65
@@ -445,15 +534,34 @@ const _proPhotoLinear2xyz = (p3: [number, number, number]) => {
     return multiplyMatrices(
         [
             // eslint-disable-next-line prettier/prettier
-            0.79776664490064230,  0.13518129740053308,  0.03134773412839220,
+            0.79776664490064230, 0.13518129740053308, 0.03134773412839220,
             // eslint-disable-next-line prettier/prettier
-            0.28807482881940130,  0.71183523424187300,  0.00008993693872564,
+            0.28807482881940130, 0.71183523424187300, 0.00008993693872564,
             // eslint-disable-next-line prettier/prettier
-            0.00000000000000000,  0.00000000000000000,  0.82510460251046020
+            0.00000000000000000, 0.00000000000000000, 0.82510460251046020
         ],
         p3
     );
 };
+
+/**
+ * Convert XYZ D65 to linear-light display-p3
+ *
+ * @param xyz
+ */
+/*const _xyz2proPhotoLinear = (xyz: [number, number, number]) => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            1.34578688164715830, -0.25557208737979464, -0.05110186497554526,
+            // eslint-disable-next-line prettier/prettier
+            -0.54463070512490190, 1.50824774284514680, 0.02052744743642139,
+            // eslint-disable-next-line prettier/prettier
+            0.00000000000000000, 0.00000000000000000, 1.21196754563894520
+        ],
+        xyz
+    );
+};*/
 
 /**
  * Convert linear-light rec2020 to XYZ D65
@@ -464,13 +572,51 @@ const _rec2020Linear2xyz = (rec: [number, number, number]) => {
     return multiplyMatrices(
         [
             // eslint-disable-next-line prettier/prettier
-            0.6369580483012914, 0.14461690358620832,  0.1688809751641721,
+            0.6369580483012914, 0.14461690358620832, 0.1688809751641721,
             // eslint-disable-next-line prettier/prettier
-            0.2627002120112671, 0.6779980715188708,   0.05930171646986196,
+            0.2627002120112671, 0.6779980715188708, 0.05930171646986196,
             // eslint-disable-next-line prettier/prettier
-            0.000000000000000,  0.028072693049087428, 1.060985057710791
+            0.000000000000000, 0.028072693049087428, 1.060985057710791
         ],
         rec
+    );
+};
+
+/**
+ * Convert linear-light rec2020 to XYZ D65
+ *
+ * @param xyz
+ */
+/*const _xyz2rec2020Linear = (xyz: [number, number, number]) => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            1.716651187971268, -0.355670783776392, -0.253366281373660,
+            // eslint-disable-next-line prettier/prettier
+            -0.666684351832489, 1.616481236634939, 0.0157685458139111,
+            // eslint-disable-next-line prettier/prettier
+            0.017639857445311, -0.042770613257809, 0.942103121235474
+        ],
+        xyz
+    );
+};*/
+
+/**
+ * Convert D65 to D50
+ *
+ * @param xyz
+ */
+const _d65toD50 = (xyz: [number, number, number]) => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            1.0479297925449969, 0.022946870601609652, -0.05019226628920524,
+            // eslint-disable-next-line prettier/prettier
+            0.02962780877005599, 0.9904344267538799, -0.017073799063418826,
+            // eslint-disable-next-line prettier/prettier
+            -0.009243040646204504, 0.015055191490298152, 0.7518742814281371
+        ],
+        xyz
     );
 };
 
@@ -493,9 +639,44 @@ const _d50toD65 = (xyz: [number, number, number]) => {
     );
 };
 
-const _color = (_context: Context, args: CSSValue[]) => {
+const _xyz502XYZ = (args: number[]) => {
+    return _d50toD65([args[0], args[1], args[2]]);
+};
+
+/*const _xyz50FromXYZ = (args: number[]) => {
+    return _d65toD50([args[0], args[1], args[2]]);
+};*/
+
+const _p32XYZ = (args: number[]) => {
+    const p3_linear = _p32p3Linear([args[0], args[1], args[2]]);
+    return _p3Linear2xyz([p3_linear[0], p3_linear[1], p3_linear[2]]);
+};
+
+/*const _p3FromXYZ = (args: number[]) => {
+    return _p3Linear2p3(_xyz2p3Linear([args[0], args[1], args[2]]));
+};*/
+
+const _proPhoto2XYZ = (args: number[]) => {
+    const prophoto_linear = _prophoto2prophotoLinear([args[0], args[1], args[2]]);
+    return _d50toD65(_proPhotoLinear2xyz([prophoto_linear[0], prophoto_linear[1], prophoto_linear[2]]));
+};
+
+/*const _proPhotoFromXYZ = (args: number[]) => {
+    return _xyz2proPhotoLinear([args[0], args[1], args[2]]);
+};*/
+
+const _rec20202XYZ = (args: number[]) => {
+    const rec2020_linear = _rec20202rec2020Linear([args[0], args[1], args[2]]);
+    return _rec2020Linear2xyz([rec2020_linear[0], rec2020_linear[1], rec2020_linear[2]]);
+};
+
+/*const _rec2020FromXYZ = (args: number[]) => {
+    return _rec2020Linear2rec2020(_xyz2rec2020Linear([args[0], args[1], args[2]]));
+};*/
+
+const _color = (context: Context, args: CSSValue[]) => {
     const _srgb = (args: number[]) => {
-        return pack(args[0], args[1], args[2], args[3]);
+        return pack(clamp(args[0], 0, 255), clamp(args[1], 0, 255), clamp(args[2], 0, 255), clamp(args[3], 0, 1));
     };
 
     const _packSrgbLinear = ([r, g, b, a]: [number, number, number, number]) => {
@@ -508,24 +689,27 @@ const _color = (_context: Context, args: CSSValue[]) => {
         );
     };
 
+    const _packXYZ = (args: number[]) => {
+        const srgb_linear = _xyz2rgbLinear([args[0], args[1], args[2]]);
+        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
+    };
+
     const _srgbLinear = (args: number[]) => {
         return _packSrgbLinear([args[0], args[1], args[2], args[3]]);
     };
 
     const _xyz = (args: number[]) => {
-        const srgb_linear = _xyz2rgbLinear([args[0], args[1], args[2]]);
-        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
+        return _packXYZ([args[0], args[1], args[2], args[3]]);
     };
 
     const _xyz50 = (args: number[]) => {
-        const srgb_linear = _xyz2rgbLinear(_d50toD65([args[0], args[1], args[2]]));
-        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
+        const xyz = _xyz502XYZ([args[0], args[1], args[2]]);
+        return _packXYZ([xyz[0], xyz[1], xyz[2], args[3]]);
     };
 
     const _p3 = (args: number[]) => {
-        const p3Linear = _p32p3Linear([args[0], args[1], args[2]]),
-            srgb_linear = _xyz2rgbLinear(_p3Linear2xyz([p3Linear[0], p3Linear[1], p3Linear[2]]));
-        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
+        const xyz = _p32XYZ([args[0], args[1], args[2]]);
+        return _packXYZ([xyz[0], xyz[1], xyz[2], args[3]]);
     };
 
     const _a98rgb = (args: number[]) => {
@@ -534,20 +718,16 @@ const _color = (_context: Context, args: CSSValue[]) => {
     };
 
     const _proPhoto = (args: number[]) => {
-        const prophoto_linear = _prophoto2prophotoLinear([args[0], args[1], args[2]]),
-            srgb_linear = _xyz2rgbLinear(
-                _d50toD65(_proPhotoLinear2xyz([prophoto_linear[0], prophoto_linear[1], prophoto_linear[2]]))
-            );
-        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
+        const xyz = _proPhoto2XYZ([args[0], args[1], args[2]]);
+        return _packXYZ([xyz[0], xyz[1], xyz[2], args[3]]);
     };
 
     const _rec2020 = (args: number[]) => {
-        const rec2020_linear = _rec2rec2Linear([args[0], args[1], args[2]]),
-            srgb_linear = _xyz2rgbLinear(_rec2020Linear2xyz([rec2020_linear[0], rec2020_linear[1], rec2020_linear[2]]));
-        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
+        const xyz = _rec20202XYZ([args[0], args[1], args[2]]);
+        return _packXYZ([xyz[0], xyz[1], xyz[2], args[3]]);
     };
 
-    const SUPPORTED_COLOR_SPACES: {
+    const SUPPORTED_COLOR_SPACES_ABSOLUTE: {
         [key: string]: (args: number[]) => number;
     } = {
         srgb: _srgb,
@@ -561,13 +741,119 @@ const _color = (_context: Context, args: CSSValue[]) => {
         rec2020: _rec2020
     };
 
+    const _rgb = (_context: Context, args: CSSValue[]): [number, number, number, number] => {
+        const tokens = args.filter(nonFunctionArgSeparator);
+
+        if (tokens.length === 3) {
+            const [r, g, b] = tokens.map(getTokenColorValue),
+                rgb_linear = _rgb2rgbLinear([r / 255, g / 255, b / 255]),
+                [x, y, z] = _rgbLinear2xyz([rgb_linear[0], rgb_linear[1], rgb_linear[2]]);
+            return [x, y, z, 1];
+        }
+
+        if (tokens.length === 4) {
+            const [r, g, b, a] = tokens.map(getTokenColorValue),
+                rgb_linear = _rgb2rgbLinear([r / 255, g / 255, b / 255]),
+                [x, y, z] = _rgbLinear2xyz([rgb_linear[0], rgb_linear[1], rgb_linear[2]]);
+            return [x, y, z, a];
+        }
+
+        return [0, 0, 0, 1];
+    };
+
+    const _hsl = (context: Context, args: CSSValue[]): [number, number, number, number] => {
+        const [h, s, l, a] = _extractHslComponents(context, args),
+            rgb_linear = _rgb2rgbLinear(_hsl2rgb([h, s, l])),
+            [x, y, z] = _rgbLinear2xyz([rgb_linear[0], rgb_linear[1], rgb_linear[2]]);
+
+        return [x, y, z, a];
+    };
+
+    const _lab = (_context: Context, args: CSSValue[]): [number, number, number, number] => {
+        const [l, a, b, alpha] = _extractLabComponents(args),
+            [x, y, z] = _lab2xyz([l, a, b]);
+        return [x, y, z, alpha];
+    };
+
+    const _lch = (_context: Context, args: CSSValue[]): [number, number, number, number] => {
+        const [l, c, h, alpha] = _extractLchComponents(args),
+            [x, y, z] = _lab2xyz(_lch2lab([l, c, h]));
+        return [x, y, z, alpha];
+    };
+
+    const _oklch = (_context: Context, args: CSSValue[]): [number, number, number, number] => {
+        const [l, c, h, alpha] = _extractOkLchComponents(args),
+            [x, y, z] = _oklab2xyz(_lch2lab([l, c, h]));
+        return [x, y, z, alpha];
+    };
+
+    const _oklab = (_context: Context, args: CSSValue[]): [number, number, number, number] => {
+        const [l, c, h, alpha] = _extractLabComponents(args),
+            [x, y, z] = _oklab2xyz([l, c, h]);
+        return [x, y, z, alpha];
+    };
+
+    const _srgbFromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+        const [r, g, b] = _srgbLinear2rgb(_xyz2rgbLinear([args[0], args[1], args[2]]));
+        return [
+            clamp(Math.round(r * 255), 0, 255),
+            clamp(Math.round(g * 255), 0, 255),
+            clamp(Math.round(b * 255), 0, 255),
+            args[3]
+        ];
+    };
+
+    const _srgbLinearFromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+        const [r, g, b] = _xyz2rgbLinear([args[0], args[1], args[2]]);
+        return [
+            clamp(Math.round(r * 255), 0, 255),
+            clamp(Math.round(g * 255), 0, 255),
+            clamp(Math.round(b * 255), 0, 255),
+            args[3]
+        ];
+    };
+
+    const _xyzFromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+        return args;
+    };
+
+    const _xyz50FromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+        const [x, y, z] = _d65toD50([args[0], args[2], args[3]]);
+        return [x, y, z, args[3]];
+    };
+
+    const SUPPORTED_COLOR_SPACES_TO_XYZ: {
+        [key: string]: (context: Context, args: CSSValue[]) => [number, number, number, number];
+    } = {
+        rgb: _rgb,
+        hsl: _hsl,
+        lab: _lab,
+        lch: _lch,
+        oklab: _oklab,
+        oklch: _oklch
+    };
+
+    const SUPPORTED_COLOR_SPACES_FROM_XYZ: {
+        [key: string]: (args: [number, number, number, number]) => [number, number, number, number];
+    } = {
+        srgb: _srgbFromXYZ,
+        'srgb-linear': _srgbLinearFromXYZ,
+        'display-p3': _srgbFromXYZ,
+        'a98-rgb': _srgbFromXYZ,
+        'prophoto-rgb': _srgbFromXYZ,
+        xyz: _xyzFromXYZ,
+        'xyz-d50': _xyz50FromXYZ,
+        'xyz-d65': _xyzFromXYZ,
+        rec2020: _srgbFromXYZ
+    };
+
     const tokens = args.filter(nonFunctionArgSeparator),
         token_1_value = tokens[0].type === TokenType.IDENT_TOKEN ? tokens[0].value : 'unknown',
-        is_absolute = isRelativeTransform(tokens);
+        is_absolute = !isRelativeTransform(tokens);
 
     if (is_absolute) {
         const color_space = token_1_value,
-            colorSpaceFunction = SUPPORTED_COLOR_SPACES[color_space];
+            colorSpaceFunction = SUPPORTED_COLOR_SPACES_ABSOLUTE[color_space];
         if (typeof colorSpaceFunction === 'undefined') {
             throw new Error(`Attempting to parse an unsupported color space "${color_space}" for color() function`);
         }
@@ -584,21 +870,142 @@ const _color = (_context: Context, args: CSSValue[]) => {
 
         return colorSpaceFunction([c1, c2, c3, a]);
     } else {
-        throw new Error(`Attempting to use relative color function which is not yet supported`);
+        const extractComponent = (color: [number, number, number, number], token: CSSValue) => {
+            if (isNumberToken(token)) {
+                return token.number;
+            }
+
+            const posFromVal = (value: string): number => {
+                return value === 'r' || value === 'x' ? 0 : value === 'g' || value === 'y' ? 1 : 2;
+            };
+
+            if (isIdentToken(token)) {
+                const position = posFromVal(token.value);
+                return color[position];
+            }
+
+            const parseCalc = (args: CSSValue[]): string => {
+                const parts = args.filter(nonFunctionArgSeparator);
+                let expression = '(';
+                for (const part of parts) {
+                    expression +=
+                        part.type === TokenType.FUNCTION && part.name === 'calc'
+                            ? parseCalc(part.values)
+                            : isNumberToken(part)
+                            ? part.number
+                            : part.type === TokenType.DELIM_TOKEN || isIdentToken(part)
+                            ? part.value
+                            : '';
+                }
+                expression += ')';
+                return expression;
+            };
+
+            if (token.type === TokenType.FUNCTION) {
+                const args = token.values.filter(nonFunctionArgSeparator);
+                if (token.name === 'calc') {
+                    const expression = parseCalc(args)
+                        .replace(/r|x/, color[0].toString())
+                        .replace(/g|y/, color[1].toString())
+                        .replace(/b|z/, color[2].toString());
+
+                    return eval(expression);
+                }
+            }
+
+            return null;
+        };
+
+        const from_colorspace =
+                tokens[1].type === TokenType.FUNCTION
+                    ? tokens[1].name
+                    : isIdentToken(tokens[1]) || tokens[1].type === TokenType.HASH_TOKEN
+                    ? 'rgb'
+                    : 'unknown',
+            to_colorspace = isIdentToken(tokens[2]) ? tokens[2].value : 'unknown';
+
+        let from =
+            tokens[1].type === TokenType.FUNCTION ? tokens[1].values : isIdentToken(tokens[1]) ? [tokens[1]] : [];
+
+        if (isIdentToken(tokens[1])) {
+            const named_color = COLORS[tokens[1].value.toUpperCase()];
+            if (typeof named_color === 'undefined') {
+                throw new Error(`Attempting to use unknown color in relative color 'from'`);
+            } else {
+                const _c = parseColor(context, tokens[1].value),
+                    alpha = 0xff & _c,
+                    blue = 0xff & (_c >> 8),
+                    green = 0xff & (_c >> 16),
+                    red = 0xff & (_c >> 24);
+                from = [
+                    {type: TokenType.NUMBER_TOKEN, number: red, flags: 1},
+                    {type: TokenType.NUMBER_TOKEN, number: green, flags: 1},
+                    {type: TokenType.NUMBER_TOKEN, number: blue, flags: 1},
+                    {type: TokenType.NUMBER_TOKEN, number: alpha, flags: 1}
+                ];
+            }
+        } else if (tokens[1].type === TokenType.HASH_TOKEN) {
+            const [red, green, blue, alpha] = hash2rgb(tokens[1]);
+            from = [
+                {type: TokenType.NUMBER_TOKEN, number: red, flags: 1},
+                {type: TokenType.NUMBER_TOKEN, number: green, flags: 1},
+                {type: TokenType.NUMBER_TOKEN, number: blue, flags: 1},
+                {type: TokenType.NUMBER_TOKEN, number: alpha, flags: 1}
+            ];
+        }
+
+        if (from.length === 0) {
+            throw new Error(`Attempting to use unknown color in relative color 'from'`);
+        }
+        if (to_colorspace === 'unknown') {
+            throw new Error(`Attempting to use unknown colorspace in relative color 'to'`);
+        }
+
+        const fromColorToXyz = SUPPORTED_COLOR_SPACES_TO_XYZ[from_colorspace],
+            toColorFromXyz = SUPPORTED_COLOR_SPACES_FROM_XYZ[to_colorspace],
+            toColorPack = SUPPORTED_COLOR_SPACES_ABSOLUTE[to_colorspace];
+
+        if (typeof fromColorToXyz === 'undefined') {
+            throw new Error(`Attempting to parse an unsupported color space "${from_colorspace}" for color() function`);
+        }
+        if (typeof toColorFromXyz === 'undefined') {
+            throw new Error(`Attempting to parse an unsupported color space "${to_colorspace}" for color() function`);
+        }
+
+        const from_color: [number, number, number, number] = fromColorToXyz(context, from),
+            from_final_colorspace: [number, number, number, number] = toColorFromXyz(from_color),
+            c1 = extractComponent(from_final_colorspace, tokens[3]),
+            c2 = extractComponent(from_final_colorspace, tokens[4]),
+            c3 = extractComponent(from_final_colorspace, tokens[5]),
+            a =
+                tokens.length > 6 &&
+                tokens[6].type === TokenType.DELIM_TOKEN &&
+                tokens[6].value === '/' &&
+                isNumberToken(tokens[7])
+                    ? tokens[7].number
+                    : 1;
+        if (c1 === null || c2 === null || c3 === null) {
+            throw new Error(`Invalid relative color in color() function`);
+        }
+
+        // eslint-disable-next-line no-console
+        console.log([c1, c2, c3, a], toColorFromXyz, toColorPack);
+
+        return toColorPack([c1, c2, c3, a]);
     }
 };
 
 const SUPPORTED_COLOR_FUNCTIONS: {
     [key: string]: (context: Context, args: CSSValue[]) => number;
 } = {
-    hsl: hsl,
-    hsla: hsl,
+    hsl: packHSL,
+    hsla: packHSL,
     rgb: rgb,
     rgba: rgb,
-    lch: lch,
-    oklch: oklch,
-    oklab: oklab,
-    lab: lab,
+    lch: packLch,
+    oklch: packOkLch,
+    oklab: packOkLab,
+    lab: packLab,
     color: _color
 };
 

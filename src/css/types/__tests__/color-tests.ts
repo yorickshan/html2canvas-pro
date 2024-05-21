@@ -40,6 +40,22 @@ describe('types', () => {
             it('hsl(.75turn, 60%, 70%)', () => strictEqual(parse('hsl(.75turn, 60%, 70%)'), parse('rgb(178,132,224)')));
             it('hsla(.75turn, 60%, 70%, 50%)', () =>
                 strictEqual(parse('hsl(.75turn, 60%, 70%, 50%)'), parse('rgba(178,132,224, 0.5)')));
+            it('oklch(0.93 0.39 28deg)', () => strictEqual(parse('oklch(0.93 0.39 28deg)'), pack(255, 0, 23, 1)));
+            it('oklch(0.93 0.39 28)', () => strictEqual(parse('oklch(0.93 0.39 28)'), pack(255, 0, 23, 1)));
+            it('oklch(0.63 0.26 27.65)', () => strictEqual(parse('oklch(0.63 0.26 27.65)'), pack(255, 0, 20, 1)));
+            it('oklch(0.57 0.23 145.62)', () => strictEqual(parse('oklch(0.57 0.23 145.62)'), pack(0, 151, 0, 1)));
+            it('oklch(0.57 0.23 145.62 / 0.5)', () =>
+                strictEqual(parse('oklch(0.57 0.23 145.62 / 0.5)'), pack(0, 151, 0, 0.5)));
+            it('oklab(0.4 0.11 0.05)', () => strictEqual(parse('oklab(0.4 0.11 0.05)'), pack(124, 37, 37, 1)));
+            it('oklab(0.57 -0.19 0.13)', () => strictEqual(parse('oklab(0.57 -0.19 0.13)'), pack(0, 151, 0, 1)));
+            it('oklab(0.57 -0.19 0.13 / 50%)', () =>
+                strictEqual(parse('oklab(0.57 -0.19 0.13 / 50%)'), pack(0, 151, 0, 0.5)));
+            it('lab(53 -66.2 60.96)', () => strictEqual(parse('lab(53 -66.2 60.96)'), pack(0, 150, 0, 1)));
+            it('lab(63 -41.52 -25.36)', () => strictEqual(parse('lab(63 -41.52 -25.36)'), pack(0, 173, 196, 1)));
+            it('lab(63 -41.52 -25.36 / 0.5)', () =>
+                strictEqual(parse('lab(63 -41.52 -25.36 / 0.5)'), pack(0, 173, 196, 0.5)));
+            it('lch(29.2345% 44.2 27)', () => strictEqual(parse('lch(29.2345% 44.2 27)'), pack(127, 36, 40, 1)));
+            it('lch(52.2345% 72.2 56.2)', () => strictEqual(parse('lch(52.2345% 72.2 56.2)'), pack(203, 92, 6, 1)));
             it('color(srgb 200 3 5)', () => strictEqual(parse('color(srgb 200 3 5)'), pack(200, 3, 5, 1)));
             it('color(srgb 200 3 5 / .5)', () => strictEqual(parse('color(srgb 200 3 5 / .5)'), pack(200, 3, 5, 0.5)));
             it('color(xyz 0.11 0.17 0.24)', () =>
@@ -68,22 +84,22 @@ describe('types', () => {
             it('color(rec2020 1 0 0)', () => strictEqual(parse('color(rec2020 1 0 0)'), pack(255, 0, 0, 1)));
             it('color(rec2020 0 1 0)', () => strictEqual(parse('color(rec2020 0 1 0)'), pack(0, 255, 0, 1)));
             it('color(rec2020 0 0 1)', () => strictEqual(parse('color(rec2020 0 0 1)'), pack(0, 0, 255, 1)));
-            it('oklch(0.93 0.39 28deg)', () => strictEqual(parse('oklch(0.93 0.39 28deg)'), pack(255, 0, 23, 1)));
-            it('oklch(0.93 0.39 28)', () => strictEqual(parse('oklch(0.93 0.39 28)'), pack(255, 0, 23, 1)));
-            it('oklch(0.63 0.26 27.65)', () => strictEqual(parse('oklch(0.63 0.26 27.65)'), pack(255, 0, 20, 1)));
-            it('oklch(0.57 0.23 145.62)', () => strictEqual(parse('oklch(0.57 0.23 145.62)'), pack(0, 151, 0, 1)));
-            it('oklch(0.57 0.23 145.62 / 0.5)', () =>
-                strictEqual(parse('oklch(0.57 0.23 145.62 / 0.5)'), pack(0, 151, 0, 0.5)));
-            it('oklab(0.4 0.11 0.05)', () => strictEqual(parse('oklab(0.4 0.11 0.05)'), pack(124, 37, 37, 1)));
-            it('oklab(0.57 -0.19 0.13)', () => strictEqual(parse('oklab(0.57 -0.19 0.13)'), pack(0, 151, 0, 1)));
-            it('oklab(0.57 -0.19 0.13 / 50%)', () =>
-                strictEqual(parse('oklab(0.57 -0.19 0.13 / 50%)'), pack(0, 151, 0, 0.5)));
-            it('lab(53 -66.2 60.96)', () => strictEqual(parse('lab(53 -66.2 60.96)'), pack(0, 150, 0, 1)));
-            it('lab(63 -41.52 -25.36)', () => strictEqual(parse('lab(63 -41.52 -25.36)'), pack(0, 173, 196, 1)));
-            it('lab(63 -41.52 -25.36 / 0.5)', () =>
-                strictEqual(parse('lab(63 -41.52 -25.36 / 0.5)'), pack(0, 173, 196, 0.5)));
-            it('lch(29.2345% 44.2 27)', () => strictEqual(parse('lch(29.2345% 44.2 27)'), pack(127, 36, 40, 1)));
-            it('lch(52.2345% 72.2 56.2)', () => strictEqual(parse('lch(52.2345% 72.2 56.2)'), pack(203, 92, 6, 1)));
+            it('color(from #0000FF srgb r g b)', () =>
+                strictEqual(parse('color(from #0000FF srgb r b g)'), pack(0, 255, 0, 1)));
+            it('color(from #0000FF srgb b 0 0)', () =>
+                strictEqual(parse('color(from #0000FF srgb b 0 0)'), pack(255, 0, 0, 1)));
+            it('color(from green srgb r g b)', () =>
+                strictEqual(parse('color(from green srgb r g b)'), pack(0, 128, 0, 1)));
+            it('color(from lime srgb r g b)', () =>
+                strictEqual(parse('color(from lime srgb r g b)'), pack(0, 255, 0, 1)));
+            it('color(from green srgb r calc(g * 2) b)', () =>
+                strictEqual(parse('color(from green srgb r calc(g * 2) b)'), pack(0, 255, 0, 1)));
+            it('color(from hsl(0 100% 50%) xyz x y z)', () =>
+                strictEqual(parse('color(from hsl(0 100% 50%) xyz x y z)'), pack(255, 0, 0, 1)));
+            it('color(from hsl(0 100% 50%) xyz 0.75 0.6554 0.1)', () =>
+                strictEqual(parse('color(from hsl(0 100% 50%) xyz 0.75 0.6554 0.1)'), pack(255, 189, 31, 1)));
+            it('color(from hsl(0 100% 50%) srgb 0.749938 0 0.609579)', () =>
+                strictEqual(parse('color(from hsl(0 100% 50%) srgb 0.749938 0 0.609579)'), pack(255, 0, 0, 1)));
         });
         describe('util', () => {
             describe('isTransparent', () => {
