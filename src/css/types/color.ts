@@ -318,11 +318,11 @@ const _rec2rec2Linear = (rgb: [number, number, number]) => {
 };
 
 /**
- * Convert P3 to rgb linear
+ * Convert P3 to P3 linear
  *
  * @param p3
  */
-const _p32rgbLinear = (p3: [number, number, number]) => {
+const _p32p3Linear = (p3: [number, number, number]) => {
     return p3.map((c: number) => {
         const sign = c < 0 ? -1 : 1,
             abs = c * sign;
@@ -333,6 +333,17 @@ const _p32rgbLinear = (p3: [number, number, number]) => {
 
         // eslint-disable-next-line prettier/prettier
         return sign * (((c + 0.055) / 1.055) ** 2.4) || 0;
+    });
+};
+
+/**
+ * Convert P3 to rgb linear
+ *
+ * @param p3
+ */
+const _prophoto2prophotoLinear = (p3: [number, number, number]) => {
+    return p3.map((c: number) => {
+        return c < 16 / 512 ? c / 16 : c ** 1.8;
     });
 };
 
@@ -407,6 +418,25 @@ const _xyz2rgbLinear = (xyz: [number, number, number]) => {
 };
 
 /**
+ * Convert P3 Linear to xyz
+ *
+ * @param p3l
+ */
+const _p3Linear2xyz = (p3l: [number, number, number]) => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            0.4865709486482162, 0.26566769316909306, 0.1982172852343625,
+            // eslint-disable-next-line prettier/prettier
+            0.2289745640697488, 0.6917385218365064,  0.079286914093745,
+            // eslint-disable-next-line prettier/prettier
+            0.0000000000000000, 0.04511338185890264, 1.043944368900976
+        ],
+        p3l
+    );
+};
+
+/**
  * Convert linear-light display-p3 to XYZ D65
  *
  * @param p3
@@ -468,80 +498,53 @@ const _color = (_context: Context, args: CSSValue[]) => {
         return pack(args[0], args[1], args[2], args[3]);
     };
 
-    const _srgbLinear = (args: number[]) => {
-        const linear = _srgbLinear2rgb([args[0], args[1], args[2]]);
+    const _packSrgbLinear = ([r, g, b, a]: [number, number, number, number]) => {
+        const rgb = _srgbLinear2rgb([r, g, b]);
         return pack(
-            clamp(Math.round(linear[0] * 255), 0, 255),
-            clamp(Math.round(linear[1] * 255), 0, 255),
-            clamp(Math.round(linear[2] * 255), 0, 255),
-            args[3]
+            clamp(Math.round(rgb[0] * 255), 0, 255),
+            clamp(Math.round(rgb[1] * 255), 0, 255),
+            clamp(Math.round(rgb[2] * 255), 0, 255),
+            a
         );
+    };
+
+    const _srgbLinear = (args: number[]) => {
+        return _packSrgbLinear([args[0], args[1], args[2], args[3]]);
     };
 
     const _xyz = (args: number[]) => {
-        const rgb = _srgbLinear2rgb(_xyz2rgbLinear([args[0], args[1], args[2]]));
-        return pack(
-            clamp(Math.round(rgb[0] * 255), 0, 255),
-            clamp(Math.round(rgb[1] * 255), 0, 255),
-            clamp(Math.round(rgb[2] * 255), 0, 255),
-            args[3]
-        );
+        const srgb_linear = _xyz2rgbLinear([args[0], args[1], args[2]]);
+        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
     };
 
     const _xyz50 = (args: number[]) => {
-        const rgb = _srgbLinear2rgb(_xyz2rgbLinear(_d50toD65([args[0], args[1], args[2]])));
-        return pack(
-            clamp(Math.round(rgb[0] * 255), 0, 255),
-            clamp(Math.round(rgb[1] * 255), 0, 255),
-            clamp(Math.round(rgb[2] * 255), 0, 255),
-            args[3]
-        );
+        const srgb_linear = _xyz2rgbLinear(_d50toD65([args[0], args[1], args[2]]));
+        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
     };
 
     const _p3 = (args: number[]) => {
-        const linear = _p32rgbLinear([args[0], args[1], args[2]]),
-            rgb = _srgbLinear2rgb([linear[0], linear[1], linear[2]]);
-
-        return pack(
-            clamp(Math.round(rgb[0] * 255), 0, 255),
-            clamp(Math.round(rgb[1] * 255), 0, 255),
-            clamp(Math.round(rgb[2] * 255), 0, 255),
-            args[3]
-        );
+        const p3Linear = _p32p3Linear([args[0], args[1], args[2]]),
+            srgb_linear = _xyz2rgbLinear(_p3Linear2xyz([p3Linear[0], p3Linear[1], p3Linear[2]]));
+        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
     };
 
     const _a98rgb = (args: number[]) => {
-        const linear = _a982rgbLinear([args[0], args[1], args[2]]),
-            rgb = _srgbLinear2rgb([linear[0], linear[1], linear[2]]);
-
-        return pack(
-            clamp(Math.round(rgb[0] * 255), 0, 255),
-            clamp(Math.round(rgb[1] * 255), 0, 255),
-            clamp(Math.round(rgb[2] * 255), 0, 255),
-            args[3]
-        );
+        const srgb_linear = _a982rgbLinear([args[0], args[1], args[2]]);
+        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
     };
 
     const _proPhoto = (args: number[]) => {
-        const rgb = _xyz2rgbLinear(_d50toD65(_proPhotoLinear2xyz([args[0], args[1], args[2]])));
-        return pack(
-            clamp(Math.round(rgb[0] * 255), 0, 255),
-            clamp(Math.round(rgb[1] * 255), 0, 255),
-            clamp(Math.round(rgb[2] * 255), 0, 255),
-            args[3]
-        );
+        const prophoto_linear = _prophoto2prophotoLinear([args[0], args[1], args[2]]),
+            srgb_linear = _xyz2rgbLinear(
+                _d50toD65(_proPhotoLinear2xyz([prophoto_linear[0], prophoto_linear[1], prophoto_linear[2]]))
+            );
+        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
     };
 
     const _rec2020 = (args: number[]) => {
-        const linear = _rec2rec2Linear([args[0], args[1], args[2]]),
-            rgb = _srgbLinear2rgb(_xyz2rgbLinear(_rec2020Linear2xyz([linear[0], linear[1], linear[2]])));
-
-        return pack(
-            clamp(Math.round(rgb[0] * 255), 0, 255),
-            clamp(Math.round(rgb[1] * 255), 0, 255),
-            clamp(Math.round(rgb[2] * 255), 0, 255),
-            args[3]
-        );
+        const rec2020_linear = _rec2rec2Linear([args[0], args[1], args[2]]),
+            srgb_linear = _xyz2rgbLinear(_rec2020Linear2xyz([rec2020_linear[0], rec2020_linear[1], rec2020_linear[2]]));
+        return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
     };
 
     const SUPPORTED_COLOR_SPACES: {

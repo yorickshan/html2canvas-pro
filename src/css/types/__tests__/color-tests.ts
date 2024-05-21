@@ -55,6 +55,8 @@ describe('types', () => {
             it('color(display-p3 1 1 1)', () => strictEqual(parse('color(display-p3 1 1 1)'), pack(255, 255, 255, 1)));
             it('color(display-p3 -0.1 -0.1 -0.1) ', () =>
                 strictEqual(parse('color(display-p3 -0.1 -0.1 -0.1)'), pack(0, 0, 0, 1)));
+            it('color(display-p3 0.238 0.532 0.611)', () =>
+                strictEqual(parse('color(display-p3 0.238 0.532 0.611)'), pack(5, 138, 158, 1)));
             it('color(display-p3 1 0 0)', () => strictEqual(parse('color(display-p3 1 0 0)'), pack(255, 0, 0, 1)));
             it('color(display-p3 0 1 0)', () => strictEqual(parse('color(display-p3 0 1 0)'), pack(0, 255, 0, 1)));
             it('color(display-p3 0 0 1)', () => strictEqual(parse('color(display-p3 0 0 1)'), pack(0, 0, 255, 1)));
