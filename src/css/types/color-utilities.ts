@@ -192,14 +192,8 @@ export const extractOkLchComponents = (args: CSSValue[]): [number, number, numbe
  */
 export const d65toD50 = (xyz: [number, number, number]): [number, number, number] => {
     return multiplyMatrices(
-        [
-            // eslint-disable-next-line prettier/prettier
-            1.0479297925449969, 0.022946870601609652, -0.05019226628920524,
-            // eslint-disable-next-line prettier/prettier
-            0.02962780877005599, 0.9904344267538799, -0.017073799063418826,
-            // eslint-disable-next-line prettier/prettier
-            -0.009243040646204504, 0.015055191490298152, 0.7518742814281371
-        ],
+        // eslint-disable-next-line prettier/prettier
+        [1.0479297925449969, 0.022946870601609652, -0.05019226628920524, 0.02962780877005599, 0.9904344267538799, -0.017073799063418826, -0.009243040646204504, 0.015055191490298152, 0.7518742814281371],
         xyz
     );
 };
@@ -211,14 +205,8 @@ export const d65toD50 = (xyz: [number, number, number]): [number, number, number
  */
 export const d50toD65 = (xyz: [number, number, number]): [number, number, number] => {
     return multiplyMatrices(
-        [
-            // eslint-disable-next-line prettier/prettier
-            0.955473421488075, -0.02309845494876471, 0.06325924320057072,
-            // eslint-disable-next-line prettier/prettier
-            -0.0283697093338637, 1.0099953980813041, 0.021041441191917323,
-            // eslint-disable-next-line prettier/prettier
-            0.012314014864481998, -0.020507649298898964, 1.330365926242124
-        ],
+        // eslint-disable-next-line prettier/prettier
+        [0.955473421488075, -0.02309845494876471, 0.06325924320057072, -0.0283697093338637, 1.0099953980813041, 0.021041441191917323, 0.012314014864481998, -0.020507649298898964, 1.330365926242124],
         xyz
     );
 };
@@ -277,29 +265,17 @@ const lch2lab = ([l, c, h]: [number, number, number]): [number, number, number] 
  *
  * @param lab
  */
-const oklab2xyz = (lab: [number, number, number]) => {
+const oklab2xyz = (lab: [number, number, number]): [number, number, number] => {
     const LMSg = multiplyMatrices(
-            [
-                // eslint-disable-next-line prettier/prettier
-                1, 0.3963377773761749, 0.2158037573099136,
-                // eslint-disable-next-line prettier/prettier
-                1, -0.1055613458156586, -0.0638541728258133,
-                // eslint-disable-next-line prettier/prettier
-                1, -0.0894841775298119, -1.2914855480194092
-            ],
+            // eslint-disable-next-line prettier/prettier
+            [1, 0.3963377773761749, 0.2158037573099136, 1, -0.1055613458156586, -0.0638541728258133, 1, -0.0894841775298119, -1.2914855480194092],
             lab
         ),
         LMS = LMSg.map((val: number) => val ** 3);
 
     return multiplyMatrices(
-        [
-            // eslint-disable-next-line prettier/prettier
-            1.2268798758459243, -0.5578149944602171, 0.2813910456659647,
-            // eslint-disable-next-line prettier/prettier
-            -0.0405757452148008, 1.112286803280317, -0.0717110580655164,
-            // eslint-disable-next-line prettier/prettier
-            -0.0763729366746601, -0.4214933324022432, 1.5869240198367816
-        ],
+        // eslint-disable-next-line prettier/prettier
+        [1.2268798758459243, -0.5578149944602171, 0.2813910456659647, -0.0405757452148008, 1.112286803280317, -0.0717110580655164, -0.0763729366746601, -0.4214933324022432, 1.5869240198367816],
         LMS
     );
 };
@@ -324,6 +300,12 @@ const lab2xyz = (lab: [number, number, number]): [number, number, number] => {
     return d50toD65([xyz[0], xyz[1], xyz[2]]);
 };
 
+/**
+ * Convert RGB to XYZ
+ *
+ * @param _context
+ * @param args
+ */
 export const rgbToXyz = (_context: Context, args: CSSValue[]): [number, number, number, number] => {
     const tokens = args.filter(nonFunctionArgSeparator);
 
@@ -411,7 +393,7 @@ export const oklabToXyz = (_context: Context, args: CSSValue[]): [number, number
  *
  * @param args
  */
-export const xyz50ToXYZ = (args: number[]) => {
+export const xyz50ToXYZ = (args: number[]): [number, number, number] => {
     return d50toD65([args[0], args[1], args[2]]);
 };
 
@@ -439,7 +421,7 @@ export const xyz50FromXYZ = (args: [number, number, number, number]): [number, n
  *
  * @param args
  */
-export const convertXyz = (args: number[]) => {
+export const convertXyz = (args: number[]): number => {
     return packXYZ([args[0], args[1], args[2], args[3]]);
 };
 
@@ -448,7 +430,7 @@ export const convertXyz = (args: number[]) => {
  *
  * @param args
  */
-export const convertXyz50 = (args: number[]) => {
+export const convertXyz50 = (args: number[]): number => {
     const xyz = xyz50ToXYZ([args[0], args[1], args[2]]);
     return packXYZ([xyz[0], xyz[1], xyz[2], args[3]]);
 };
