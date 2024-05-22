@@ -50,14 +50,15 @@ describe('types', () => {
             it('oklab(0.57 -0.19 0.13)', () => strictEqual(parse('oklab(0.57 -0.19 0.13)'), pack(0, 151, 0, 1)));
             it('oklab(0.57 -0.19 0.13 / 50%)', () =>
                 strictEqual(parse('oklab(0.57 -0.19 0.13 / 50%)'), pack(0, 151, 0, 0.5)));
-            it('lab(53 -66.2 60.96)', () => strictEqual(parse('lab(53 -66.2 60.96)'), pack(0, 150, 0, 1)));
+            it('lab(53 -66.2 60.96)', () => strictEqual(parse('lab(53 -66.2 60.96)'), pack(0, 151, 0, 1)));
             it('lab(63 -41.52 -25.36)', () => strictEqual(parse('lab(63 -41.52 -25.36)'), pack(0, 173, 196, 1)));
             it('lab(63 -41.52 -25.36 / 0.5)', () =>
                 strictEqual(parse('lab(63 -41.52 -25.36 / 0.5)'), pack(0, 173, 196, 0.5)));
-            it('lch(29.2345% 44.2 27)', () => strictEqual(parse('lch(29.2345% 44.2 27)'), pack(127, 36, 40, 1)));
-            it('lch(52.2345% 72.2 56.2)', () => strictEqual(parse('lch(52.2345% 72.2 56.2)'), pack(203, 92, 6, 1)));
-            it('color(srgb 200 3 5)', () => strictEqual(parse('color(srgb 200 3 5)'), pack(200, 3, 5, 1)));
-            it('color(srgb 200 3 5 / .5)', () => strictEqual(parse('color(srgb 200 3 5 / .5)'), pack(200, 3, 5, 0.5)));
+            it('lch(29.2345% 44.2 27)', () => strictEqual(parse('lch(29.2345% 44.2 27)'), pack(125, 35, 41, 1)));
+            it('lch(52.2345% 72.2 56.2)', () => strictEqual(parse('lch(52.2345% 72.2 56.2)'), pack(198, 93, 6, 1)));
+            it('color(srgb 1 0 0)', () => strictEqual(parse('color(srgb 1 0 0)'), pack(255, 0, 0, 1)));
+            it('color(srgb 1 0 0 / .5)', () => strictEqual(parse('color(srgb 1 0 0 / .5)'), pack(255, 0, 0, 0.5)));
+            it('color(srgb 0.5 0 0.5)', () => strictEqual(parse('color(srgb 0.5 0 0.5)'), pack(128, 0, 128, 1)));
             it('color(xyz 0.11 0.17 0.24)', () =>
                 strictEqual(parse('color(xyz 0.11 0.17 0.24)'), pack(0, 130, 131, 1)));
             it('color(xyz-d65 0.11 0.17 0.24)', () =>
@@ -77,6 +78,8 @@ describe('types', () => {
             it('color(display-p3 0 1 0)', () => strictEqual(parse('color(display-p3 0 1 0)'), pack(0, 255, 0, 1)));
             it('color(display-p3 0 0 1)', () => strictEqual(parse('color(display-p3 0 0 1)'), pack(0, 0, 255, 1)));
             it('color(a98-rgb 1 0.5 0)', () => strictEqual(parse('color(a98-rgb 1 0.5 0)'), pack(255, 129, 0, 1)));
+            it('color(a98-rgb 1 0.22548 0.9854)', () =>
+                strictEqual(parse('color(a98-rgb 1 0.22548 0.9854)'), pack(255, 55, 255, 1)));
             it('color(prophoto-rgb 1 0.5 0)', () =>
                 strictEqual(parse('color(prophoto-rgb 1 0.5 0)'), pack(255, 99, 0, 1)));
             it('color(rec2020 0.17 0.31 0.5)', () =>
@@ -99,7 +102,26 @@ describe('types', () => {
             it('color(from hsl(0 100% 50%) xyz 0.75 0.6554 0.1)', () =>
                 strictEqual(parse('color(from hsl(0 100% 50%) xyz 0.75 0.6554 0.1)'), pack(255, 189, 31, 1)));
             it('color(from hsl(0 100% 50%) srgb 0.749938 0 0.609579)', () =>
-                strictEqual(parse('color(from hsl(0 100% 50%) srgb 0.749938 0 0.609579)'), pack(255, 0, 0, 1)));
+                strictEqual(parse('color(from hsl(0 100% 50%) srgb 0.749938 0 0.609579)'), pack(191, 0, 155, 1)));
+            it('color(from hsl(0 100% 50%) display-p3 r g b)', () =>
+                strictEqual(parse('color(from hsl(0 100% 50%) display-p3 r g b)'), pack(255, 0, 0, 1)));
+            it('color(from lab(52.14 -26.38 -20.37) display-p3 r g b)', () =>
+                strictEqual(parse('color(from lab(52.14 -26.38 -20.37) display-p3 r g b)'), pack(5, 138, 158, 1)));
+            it('color(from lab(52.14 -26.38 -20.37) display-p3 r g calc(r / 2))', () =>
+                strictEqual(
+                    parse('color(from lab(52.14 -26.38 -20.37) display-p3 r g calc(r / 2))'),
+                    pack(5, 138, 0, 1)
+                ));
+            it('color(from lab(52.14 -26.38 -20.37) a98-rgb r g b)', () =>
+                strictEqual(parse('color(from lab(52.14 -26.38 -20.37) a98-rgb r g b)'), pack(5, 138, 158, 1)));
+            it('color(from hsl(0 100% 50%) prophoto-rgb r g b)', () =>
+                strictEqual(parse('color(from hsl(0 100% 50%) prophoto-rgb r g b)'), pack(255, 0, 0, 1)));
+            it('color(from hsl(0 100% 50%) prophoto-rgb calc(r / 2) g b)', () =>
+                strictEqual(parse('color(from hsl(0 100% 50%) prophoto-rgb calc(r / 2) g b)'), pack(132, 83, 11, 1)));
+            it('color(from lab(52.14 -26.38 -20.37) rec2020 r g b)', () =>
+                strictEqual(parse('color(from lab(52.14 -26.38 -20.37) rec2020 r g b)'), pack(5, 138, 158, 1)));
+            it('color(from hsl(0 100% 50%) rec2020 calc(r / 2) g 0)', () =>
+                strictEqual(parse('color(from hsl(0 100% 50%) rec2020 calc(r / 2) g 0)'), pack(135, 68, 0, 1)));
         });
         describe('util', () => {
             describe('isTransparent', () => {

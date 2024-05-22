@@ -274,11 +274,15 @@ const multiplyMatrices = (A: number[], B: number[]): [number, number, number] =>
  * @param c
  * @param h
  */
-const _lch2lab = ([l, c, h]: [number, number, number]): [number, number, number] => [
-    l,
-    isNaN(h) ? 0 : c * Math.cos((h * Math.PI) / 180),
-    isNaN(h) ? 0 : c * Math.sin((h * Math.PI) / 180)
-];
+const _lch2lab = ([l, c, h]: [number, number, number]): [number, number, number] => {
+    if (c < 0) {
+        c = 0;
+    }
+    if (isNaN(h)) {
+        h = 0;
+    }
+    return [l, c * Math.cos((h * Math.PI) / 180), c * Math.sin((h * Math.PI) / 180)];
+};
 
 /**
  * Convert sRGB to RGB
@@ -289,7 +293,8 @@ const _srgbLinear2rgb = (rgb: [number, number, number]) => {
     return rgb.map((c: number) => {
         const sign = c < 0 ? -1 : 1,
             abs = Math.abs(c);
-        return abs > 0.0031308 ? sign * (1.055 * abs ** (1 / 2.4) - 0.055) : 12.92 * c;
+        // eslint-disable-next-line prettier/prettier
+        return abs > 0.0031308 ? sign * (1.055 * (abs ** (1 / 2.4)) - 0.055) : (12.92 * c);
     });
 };
 
@@ -312,16 +317,33 @@ const _rgb2rgbLinear = (rgb: [number, number, number]) => {
  *
  * @param rgb
  */
-const _a982rgbLinear = (rgb: [number, number, number]) => {
-    return rgb.map((c: number) => {
+const _a982a98Linear = (rgb: [number, number, number]): [number, number, number] => {
+    const mapped = rgb.map((c: number) => {
         const sign = c < 0 ? -1 : 1,
             abs = Math.abs(c);
         return sign * abs ** (563 / 256);
     });
+
+    return [mapped[0], mapped[1], mapped[2]];
 };
 
 /**
- * Convert A98 RGB to rgb linear
+ * Convert A98 RGB Linear to A98
+ *
+ * @param rgb
+ */
+const _a98Linear2a98 = (rgb: [number, number, number]): [number, number, number] => {
+    const mapped = rgb.map((c: number) => {
+        const sign = c < 0 ? -1 : 1,
+            abs = Math.abs(c);
+        return sign * abs ** (256 / 563);
+    });
+
+    return [mapped[0], mapped[1], mapped[2]];
+};
+
+/**
+ * Convert rec2020 to rec2020 linear
  *
  * @param rgb
  */
@@ -338,17 +360,13 @@ const _rec20202rec2020Linear = (rgb: [number, number, number]) => {
  *
  * @param rgb
  */
-/*const _rec2020Linear2rec2020 = (rgb: [number, number, number]) => {
+const _rec2020Linear2rec2020 = (rgb: [number, number, number]) => {
     const a = 1.09929682680944;
     const b = 0.018053968510807;
     return rgb.map(function (c) {
-        if (c >= b) {
-            return a * Math.pow(c, 0.45) - (a - 1);
-        }
-
-        return 4.5 * c;
+        return c >= b ? a * Math.pow(c, 0.45) - (a - 1) : 4.5 * c;
     });
-};*/
+};
 
 /**
  * Convert P3 to P3 linear
@@ -374,28 +392,29 @@ const _p32p3Linear = (p3: [number, number, number]) => {
  *
  * @param p3l
  */
-/*const _p3Linear2p3 = (p3l: [number, number, number]) => {
-    return p3l.map((c: number) => {
-        const sign = c < 0 ? -1 : 1,
-            abs = c * sign;
-
-        if (abs > 0.0031308) {
-            // eslint-disable-next-line prettier/prettier
-            return sign * (1.055 * (abs ** (1 / 2.4)) - 0.055);
-        }
-
-        return 12.92 * c;
-    });
-};*/
+const _p3Linear2p3 = (p3l: [number, number, number]) => {
+    return _srgbLinear2rgb(p3l);
+};
 
 /**
- * Convert P3 to rgb linear
+ * Convert pro-photo to pro-photo linear
  *
  * @param p3
  */
 const _prophoto2prophotoLinear = (p3: [number, number, number]) => {
     return p3.map((c: number) => {
         return c < 16 / 512 ? c / 16 : c ** 1.8;
+    });
+};
+
+/**
+ * Convert pro-photo Linear to pro-photo
+ *
+ * @param p3
+ */
+const _prophotoLinear2prophoto = (p3: [number, number, number]) => {
+    return p3.map((c: number) => {
+        return c > 1 / 512 ? c ** (1 / 1.8) : c * 16;
     });
 };
 
@@ -437,17 +456,18 @@ const _oklab2xyz = (lab: [number, number, number]) => {
  * @param lab
  */
 const _lab2xyz = (lab: [number, number, number]): [number, number, number] => {
-    const fy = (lab[0] + 16.0) / 116.0,
-        fx = lab[1] / 500.0 + fy,
-        fz = fy - lab[2] / 200.0,
-        k = 903.2962963,
-        e = 0.00885645167;
+    const fy = (lab[0] + 16) / 116,
+        fx = lab[1] / 500 + fy,
+        fz = fy - lab[2] / 200,
+        k = 24389 / 27,
+        e = 24 / 116,
+        xyz = [
+            ((fx > e ? fx ** 3 : (116 * fx - 16) / k) * 0.3457) / 0.3585,
+            lab[0] > 8 ? fy ** 3 : lab[0] / k,
+            ((fz > e ? fz ** 3 : (116 * fz - 16) / k) * (1.0 - 0.3457 - 0.3585)) / 0.3585
+        ];
 
-    return [
-        (fx ** 3 > e ? fx ** 3 : (116 * fx - 16) / k) * (0.3127 / 0.329),
-        lab[0] > k * e ? fy ** 3 : lab[0] / k,
-        (fz ** 3 > e ? fz ** 3 : (116 * fz - 16) / k) * ((1.0 - 0.3127 - 0.329) / 0.329)
-    ];
+    return _d50toD65([xyz[0], xyz[1], xyz[2]]);
 };
 
 /**
@@ -466,6 +486,44 @@ const _xyz2rgbLinear = (xyz: [number, number, number]) => {
             0.05563007969699366, -0.20397695888897652, 1.0569715142428786
         ],
         xyz
+    );
+};
+
+/**
+ * Convert XYZ to a98 linear
+ *
+ * @param xyz
+ */
+const _xyz2a98Linear = (xyz: [number, number, number]): [number, number, number] => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            2.0415879038107465, -0.5650069742788596, -0.34473135077832956,
+            // eslint-disable-next-line prettier/prettier
+            -0.9692436362808795, 1.8759675015077202, 0.04155505740717557,
+            // eslint-disable-next-line prettier/prettier
+            0.013444280632031142, -0.11836239223101838, 1.0151749943912054
+        ],
+        xyz
+    );
+};
+
+/**
+ * Convert XYZ to a98 linear
+ *
+ * @param a98
+ */
+const _a98Linear2xyz = (a98: [number, number, number]): [number, number, number] => {
+    return multiplyMatrices(
+        [
+            // eslint-disable-next-line prettier/prettier
+            0.5766690429101305, 0.1855582379065463, 0.1882286462349947,
+            // eslint-disable-next-line prettier/prettier
+            0.29734497525053605, 0.6273635662554661, 0.0752914584939978,
+            // eslint-disable-next-line prettier/prettier
+            0.02703136138641234, 0.07068885253582723, 0.9913375368376388
+        ],
+        a98
     );
 };
 
@@ -511,7 +569,7 @@ const _p3Linear2xyz = (p3l: [number, number, number]) => {
  *
  * @param xyz
  */
-/*const _xyz2p3Linear = (xyz: [number, number, number]) => {
+const _xyz2p3Linear = (xyz: [number, number, number]) => {
     return multiplyMatrices(
         [
             // eslint-disable-next-line prettier/prettier
@@ -523,7 +581,7 @@ const _p3Linear2xyz = (p3l: [number, number, number]) => {
         ],
         xyz
     );
-};*/
+};
 
 /**
  * Convert linear-light display-p3 to XYZ D65
@@ -549,7 +607,7 @@ const _proPhotoLinear2xyz = (p3: [number, number, number]) => {
  *
  * @param xyz
  */
-/*const _xyz2proPhotoLinear = (xyz: [number, number, number]) => {
+const _xyz2proPhotoLinear = (xyz: [number, number, number]) => {
     return multiplyMatrices(
         [
             // eslint-disable-next-line prettier/prettier
@@ -561,7 +619,7 @@ const _proPhotoLinear2xyz = (p3: [number, number, number]) => {
         ],
         xyz
     );
-};*/
+};
 
 /**
  * Convert linear-light rec2020 to XYZ D65
@@ -587,7 +645,7 @@ const _rec2020Linear2xyz = (rec: [number, number, number]) => {
  *
  * @param xyz
  */
-/*const _xyz2rec2020Linear = (xyz: [number, number, number]) => {
+const _xyz2rec2020Linear = (xyz: [number, number, number]) => {
     return multiplyMatrices(
         [
             // eslint-disable-next-line prettier/prettier
@@ -599,7 +657,7 @@ const _rec2020Linear2xyz = (rec: [number, number, number]) => {
         ],
         xyz
     );
-};*/
+};
 
 /**
  * Convert D65 to D50
@@ -643,40 +701,29 @@ const _xyz502XYZ = (args: number[]) => {
     return _d50toD65([args[0], args[1], args[2]]);
 };
 
-/*const _xyz50FromXYZ = (args: number[]) => {
-    return _d65toD50([args[0], args[1], args[2]]);
-};*/
-
 const _p32XYZ = (args: number[]) => {
     const p3_linear = _p32p3Linear([args[0], args[1], args[2]]);
     return _p3Linear2xyz([p3_linear[0], p3_linear[1], p3_linear[2]]);
 };
-
-/*const _p3FromXYZ = (args: number[]) => {
-    return _p3Linear2p3(_xyz2p3Linear([args[0], args[1], args[2]]));
-};*/
 
 const _proPhoto2XYZ = (args: number[]) => {
     const prophoto_linear = _prophoto2prophotoLinear([args[0], args[1], args[2]]);
     return _d50toD65(_proPhotoLinear2xyz([prophoto_linear[0], prophoto_linear[1], prophoto_linear[2]]));
 };
 
-/*const _proPhotoFromXYZ = (args: number[]) => {
-    return _xyz2proPhotoLinear([args[0], args[1], args[2]]);
-};*/
-
 const _rec20202XYZ = (args: number[]) => {
     const rec2020_linear = _rec20202rec2020Linear([args[0], args[1], args[2]]);
     return _rec2020Linear2xyz([rec2020_linear[0], rec2020_linear[1], rec2020_linear[2]]);
 };
 
-/*const _rec2020FromXYZ = (args: number[]) => {
-    return _rec2020Linear2rec2020(_xyz2rec2020Linear([args[0], args[1], args[2]]));
-};*/
-
 const _color = (context: Context, args: CSSValue[]) => {
     const _srgb = (args: number[]) => {
-        return pack(clamp(args[0], 0, 255), clamp(args[1], 0, 255), clamp(args[2], 0, 255), clamp(args[3], 0, 1));
+        return pack(
+            clamp(Math.round(args[0] * 255), 0, 255),
+            clamp(Math.round(args[1] * 255), 0, 255),
+            clamp(Math.round(args[2] * 255), 0, 255),
+            clamp(args[3], 0, 1)
+        );
     };
 
     const _packSrgbLinear = ([r, g, b, a]: [number, number, number, number]) => {
@@ -713,7 +760,7 @@ const _color = (context: Context, args: CSSValue[]) => {
     };
 
     const _a98rgb = (args: number[]) => {
-        const srgb_linear = _a982rgbLinear([args[0], args[1], args[2]]);
+        const srgb_linear = _xyz2rgbLinear(_a98Linear2xyz(_a982a98Linear([args[0], args[1], args[2]])));
         return _packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
     };
 
@@ -795,12 +842,7 @@ const _color = (context: Context, args: CSSValue[]) => {
 
     const _srgbFromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
         const [r, g, b] = _srgbLinear2rgb(_xyz2rgbLinear([args[0], args[1], args[2]]));
-        return [
-            clamp(Math.round(r * 255), 0, 255),
-            clamp(Math.round(g * 255), 0, 255),
-            clamp(Math.round(b * 255), 0, 255),
-            args[3]
-        ];
+        return [r, g, b, args[3]];
     };
 
     const _srgbLinearFromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
@@ -822,6 +864,26 @@ const _color = (context: Context, args: CSSValue[]) => {
         return [x, y, z, args[3]];
     };
 
+    const _p3FromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+        const [r, g, b] = _p3Linear2p3(_xyz2p3Linear([args[0], args[1], args[2]]));
+        return [r, g, b, args[3]];
+    };
+
+    const _a98FromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+        const [r, g, b] = _a98Linear2a98(_xyz2a98Linear([args[0], args[1], args[2]]));
+        return [r, g, b, args[3]];
+    };
+
+    const _proPhotoFromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+        const [r, g, b] = _prophotoLinear2prophoto(_xyz2proPhotoLinear(_d65toD50([args[0], args[1], args[2]])));
+        return [r, g, b, args[3]];
+    };
+
+    const _rec2020FromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+        const [r, g, b] = _rec2020Linear2rec2020(_xyz2rec2020Linear([args[0], args[1], args[2]]));
+        return [r, g, b, args[3]];
+    };
+
     const SUPPORTED_COLOR_SPACES_TO_XYZ: {
         [key: string]: (context: Context, args: CSSValue[]) => [number, number, number, number];
     } = {
@@ -838,13 +900,13 @@ const _color = (context: Context, args: CSSValue[]) => {
     } = {
         srgb: _srgbFromXYZ,
         'srgb-linear': _srgbLinearFromXYZ,
-        'display-p3': _srgbFromXYZ,
-        'a98-rgb': _srgbFromXYZ,
-        'prophoto-rgb': _srgbFromXYZ,
+        'display-p3': _p3FromXYZ,
+        'a98-rgb': _a98FromXYZ,
+        'prophoto-rgb': _proPhotoFromXYZ,
         xyz: _xyzFromXYZ,
         'xyz-d50': _xyz50FromXYZ,
         'xyz-d65': _xyzFromXYZ,
-        rec2020: _srgbFromXYZ
+        rec2020: _rec2020FromXYZ
     };
 
     const tokens = args.filter(nonFunctionArgSeparator),
@@ -941,7 +1003,7 @@ const _color = (context: Context, args: CSSValue[]) => {
                     {type: TokenType.NUMBER_TOKEN, number: red, flags: 1},
                     {type: TokenType.NUMBER_TOKEN, number: green, flags: 1},
                     {type: TokenType.NUMBER_TOKEN, number: blue, flags: 1},
-                    {type: TokenType.NUMBER_TOKEN, number: alpha, flags: 1}
+                    {type: TokenType.NUMBER_TOKEN, number: alpha > 1 ? alpha / 255 : alpha, flags: 1}
                 ];
             }
         } else if (tokens[1].type === TokenType.HASH_TOKEN) {
@@ -950,7 +1012,7 @@ const _color = (context: Context, args: CSSValue[]) => {
                 {type: TokenType.NUMBER_TOKEN, number: red, flags: 1},
                 {type: TokenType.NUMBER_TOKEN, number: green, flags: 1},
                 {type: TokenType.NUMBER_TOKEN, number: blue, flags: 1},
-                {type: TokenType.NUMBER_TOKEN, number: alpha, flags: 1}
+                {type: TokenType.NUMBER_TOKEN, number: alpha > 1 ? alpha / 255 : alpha, flags: 1}
             ];
         }
 
@@ -989,7 +1051,16 @@ const _color = (context: Context, args: CSSValue[]) => {
         }
 
         // eslint-disable-next-line no-console
-        console.log([c1, c2, c3, a], toColorFromXyz, toColorPack);
+        console.log(
+            fromColorToXyz,
+            from_color,
+            toColorFromXyz,
+            from_final_colorspace,
+            [c1, c2, c3, a],
+            toColorPack,
+            toColorPack([c1, c2, c3, a]),
+            tokens
+        );
 
         return toColorPack([c1, c2, c3, a]);
     }
