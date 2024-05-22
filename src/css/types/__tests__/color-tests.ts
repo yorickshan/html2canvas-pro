@@ -27,6 +27,8 @@ describe('types', () => {
             it('rgba(50% 50% 50% 50%)', () => strictEqual(parse('rgba(50% 50% 50% 50%)'), pack(128, 128, 128, 0.5)));
             it('rgb(100% 100% 100%)', () => strictEqual(parse('rgb(100% 100% 100%)'), pack(255, 255, 255, 1)));
             it('rgb(222 111 50)', () => strictEqual(parse('rgb(222 111 50)'), pack(222, 111, 50, 1)));
+            it('rgb(from green r g b / 0.5)', () =>
+                strictEqual(parse('rgb(from green r g b / 0.5)'), pack(0, 128, 0, 0.5)));
             it('rgba(200, 3, 5, 1)', () => strictEqual(parse('rgba(200, 3, 5, 1)'), pack(200, 3, 5, 1)));
             it('rgba(222, 111, 50, 0.22)', () =>
                 strictEqual(parse('rgba(222, 111, 50, 0.22)'), pack(222, 111, 50, 0.22)));
