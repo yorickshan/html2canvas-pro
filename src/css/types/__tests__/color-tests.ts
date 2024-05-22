@@ -1,5 +1,6 @@
 import {strictEqual} from 'assert';
-import {asString, color, isTransparent, pack} from '../color';
+import {color} from '../color';
+import {asString, isTransparent, pack} from '../color-utilities';
 import {Parser} from '../../syntax/parser';
 import {Context} from '../../../core/context';
 
