@@ -2,7 +2,7 @@ import {deepStrictEqual} from 'assert';
 import {Parser} from '../../syntax/parser';
 import {backgroundImage} from '../background-image';
 import {CSSImageType} from '../../types/image';
-import {pack} from '../../types/color';
+import {pack} from '../../types/color-utilities';
 import {deg} from '../../types/angle';
 
 jest.mock('../../../core/context');

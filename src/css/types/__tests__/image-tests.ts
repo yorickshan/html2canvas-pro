@@ -1,7 +1,8 @@
 import {deepStrictEqual} from 'assert';
 import {Parser} from '../../syntax/parser';
 import {CSSImageType, image} from '../image';
-import {color, pack} from '../color';
+import {color} from '../color';
+import {pack} from '../color-utilities';
 import {FLAG_INTEGER, TokenType} from '../../syntax/tokenizer';
 import {deg} from '../angle';
 

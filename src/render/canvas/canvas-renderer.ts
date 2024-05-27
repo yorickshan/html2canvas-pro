@@ -1,5 +1,6 @@
 import {ElementPaint, parseStackingContexts, StackingContext} from '../stacking-context';
-import {asString, Color, isTransparent} from '../../css/types/color';
+import {Color} from '../../css/types/color';
+import {asString, isTransparent} from '../../css/types/color-utilities';
 import {ElementContainer, FLAGS} from '../../dom/element-container';
 import {BORDER_STYLE} from '../../css/property-descriptors/border-style';
 import {CSSParsedDeclaration} from '../../css';
