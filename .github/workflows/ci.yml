@@ -101,13 +101,6 @@ jobs:
                     - os: macos-latest
                       name: OSX Safari Stable
                       targetBrowser: Safari_Stable
-                    - os: macos-11
-                      name: iOS Simulator Safari 15.0
-                      targetBrowser: Safari_IOS_15_0
-                      xcode: /Applications/Xcode_13.0.app
-                    - os: windows-latest
-                      name: Windows Internet Explorer 11
-                      targetBrowser: IE_11
         runs-on: ${{ matrix.config.os }}
         name: ${{ matrix.config.name }}
         env:
@@ -162,7 +155,7 @@ jobs:
                   if-no-files-found: error
     publish:
         runs-on: ubuntu-latest
-        name: Publish
+        name: Publish NPM
         if: startsWith(github.ref, 'refs/tags/v')
         needs: browser-test
         permissions:
