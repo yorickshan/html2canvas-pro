@@ -116,7 +116,7 @@
     "watch": "rollup -c rollup.config.ts -w",
     "watch:unittest": "mocha --require ts-node/register --watch-extensions ts -w src/**/__tests__/*.ts",
     "start": "ts-node tests/server --port=8080 --cors=8081",
-    "pub": "sh ./publish.sh"
+    "tag": "sh ./scripts/create-tag.sh"
   },
   "license": "MIT",
   "dependencies": {
