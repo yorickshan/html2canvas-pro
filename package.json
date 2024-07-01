@@ -12,6 +12,10 @@
     "email": "yorickshan@gmail.com",
     "url": "https://github.com/yorickshan"
   },
+  "keywords": [
+    "html2canvas",
+    "screenshot"
+  ],
   "engines": {
     "node": ">=8.0.0"
   },
