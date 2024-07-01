@@ -37,7 +37,9 @@ export const rec2020Linear2rec2020 = (rgb: [number, number, number]): number[] =
 export const rec2020LinearToXyz = (rec: [number, number, number]): [number, number, number] => {
     return multiplyMatrices(
         // eslint-disable-next-line prettier/prettier
-        [0.6369580483012914, 0.14461690358620832, 0.1688809751641721, 0.2627002120112671, 0.6779980715188708, 0.05930171646986196, 0.0, 0.028072693049087428, 1.060985057710791
+        [
+            0.6369580483012914, 0.14461690358620832, 0.1688809751641721, 0.2627002120112671, 0.6779980715188708,
+            0.05930171646986196, 0.0, 0.028072693049087428, 1.060985057710791
         ],
         rec
     );
@@ -51,7 +53,10 @@ export const rec2020LinearToXyz = (rec: [number, number, number]): [number, numb
 export const xyzToRec2020Linear = (xyz: [number, number, number]): [number, number, number] => {
     return multiplyMatrices(
         // eslint-disable-next-line prettier/prettier
-        [1.716651187971268, -0.355670783776392, -0.253366281373660,  -0.666684351832489, 1.616481236634939, 0.0157685458139111, 0.017639857445311, -0.042770613257809, 0.942103121235474],
+        [
+            1.716651187971268, -0.355670783776392, -0.25336628137366, -0.666684351832489, 1.616481236634939,
+            0.0157685458139111, 0.017639857445311, -0.042770613257809, 0.942103121235474
+        ],
         xyz
     );
 };

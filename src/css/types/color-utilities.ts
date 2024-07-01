@@ -164,9 +164,19 @@ export const extractLchComponents = (args: CSSValue[]): [number, number, number,
 export const extractLabComponents = (args: CSSValue[]): [number, number, number, number] => {
     const tokens = args.filter(nonFunctionArgSeparator),
         // eslint-disable-next-line prettier/prettier
-        l = tokens[0].type === TokenType.PERCENTAGE_TOKEN ? tokens[0].number / 100 : (isNumberToken(tokens[0]) ? tokens[0].number : 0),
+        l =
+            tokens[0].type === TokenType.PERCENTAGE_TOKEN
+                ? tokens[0].number / 100
+                : isNumberToken(tokens[0])
+                ? tokens[0].number
+                : 0,
         // eslint-disable-next-line prettier/prettier
-        a = tokens[1].type === TokenType.PERCENTAGE_TOKEN ? tokens[1].number / 100 : (isNumberToken(tokens[1]) ? tokens[1].number : 0),
+        a =
+            tokens[1].type === TokenType.PERCENTAGE_TOKEN
+                ? tokens[1].number / 100
+                : isNumberToken(tokens[1])
+                ? tokens[1].number
+                : 0,
         b = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
         alpha = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
 
@@ -176,9 +186,19 @@ export const extractLabComponents = (args: CSSValue[]): [number, number, number,
 export const extractOkLchComponents = (args: CSSValue[]): [number, number, number, number] => {
     const tokens = args.filter(nonFunctionArgSeparator),
         // eslint-disable-next-line prettier/prettier
-        l = tokens[0].type === TokenType.PERCENTAGE_TOKEN ? tokens[0].number / 100 : isNumberToken(tokens[0]) ? tokens[0].number : 0,
+        l =
+            tokens[0].type === TokenType.PERCENTAGE_TOKEN
+                ? tokens[0].number / 100
+                : isNumberToken(tokens[0])
+                ? tokens[0].number
+                : 0,
         // eslint-disable-next-line prettier/prettier
-        c = tokens[1].type === TokenType.PERCENTAGE_TOKEN ? tokens[1].number / 100 : isNumberToken(tokens[1]) ? tokens[1].number : 0,
+        c =
+            tokens[1].type === TokenType.PERCENTAGE_TOKEN
+                ? tokens[1].number / 100
+                : isNumberToken(tokens[1])
+                ? tokens[1].number
+                : 0,
         h = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
         a = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
 
@@ -193,7 +213,10 @@ export const extractOkLchComponents = (args: CSSValue[]): [number, number, numbe
 export const d65toD50 = (xyz: [number, number, number]): [number, number, number] => {
     return multiplyMatrices(
         // eslint-disable-next-line prettier/prettier
-        [1.0479297925449969, 0.022946870601609652, -0.05019226628920524, 0.02962780877005599, 0.9904344267538799, -0.017073799063418826, -0.009243040646204504, 0.015055191490298152, 0.7518742814281371],
+        [
+            1.0479297925449969, 0.022946870601609652, -0.05019226628920524, 0.02962780877005599, 0.9904344267538799,
+            -0.017073799063418826, -0.009243040646204504, 0.015055191490298152, 0.7518742814281371
+        ],
         xyz
     );
 };
@@ -206,7 +229,10 @@ export const d65toD50 = (xyz: [number, number, number]): [number, number, number
 export const d50toD65 = (xyz: [number, number, number]): [number, number, number] => {
     return multiplyMatrices(
         // eslint-disable-next-line prettier/prettier
-        [0.955473421488075, -0.02309845494876471, 0.06325924320057072, -0.0283697093338637, 1.0099953980813041, 0.021041441191917323, 0.012314014864481998, -0.020507649298898964, 1.330365926242124],
+        [
+            0.955473421488075, -0.02309845494876471, 0.06325924320057072, -0.0283697093338637, 1.0099953980813041,
+            0.021041441191917323, 0.012314014864481998, -0.020507649298898964, 1.330365926242124
+        ],
         xyz
     );
 };
@@ -268,14 +294,20 @@ const lch2lab = ([l, c, h]: [number, number, number]): [number, number, number] 
 const oklab2xyz = (lab: [number, number, number]): [number, number, number] => {
     const LMSg = multiplyMatrices(
             // eslint-disable-next-line prettier/prettier
-            [1, 0.3963377773761749, 0.2158037573099136, 1, -0.1055613458156586, -0.0638541728258133, 1, -0.0894841775298119, -1.2914855480194092],
+            [
+                1, 0.3963377773761749, 0.2158037573099136, 1, -0.1055613458156586, -0.0638541728258133, 1,
+                -0.0894841775298119, -1.2914855480194092
+            ],
             lab
         ),
         LMS = LMSg.map((val: number) => val ** 3);
 
     return multiplyMatrices(
         // eslint-disable-next-line prettier/prettier
-        [1.2268798758459243, -0.5578149944602171, 0.2813910456659647, -0.0405757452148008, 1.112286803280317, -0.0717110580655164, -0.0763729366746601, -0.4214933324022432, 1.5869240198367816],
+        [
+            1.2268798758459243, -0.5578149944602171, 0.2813910456659647, -0.0405757452148008, 1.112286803280317,
+            -0.0717110580655164, -0.0763729366746601, -0.4214933324022432, 1.5869240198367816
+        ],
         LMS
     );
 };
