@@ -2,7 +2,7 @@
  * REC2020 related functions
  */
 
-import {multiplyMatrices, packXYZ} from '../color-utilities';
+import { multiplyMatrices, packXYZ } from '../color-utilities';
 
 const _a = 1.09929682680944;
 const _b = 0.018053968510807;

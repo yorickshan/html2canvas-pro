@@ -1,5 +1,5 @@
-import {Matrix} from '../css/property-descriptors/transform';
-import {Path} from './path';
+import { Matrix } from '../css/property-descriptors/transform';
+import { Path } from './path';
 
 export const enum EffectType {
     TRANSFORM = 0,

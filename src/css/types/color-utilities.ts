@@ -1,9 +1,9 @@
-import {Context} from '../../core/context';
-import {CSSValue, isDimensionToken, isNumberToken, nonFunctionArgSeparator} from '../syntax/parser';
-import {rgb2rgbLinear, rgbLinear2xyz, srgbLinear2rgb, xyz2rgbLinear} from './color-spaces/srgb';
-import {TokenType} from '../syntax/tokenizer';
-import {angle, deg} from './angle';
-import {getAbsoluteValue, isLengthPercentage} from './length-percentage';
+import { Context } from '../../core/context';
+import { CSSValue, isDimensionToken, isNumberToken, nonFunctionArgSeparator } from '../syntax/parser';
+import { rgb2rgbLinear, rgbLinear2xyz, srgbLinear2rgb, xyz2rgbLinear } from './color-spaces/srgb';
+import { TokenType } from '../syntax/tokenizer';
+import { angle, deg } from './angle';
+import { getAbsoluteValue, isLengthPercentage } from './length-percentage';
 
 type Color = number;
 

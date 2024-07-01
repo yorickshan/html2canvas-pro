@@ -1,14 +1,14 @@
-import {Bounds} from '../css/layout/bounds';
-import {BACKGROUND_ORIGIN} from '../css/property-descriptors/background-origin';
-import {ElementContainer} from '../dom/element-container';
-import {BACKGROUND_SIZE, BackgroundSizeInfo} from '../css/property-descriptors/background-size';
-import {Vector} from './vector';
-import {BACKGROUND_REPEAT} from '../css/property-descriptors/background-repeat';
-import {getAbsoluteValue, getAbsoluteValueForTuple, isLengthPercentage} from '../css/types/length-percentage';
-import {CSSValue, isIdentToken} from '../css/syntax/parser';
-import {contentBox, paddingBox} from './box-sizing';
-import {Path} from './path';
-import {BACKGROUND_CLIP} from '../css/property-descriptors/background-clip';
+import { Bounds } from '../css/layout/bounds';
+import { BACKGROUND_ORIGIN } from '../css/property-descriptors/background-origin';
+import { ElementContainer } from '../dom/element-container';
+import { BACKGROUND_SIZE, BackgroundSizeInfo } from '../css/property-descriptors/background-size';
+import { Vector } from './vector';
+import { BACKGROUND_REPEAT } from '../css/property-descriptors/background-repeat';
+import { getAbsoluteValue, getAbsoluteValueForTuple, isLengthPercentage } from '../css/types/length-percentage';
+import { CSSValue, isIdentToken } from '../css/syntax/parser';
+import { contentBox, paddingBox } from './box-sizing';
+import { Path } from './path';
+import { BACKGROUND_CLIP } from '../css/property-descriptors/background-clip';
 
 export const calculateBackgroundPositioningArea = (
     backgroundOrigin: BACKGROUND_ORIGIN,

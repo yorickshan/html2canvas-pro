@@ -1,9 +1,9 @@
-import {testList, ignoredTests} from '../build/reftests';
+import { testList, ignoredTests } from '../build/reftests';
 // @ts-ignore
-import {default as platform} from 'platform';
+import { default as platform } from 'platform';
 // @ts-ignore
 import Promise from 'es6-promise';
-import {ScreenshotRequest} from './types';
+import { ScreenshotRequest } from './types';
 
 // @ts-ignore
 window.Promise = Promise;

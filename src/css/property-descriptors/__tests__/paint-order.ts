@@ -1,7 +1,7 @@
-import {deepStrictEqual} from 'assert';
-import {Parser} from '../../syntax/parser';
-import {paintOrder, PAINT_ORDER_LAYER} from '../paint-order';
-import {Context} from '../../../core/context';
+import { deepStrictEqual } from 'assert';
+import { Parser } from '../../syntax/parser';
+import { paintOrder, PAINT_ORDER_LAYER } from '../paint-order';
+import { Context } from '../../../core/context';
 
 const paintOrderParse = (value: string) => paintOrder.parse({} as Context, Parser.parseValues(value));
 

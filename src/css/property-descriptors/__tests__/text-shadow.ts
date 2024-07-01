@@ -1,10 +1,10 @@
-import {deepStrictEqual} from 'assert';
-import {Parser} from '../../syntax/parser';
-import {color, COLORS} from '../../types/color';
-import {textShadow} from '../text-shadow';
-import {FLAG_INTEGER, DimensionToken, TokenType} from '../../syntax/tokenizer';
-import {ZERO_LENGTH} from '../../types/length-percentage';
-import {Context} from '../../../core/context';
+import { deepStrictEqual } from 'assert';
+import { Parser } from '../../syntax/parser';
+import { color, COLORS } from '../../types/color';
+import { textShadow } from '../text-shadow';
+import { FLAG_INTEGER, DimensionToken, TokenType } from '../../syntax/tokenizer';
+import { ZERO_LENGTH } from '../../types/length-percentage';
+import { Context } from '../../../core/context';
 
 const textShadowParse = (value: string) => textShadow.parse({} as Context, Parser.parseValues(value));
 const colorParse = (value: string) => color.parse({} as Context, Parser.parseValue(value));

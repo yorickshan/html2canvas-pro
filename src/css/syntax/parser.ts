@@ -99,7 +99,7 @@ export class Parser {
     }
 
     private consumeSimpleBlock(type: CSSBlockType): CSSBlock {
-        const block: CSSBlock = {type, values: []};
+        const block: CSSBlock = { type, values: [] };
 
         let token = this.consumeToken();
         while (true) {

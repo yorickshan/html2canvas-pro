@@ -1,6 +1,6 @@
-import {IPropertyValueDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue, isIdentToken, isNumberToken} from '../syntax/parser';
-import {Context} from '../../core/context';
+import { IPropertyValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue, isIdentToken, isNumberToken } from '../syntax/parser';
+import { Context } from '../../core/context';
 export const fontWeight: IPropertyValueDescriptor<number> = {
     name: 'font-weight',
     initialValue: 'normal',

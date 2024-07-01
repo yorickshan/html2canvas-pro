@@ -1,9 +1,9 @@
-import {CSSParsedDeclaration} from '../css/index';
-import {TextContainer} from './text-container';
-import {Bounds, parseBounds} from '../css/layout/bounds';
-import {isHTMLElementNode} from './node-parser';
-import {Context} from '../core/context';
-import {DebuggerType, isDebugging} from '../core/debugger';
+import { CSSParsedDeclaration } from '../css/index';
+import { TextContainer } from './text-container';
+import { Bounds, parseBounds } from '../css/layout/bounds';
+import { isHTMLElementNode } from './node-parser';
+import { Context } from '../core/context';
+import { DebuggerType, isDebugging } from '../core/debugger';
 
 export const enum FLAGS {
     CREATES_STACKING_CONTEXT = 1 << 1,

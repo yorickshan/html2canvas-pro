@@ -1,7 +1,7 @@
-import {TokenType} from '../syntax/tokenizer';
-import {IPropertyListDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue} from '../syntax/parser';
-import {Context} from '../../core/context';
+import { TokenType } from '../syntax/tokenizer';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue } from '../syntax/parser';
+import { Context } from '../../core/context';
 
 export type Content = CSSValue[];
 

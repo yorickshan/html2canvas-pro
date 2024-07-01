@@ -1,14 +1,14 @@
-import {CSSValue} from '../syntax/parser';
-import {TokenType} from '../syntax/tokenizer';
-import {Color} from './color';
-import {linearGradient} from './functions/linear-gradient';
-import {prefixLinearGradient} from './functions/-prefix-linear-gradient';
-import {ITypeDescriptor} from '../ITypeDescriptor';
-import {LengthPercentage} from './length-percentage';
-import {webkitGradient} from './functions/-webkit-gradient';
-import {radialGradient} from './functions/radial-gradient';
-import {prefixRadialGradient} from './functions/-prefix-radial-gradient';
-import {Context} from '../../core/context';
+import { CSSValue } from '../syntax/parser';
+import { TokenType } from '../syntax/tokenizer';
+import { Color } from './color';
+import { linearGradient } from './functions/linear-gradient';
+import { prefixLinearGradient } from './functions/-prefix-linear-gradient';
+import { ITypeDescriptor } from '../ITypeDescriptor';
+import { LengthPercentage } from './length-percentage';
+import { webkitGradient } from './functions/-webkit-gradient';
+import { radialGradient } from './functions/radial-gradient';
+import { prefixRadialGradient } from './functions/-prefix-radial-gradient';
+import { Context } from '../../core/context';
 
 export const enum CSSImageType {
     URL,
@@ -81,7 +81,7 @@ export const image: ITypeDescriptor<ICSSImage> = {
     name: 'image',
     parse: (context: Context, value: CSSValue): ICSSImage => {
         if (value.type === TokenType.URL_TOKEN) {
-            const image: CSSURLImage = {url: value.value, type: CSSImageType.URL};
+            const image: CSSURLImage = { url: value.value, type: CSSImageType.URL };
             context.cache.addImage(value.value);
             return image;
         }

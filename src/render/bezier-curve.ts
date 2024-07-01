@@ -1,5 +1,5 @@
-import {Vector} from './vector';
-import {IPath, PathType, Path} from './path';
+import { Vector } from './vector';
+import { IPath, PathType, Path } from './path';
 
 const lerp = (a: Vector, b: Vector, t: number): Vector => {
     return new Vector(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);

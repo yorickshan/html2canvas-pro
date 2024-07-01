@@ -1,6 +1,6 @@
-import {DimensionToken, FLAG_INTEGER, NumberValueToken, TokenType} from '../syntax/tokenizer';
-import {CSSValue, isDimensionToken} from '../syntax/parser';
-import {isLength} from './length';
+import { DimensionToken, FLAG_INTEGER, NumberValueToken, TokenType } from '../syntax/tokenizer';
+import { CSSValue, isDimensionToken } from '../syntax/parser';
+import { isLength } from './length';
 export type LengthPercentage = DimensionToken | NumberValueToken;
 export type LengthPercentageTuple = [LengthPercentage] | [LengthPercentage, LengthPercentage];
 

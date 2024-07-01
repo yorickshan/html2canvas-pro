@@ -1,10 +1,10 @@
-import {deepStrictEqual} from 'assert';
-import {Parser} from '../../syntax/parser';
-import {CSSImageType, image} from '../image';
-import {color} from '../color';
-import {pack} from '../color-utilities';
-import {FLAG_INTEGER, TokenType} from '../../syntax/tokenizer';
-import {deg} from '../angle';
+import { deepStrictEqual } from 'assert';
+import { Parser } from '../../syntax/parser';
+import { CSSImageType, image } from '../image';
+import { color } from '../color';
+import { pack } from '../color-utilities';
+import { FLAG_INTEGER, TokenType } from '../../syntax/tokenizer';
+import { deg } from '../angle';
 
 const parse = (context: Context, value: string) => image.parse(context, Parser.parseValue(value));
 const colorParse = (context: Context, value: string) => color.parse(context, Parser.parseValue(value));
@@ -12,7 +12,7 @@ const colorParse = (context: Context, value: string) => color.parse(context, Par
 jest.mock('../../../core/features');
 
 jest.mock('../../../core/context');
-import {Context} from '../../../core/context';
+import { Context } from '../../../core/context';
 
 describe('types', () => {
     let context: Context;
@@ -41,8 +41,8 @@ describe('types', () => {
                         angle: deg(180),
                         type: CSSImageType.LINEAR_GRADIENT,
                         stops: [
-                            {color: pack(0xf6, 0x9d, 0x3c, 1), stop: null},
-                            {color: pack(0x3f, 0x87, 0xa6, 1), stop: null}
+                            { color: pack(0xf6, 0x9d, 0x3c, 1), stop: null },
+                            { color: pack(0x3f, 0x87, 0xa6, 1), stop: null }
                         ]
                     }));
                 it('linear-gradient(yellow, blue)', () =>
@@ -50,8 +50,8 @@ describe('types', () => {
                         angle: deg(180),
                         type: CSSImageType.LINEAR_GRADIENT,
                         stops: [
-                            {color: colorParse(context, 'yellow'), stop: null},
-                            {color: colorParse(context, 'blue'), stop: null}
+                            { color: colorParse(context, 'yellow'), stop: null },
+                            { color: colorParse(context, 'blue'), stop: null }
                         ]
                     }));
                 it('linear-gradient(to bottom, yellow, blue)', () =>
@@ -59,8 +59,8 @@ describe('types', () => {
                         angle: deg(180),
                         type: CSSImageType.LINEAR_GRADIENT,
                         stops: [
-                            {color: colorParse(context, 'yellow'), stop: null},
-                            {color: colorParse(context, 'blue'), stop: null}
+                            { color: colorParse(context, 'yellow'), stop: null },
+                            { color: colorParse(context, 'blue'), stop: null }
                         ]
                     }));
                 it('linear-gradient(180deg, yellow, blue)', () =>
@@ -68,8 +68,8 @@ describe('types', () => {
                         angle: deg(180),
                         type: CSSImageType.LINEAR_GRADIENT,
                         stops: [
-                            {color: colorParse(context, 'yellow'), stop: null},
-                            {color: colorParse(context, 'blue'), stop: null}
+                            { color: colorParse(context, 'yellow'), stop: null },
+                            { color: colorParse(context, 'blue'), stop: null }
                         ]
                     }));
                 it('linear-gradient(to top, blue, yellow)', () =>
@@ -77,20 +77,20 @@ describe('types', () => {
                         angle: 0,
                         type: CSSImageType.LINEAR_GRADIENT,
                         stops: [
-                            {color: colorParse(context, 'blue'), stop: null},
-                            {color: colorParse(context, 'yellow'), stop: null}
+                            { color: colorParse(context, 'blue'), stop: null },
+                            { color: colorParse(context, 'yellow'), stop: null }
                         ]
                     }));
                 it('linear-gradient(to top right, blue, yellow)', () =>
                     deepStrictEqual(parse(context, 'linear-gradient(to top right, blue, yellow)'), {
                         angle: [
-                            {type: TokenType.PERCENTAGE_TOKEN, number: 100, flags: 4},
-                            {type: TokenType.NUMBER_TOKEN, number: 0, flags: 4}
+                            { type: TokenType.PERCENTAGE_TOKEN, number: 100, flags: 4 },
+                            { type: TokenType.NUMBER_TOKEN, number: 0, flags: 4 }
                         ],
                         type: CSSImageType.LINEAR_GRADIENT,
                         stops: [
-                            {color: colorParse(context, 'blue'), stop: null},
-                            {color: colorParse(context, 'yellow'), stop: null}
+                            { color: colorParse(context, 'blue'), stop: null },
+                            { color: colorParse(context, 'yellow'), stop: null }
                         ]
                     }));
                 it('linear-gradient(to bottom, yellow 0%, blue 100%)', () =>
@@ -121,12 +121,12 @@ describe('types', () => {
                         parse(context, 'linear-gradient(to top left, lightpink, lightpink 5px, white 5px, white 10px)'),
                         {
                             angle: [
-                                {type: TokenType.PERCENTAGE_TOKEN, number: 100, flags: 4},
-                                {type: TokenType.PERCENTAGE_TOKEN, number: 100, flags: 4}
+                                { type: TokenType.PERCENTAGE_TOKEN, number: 100, flags: 4 },
+                                { type: TokenType.PERCENTAGE_TOKEN, number: 100, flags: 4 }
                             ],
                             type: CSSImageType.LINEAR_GRADIENT,
                             stops: [
-                                {color: colorParse(context, 'lightpink'), stop: null},
+                                { color: colorParse(context, 'lightpink'), stop: null },
                                 {
                                     color: colorParse(context, 'lightpink'),
                                     stop: {

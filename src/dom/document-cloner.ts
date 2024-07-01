@@ -1,4 +1,4 @@
-import {Bounds} from '../css/layout/bounds';
+import { Bounds } from '../css/layout/bounds';
 import {
     isBodyElement,
     isCanvasElement,
@@ -16,14 +16,14 @@ import {
     isTextNode,
     isVideoElement
 } from './node-parser';
-import {isIdentToken, nonFunctionArgSeparator} from '../css/syntax/parser';
-import {TokenType} from '../css/syntax/tokenizer';
-import {CounterState, createCounterText} from '../css/types/functions/counter';
-import {LIST_STYLE_TYPE, listStyleType} from '../css/property-descriptors/list-style-type';
-import {CSSParsedCounterDeclaration, CSSParsedPseudoDeclaration} from '../css/index';
-import {getQuote} from '../css/property-descriptors/quotes';
-import {Context} from '../core/context';
-import {DebuggerType, isDebugging} from '../core/debugger';
+import { isIdentToken, nonFunctionArgSeparator } from '../css/syntax/parser';
+import { TokenType } from '../css/syntax/tokenizer';
+import { CounterState, createCounterText } from '../css/types/functions/counter';
+import { LIST_STYLE_TYPE, listStyleType } from '../css/property-descriptors/list-style-type';
+import { CSSParsedCounterDeclaration, CSSParsedPseudoDeclaration } from '../css/index';
+import { getQuote } from '../css/property-descriptors/quotes';
+import { Context } from '../core/context';
+import { DebuggerType, isDebugging } from '../core/debugger';
 
 export interface CloneOptions {
     ignoreElements?: (element: Element) => boolean;

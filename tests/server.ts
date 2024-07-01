@@ -4,14 +4,14 @@ const path = require('path');
 const serveIndex = require('serve-index');
 const proxy = require('html2canvas-proxy');
 import yargs from 'yargs';
-import {ScreenshotRequest} from './types';
+import { ScreenshotRequest } from './types';
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const filenamifyUrl = require('filenamify-url');
 const mkdirp = require('mkdirp');
 
 export const app = express();
-app.use('/', serveIndex(path.resolve(__dirname, '../'), {icons: true}));
+app.use('/', serveIndex(path.resolve(__dirname, '../'), { icons: true }));
 app.use([/^\/src($|\/)/, '/'], express.static(path.resolve(__dirname, '../')));
 
 export const corsApp = express();

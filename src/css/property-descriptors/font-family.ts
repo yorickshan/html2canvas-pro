@@ -1,7 +1,7 @@
-import {IPropertyListDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue} from '../syntax/parser';
-import {TokenType} from '../syntax/tokenizer';
-import {Context} from '../../core/context';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue } from '../syntax/parser';
+import { TokenType } from '../syntax/tokenizer';
+import { Context } from '../../core/context';
 
 export type FONT_FAMILY = string;
 

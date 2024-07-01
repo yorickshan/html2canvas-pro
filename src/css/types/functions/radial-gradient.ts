@@ -1,4 +1,4 @@
-import {CSSValue, isIdentToken, parseFunctionArgs} from '../../syntax/parser';
+import { CSSValue, isIdentToken, parseFunctionArgs } from '../../syntax/parser';
 import {
     CSSImageType,
     CSSRadialExtent,
@@ -7,10 +7,16 @@ import {
     CSSRadialSize,
     UnprocessedGradientColorStop
 } from '../image';
-import {parseColorStop} from './gradient';
-import {FIFTY_PERCENT, HUNDRED_PERCENT, isLengthPercentage, LengthPercentage, ZERO_LENGTH} from '../length-percentage';
-import {isLength} from '../length';
-import {Context} from '../../../core/context';
+import { parseColorStop } from './gradient';
+import {
+    FIFTY_PERCENT,
+    HUNDRED_PERCENT,
+    isLengthPercentage,
+    LengthPercentage,
+    ZERO_LENGTH
+} from '../length-percentage';
+import { isLength } from '../length';
+import { Context } from '../../../core/context';
 export const CLOSEST_SIDE = 'closest-side';
 export const FARTHEST_SIDE = 'farthest-side';
 export const CLOSEST_CORNER = 'closest-corner';
@@ -91,5 +97,5 @@ export const radialGradient = (context: Context, tokens: CSSValue[]): CSSRadialG
         }
     });
 
-    return {size, shape, stops, position, type: CSSImageType.RADIAL_GRADIENT};
+    return { size, shape, stops, position, type: CSSImageType.RADIAL_GRADIENT };
 };

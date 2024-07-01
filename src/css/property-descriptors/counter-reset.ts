@@ -1,6 +1,6 @@
-import {IPropertyListDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue, isIdentToken, isNumberToken, nonWhiteSpace} from '../syntax/parser';
-import {Context} from '../../core/context';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue, isIdentToken, isNumberToken, nonWhiteSpace } from '../syntax/parser';
+import { Context } from '../../core/context';
 
 export interface COUNTER_RESET {
     counter: string;
@@ -27,7 +27,7 @@ export const counterReset: IPropertyListDescriptor<CounterReset> = {
             const next = filtered[i + 1];
             if (isIdentToken(counter) && counter.value !== 'none') {
                 const reset = next && isNumberToken(next) ? next.number : 0;
-                resets.push({counter: counter.value, reset});
+                resets.push({ counter: counter.value, reset });
             }
         }
 

@@ -1,9 +1,9 @@
-import {CSSValue, isIdentToken} from '../syntax/parser';
-import {TokenType} from '../syntax/tokenizer';
-import {ITypeDescriptor} from '../ITypeDescriptor';
-import {HUNDRED_PERCENT, ZERO_LENGTH} from './length-percentage';
-import {GradientCorner} from './image';
-import {Context} from '../../core/context';
+import { CSSValue, isIdentToken } from '../syntax/parser';
+import { TokenType } from '../syntax/tokenizer';
+import { ITypeDescriptor } from '../ITypeDescriptor';
+import { HUNDRED_PERCENT, ZERO_LENGTH } from './length-percentage';
+import { GradientCorner } from './image';
+import { Context } from '../../core/context';
 
 const DEG = 'deg';
 const GRAD = 'grad';

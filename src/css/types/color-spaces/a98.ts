@@ -2,8 +2,8 @@
  * A98-RGB related functions
  */
 
-import {multiplyMatrices, packSrgbLinear} from '../color-utilities';
-import {xyz2rgbLinear} from './srgb';
+import { multiplyMatrices, packSrgbLinear } from '../color-utilities';
+import { xyz2rgbLinear } from './srgb';
 
 /**
  * Convert XYZ to a98 linear

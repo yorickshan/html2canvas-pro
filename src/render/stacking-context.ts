@@ -1,14 +1,14 @@
-import {ElementContainer, FLAGS} from '../dom/element-container';
-import {contains} from '../core/bitwise';
-import {BoundCurves, calculateBorderBoxPath, calculatePaddingBoxPath} from './bound-curves';
-import {ClipEffect, EffectTarget, IElementEffect, isClipEffect, OpacityEffect, TransformEffect} from './effects';
-import {OVERFLOW} from '../css/property-descriptors/overflow';
-import {equalPath} from './path';
-import {DISPLAY} from '../css/property-descriptors/display';
-import {OLElementContainer} from '../dom/elements/ol-element-container';
-import {LIElementContainer} from '../dom/elements/li-element-container';
-import {createCounterText} from '../css/types/functions/counter';
-import {POSITION} from '../css/property-descriptors/position';
+import { ElementContainer, FLAGS } from '../dom/element-container';
+import { contains } from '../core/bitwise';
+import { BoundCurves, calculateBorderBoxPath, calculatePaddingBoxPath } from './bound-curves';
+import { ClipEffect, EffectTarget, IElementEffect, isClipEffect, OpacityEffect, TransformEffect } from './effects';
+import { OVERFLOW } from '../css/property-descriptors/overflow';
+import { equalPath } from './path';
+import { DISPLAY } from '../css/property-descriptors/display';
+import { OLElementContainer } from '../dom/elements/ol-element-container';
+import { LIElementContainer } from '../dom/elements/li-element-container';
+import { createCounterText } from '../css/types/functions/counter';
+import { POSITION } from '../css/property-descriptors/position';
 
 export class StackingContext {
     element: ElementPaint;

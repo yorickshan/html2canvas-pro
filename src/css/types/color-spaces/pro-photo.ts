@@ -2,7 +2,7 @@
  * Pro Photo related functions
  */
 
-import {d50toD65, d65toD50, multiplyMatrices, packXYZ} from '../color-utilities';
+import { d50toD65, d65toD50, multiplyMatrices, packXYZ } from '../color-utilities';
 
 /**
  * Convert linear-light display-p3 to XYZ D65

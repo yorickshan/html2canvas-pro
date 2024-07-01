@@ -1,5 +1,5 @@
-import {ElementContainer} from '../element-container';
-import {Context} from '../../core/context';
+import { ElementContainer } from '../element-container';
+import { Context } from '../../core/context';
 export class OLElementContainer extends ElementContainer {
     readonly start: number;
     readonly reversed: boolean;

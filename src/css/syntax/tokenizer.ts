@@ -1,6 +1,6 @@
 // https://www.w3.org/TR/css-syntax-3
 
-import {fromCodePoint, toCodePoints} from 'css-line-break';
+import { fromCodePoint, toCodePoints } from 'css-line-break';
 
 export const enum TokenType {
     STRING_TOKEN,
@@ -280,33 +280,33 @@ const LEFT_PARENTHESIS_TOKEN: Token = {
 const RIGHT_PARENTHESIS_TOKEN: Token = {
     type: TokenType.RIGHT_PARENTHESIS_TOKEN
 };
-const COMMA_TOKEN: Token = {type: TokenType.COMMA_TOKEN};
-const SUFFIX_MATCH_TOKEN: Token = {type: TokenType.SUFFIX_MATCH_TOKEN};
-const PREFIX_MATCH_TOKEN: Token = {type: TokenType.PREFIX_MATCH_TOKEN};
-const COLUMN_TOKEN: Token = {type: TokenType.COLUMN_TOKEN};
-const DASH_MATCH_TOKEN: Token = {type: TokenType.DASH_MATCH_TOKEN};
-const INCLUDE_MATCH_TOKEN: Token = {type: TokenType.INCLUDE_MATCH_TOKEN};
+const COMMA_TOKEN: Token = { type: TokenType.COMMA_TOKEN };
+const SUFFIX_MATCH_TOKEN: Token = { type: TokenType.SUFFIX_MATCH_TOKEN };
+const PREFIX_MATCH_TOKEN: Token = { type: TokenType.PREFIX_MATCH_TOKEN };
+const COLUMN_TOKEN: Token = { type: TokenType.COLUMN_TOKEN };
+const DASH_MATCH_TOKEN: Token = { type: TokenType.DASH_MATCH_TOKEN };
+const INCLUDE_MATCH_TOKEN: Token = { type: TokenType.INCLUDE_MATCH_TOKEN };
 const LEFT_CURLY_BRACKET_TOKEN: Token = {
     type: TokenType.LEFT_CURLY_BRACKET_TOKEN
 };
 const RIGHT_CURLY_BRACKET_TOKEN: Token = {
     type: TokenType.RIGHT_CURLY_BRACKET_TOKEN
 };
-const SUBSTRING_MATCH_TOKEN: Token = {type: TokenType.SUBSTRING_MATCH_TOKEN};
-const BAD_URL_TOKEN: Token = {type: TokenType.BAD_URL_TOKEN};
-const BAD_STRING_TOKEN: Token = {type: TokenType.BAD_STRING_TOKEN};
-const CDO_TOKEN: Token = {type: TokenType.CDO_TOKEN};
-const CDC_TOKEN: Token = {type: TokenType.CDC_TOKEN};
-const COLON_TOKEN: Token = {type: TokenType.COLON_TOKEN};
-const SEMICOLON_TOKEN: Token = {type: TokenType.SEMICOLON_TOKEN};
+const SUBSTRING_MATCH_TOKEN: Token = { type: TokenType.SUBSTRING_MATCH_TOKEN };
+const BAD_URL_TOKEN: Token = { type: TokenType.BAD_URL_TOKEN };
+const BAD_STRING_TOKEN: Token = { type: TokenType.BAD_STRING_TOKEN };
+const CDO_TOKEN: Token = { type: TokenType.CDO_TOKEN };
+const CDC_TOKEN: Token = { type: TokenType.CDC_TOKEN };
+const COLON_TOKEN: Token = { type: TokenType.COLON_TOKEN };
+const SEMICOLON_TOKEN: Token = { type: TokenType.SEMICOLON_TOKEN };
 const LEFT_SQUARE_BRACKET_TOKEN: Token = {
     type: TokenType.LEFT_SQUARE_BRACKET_TOKEN
 };
 const RIGHT_SQUARE_BRACKET_TOKEN: Token = {
     type: TokenType.RIGHT_SQUARE_BRACKET_TOKEN
 };
-const WHITESPACE_TOKEN: Token = {type: TokenType.WHITESPACE_TOKEN};
-export const EOF_TOKEN: Token = {type: TokenType.EOF_TOKEN};
+const WHITESPACE_TOKEN: Token = { type: TokenType.WHITESPACE_TOKEN };
+export const EOF_TOKEN: Token = { type: TokenType.EOF_TOKEN };
 
 export class Tokenizer {
     private _value: number[];
@@ -343,7 +343,7 @@ export class Tokenizer {
                     const flags = isIdentifierStart(c1, c2, c3) ? FLAG_ID : FLAG_UNRESTRICTED;
                     const value = this.consumeName();
 
-                    return {type: TokenType.HASH_TOKEN, value, flags};
+                    return { type: TokenType.HASH_TOKEN, value, flags };
                 }
                 break;
             case DOLLAR_SIGN:
@@ -438,7 +438,7 @@ export class Tokenizer {
                 const a3 = this.peekCodePoint(2);
                 if (isIdentifierStart(a1, a2, a3)) {
                     const value = this.consumeName();
-                    return {type: TokenType.AT_KEYWORD_TOKEN, value};
+                    return { type: TokenType.AT_KEYWORD_TOKEN, value };
                 }
                 break;
             case LEFT_SQUARE_BRACKET:
@@ -506,7 +506,7 @@ export class Tokenizer {
             return this.consumeIdentLikeToken();
         }
 
-        return {type: TokenType.DELIM_TOKEN, value: fromCodePoint(codePoint)};
+        return { type: TokenType.DELIM_TOKEN, value: fromCodePoint(codePoint) };
     }
 
     private consumeCodePoint(): number {
@@ -547,7 +547,7 @@ export class Tokenizer {
                 16
             );
             const end = parseInt(fromCodePoint(...digits.map((digit) => (digit === QUESTION_MARK ? F : digit))), 16);
-            return {type: TokenType.UNICODE_RANGE_TOKEN, start, end};
+            return { type: TokenType.UNICODE_RANGE_TOKEN, start, end };
         }
 
         const start = parseInt(fromCodePoint(...digits), 16);
@@ -561,9 +561,9 @@ export class Tokenizer {
             }
             const end = parseInt(fromCodePoint(...endDigits), 16);
 
-            return {type: TokenType.UNICODE_RANGE_TOKEN, start, end};
+            return { type: TokenType.UNICODE_RANGE_TOKEN, start, end };
         } else {
-            return {type: TokenType.UNICODE_RANGE_TOKEN, start, end: start};
+            return { type: TokenType.UNICODE_RANGE_TOKEN, start, end: start };
         }
     }
 
@@ -574,10 +574,10 @@ export class Tokenizer {
             return this.consumeUrlToken();
         } else if (this.peekCodePoint(0) === LEFT_PARENTHESIS) {
             this.consumeCodePoint();
-            return {type: TokenType.FUNCTION_TOKEN, value};
+            return { type: TokenType.FUNCTION_TOKEN, value };
         }
 
-        return {type: TokenType.IDENT_TOKEN, value};
+        return { type: TokenType.IDENT_TOKEN, value };
     }
 
     private consumeUrlToken(): StringValueToken | Token {
@@ -585,7 +585,7 @@ export class Tokenizer {
         this.consumeWhiteSpace();
 
         if (this.peekCodePoint(0) === EOF) {
-            return {type: TokenType.URL_TOKEN, value: ''};
+            return { type: TokenType.URL_TOKEN, value: '' };
         }
 
         const next = this.peekCodePoint(0);
@@ -596,7 +596,7 @@ export class Tokenizer {
 
                 if (this.peekCodePoint(0) === EOF || this.peekCodePoint(0) === RIGHT_PARENTHESIS) {
                     this.consumeCodePoint();
-                    return {type: TokenType.URL_TOKEN, value: stringToken.value};
+                    return { type: TokenType.URL_TOKEN, value: stringToken.value };
                 }
             }
 
@@ -607,12 +607,12 @@ export class Tokenizer {
         while (true) {
             const codePoint = this.consumeCodePoint();
             if (codePoint === EOF || codePoint === RIGHT_PARENTHESIS) {
-                return {type: TokenType.URL_TOKEN, value: fromCodePoint(...value)};
+                return { type: TokenType.URL_TOKEN, value: fromCodePoint(...value) };
             } else if (isWhiteSpace(codePoint)) {
                 this.consumeWhiteSpace();
                 if (this.peekCodePoint(0) === EOF || this.peekCodePoint(0) === RIGHT_PARENTHESIS) {
                     this.consumeCodePoint();
-                    return {type: TokenType.URL_TOKEN, value: fromCodePoint(...value)};
+                    return { type: TokenType.URL_TOKEN, value: fromCodePoint(...value) };
                 }
                 this.consumeBadUrlRemnants();
                 return BAD_URL_TOKEN;
@@ -677,7 +677,7 @@ export class Tokenizer {
             const codePoint = this._value[i];
             if (codePoint === EOF || codePoint === undefined || codePoint === endingCodePoint) {
                 value += this.consumeStringSlice(i);
-                return {type: TokenType.STRING_TOKEN, value};
+                return { type: TokenType.STRING_TOKEN, value };
             }
 
             if (codePoint === LINE_FEED) {
@@ -747,15 +747,15 @@ export class Tokenizer {
 
         if (isIdentifierStart(c1, c2, c3)) {
             const unit = this.consumeName();
-            return {type: TokenType.DIMENSION_TOKEN, number, flags, unit};
+            return { type: TokenType.DIMENSION_TOKEN, number, flags, unit };
         }
 
         if (c1 === PERCENTAGE_SIGN) {
             this.consumeCodePoint();
-            return {type: TokenType.PERCENTAGE_TOKEN, number, flags};
+            return { type: TokenType.PERCENTAGE_TOKEN, number, flags };
         }
 
-        return {type: TokenType.NUMBER_TOKEN, number, flags};
+        return { type: TokenType.NUMBER_TOKEN, number, flags };
     }
 
     private consumeEscapedCodePoint(): number {

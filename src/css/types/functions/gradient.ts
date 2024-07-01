@@ -1,4 +1,4 @@
-import {CSSValue} from '../../syntax/parser';
+import { CSSValue } from '../../syntax/parser';
 import {
     CSSRadialExtent,
     CSSRadialGradientImage,
@@ -7,14 +7,14 @@ import {
     GradientCorner,
     UnprocessedGradientColorStop
 } from '../image';
-import {color as colorType} from '../color';
-import {getAbsoluteValue, HUNDRED_PERCENT, isLengthPercentage, ZERO_LENGTH} from '../length-percentage';
-import {Context} from '../../../core/context';
+import { color as colorType } from '../color';
+import { getAbsoluteValue, HUNDRED_PERCENT, isLengthPercentage, ZERO_LENGTH } from '../length-percentage';
+import { Context } from '../../../core/context';
 
 export const parseColorStop = (context: Context, args: CSSValue[]): UnprocessedGradientColorStop => {
     const color = colorType.parse(context, args[0]);
     const stop = args[1];
-    return stop && isLengthPercentage(stop) ? {color, stop} : {color, stop: null};
+    return stop && isLengthPercentage(stop) ? { color, stop } : { color, stop: null };
 };
 
 export const processColorStops = (stops: UnprocessedGradientColorStop[], lineLength: number): GradientColorStop[] => {
@@ -63,8 +63,8 @@ export const processColorStops = (stops: UnprocessedGradientColorStop[], lineLen
         }
     }
 
-    return stops.map(({color}, i) => {
-        return {color, stop: Math.max(Math.min(1, (processStops[i] as number) / lineLength), 0)};
+    return stops.map(({ color }, i) => {
+        return { color, stop: Math.max(Math.min(1, (processStops[i] as number) / lineLength), 0) };
     });
 };
 

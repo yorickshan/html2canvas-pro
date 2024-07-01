@@ -1,7 +1,7 @@
-import {IPropertyListDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {Context} from '../../core/context';
-import {CSSValue, isDimensionToken} from '../syntax/parser';
-import {time} from '../types/time';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { Context } from '../../core/context';
+import { CSSValue, isDimensionToken } from '../syntax/parser';
+import { time } from '../types/time';
 
 export const duration: IPropertyListDescriptor<number[]> = {
     name: 'duration',

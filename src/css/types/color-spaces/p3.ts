@@ -2,8 +2,8 @@
  * Display-P3 related functions
  */
 
-import {srgbLinear2rgb} from './srgb';
-import {multiplyMatrices, packXYZ} from '../color-utilities';
+import { srgbLinear2rgb } from './srgb';
+import { multiplyMatrices, packXYZ } from '../color-utilities';
 
 /**
  * Convert P3 Linear to xyz

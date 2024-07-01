@@ -1,10 +1,10 @@
-import {LIST_STYLE_TYPE} from '../../property-descriptors/list-style-type';
-import {fromCodePoint} from 'css-line-break';
-import {contains} from '../../../core/bitwise';
-import {CSSParsedCounterDeclaration} from '../../index';
+import { LIST_STYLE_TYPE } from '../../property-descriptors/list-style-type';
+import { fromCodePoint } from 'css-line-break';
+import { contains } from '../../../core/bitwise';
+import { CSSParsedCounterDeclaration } from '../../index';
 
 export class CounterState {
-    private readonly counters: {[key: string]: number[]} = {};
+    private readonly counters: { [key: string]: number[] } = {};
 
     getCounterValue(name: string): number {
         const counter = this.counters[name];

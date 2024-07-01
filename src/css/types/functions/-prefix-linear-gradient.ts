@@ -1,9 +1,9 @@
-import {CSSValue, parseFunctionArgs} from '../../syntax/parser';
-import {CSSImageType, CSSLinearGradientImage, GradientCorner, UnprocessedGradientColorStop} from '../image';
-import {TokenType} from '../../syntax/tokenizer';
-import {isAngle, angle as angleType, parseNamedSide, deg} from '../angle';
-import {parseColorStop} from './gradient';
-import {Context} from '../../../core/context';
+import { CSSValue, parseFunctionArgs } from '../../syntax/parser';
+import { CSSImageType, CSSLinearGradientImage, GradientCorner, UnprocessedGradientColorStop } from '../image';
+import { TokenType } from '../../syntax/tokenizer';
+import { isAngle, angle as angleType, parseNamedSide, deg } from '../angle';
+import { parseColorStop } from './gradient';
+import { Context } from '../../../core/context';
 
 export const prefixLinearGradient = (context: Context, tokens: CSSValue[]): CSSLinearGradientImage => {
     let angle: number | GradientCorner = deg(180);

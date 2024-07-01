@@ -1,7 +1,7 @@
-import {IPropertyListDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue, isStringToken} from '../syntax/parser';
-import {TokenType} from '../syntax/tokenizer';
-import {Context} from '../../core/context';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue, isStringToken } from '../syntax/parser';
+import { TokenType } from '../syntax/tokenizer';
+import { Context } from '../../core/context';
 
 export interface QUOTE {
     open: string;
@@ -36,7 +36,7 @@ export const quotes: IPropertyListDescriptor<Quotes> = {
         for (let i = 0; i < filtered.length; i += 2) {
             const open = filtered[i].value;
             const close = filtered[i + 1].value;
-            quotes.push({open, close});
+            quotes.push({ open, close });
         }
 
         return quotes;

@@ -1,11 +1,11 @@
-import {ElementContainer} from '../element-container';
-import {BORDER_STYLE} from '../../css/property-descriptors/border-style';
-import {BACKGROUND_CLIP} from '../../css/property-descriptors/background-clip';
-import {BACKGROUND_ORIGIN} from '../../css/property-descriptors/background-origin';
-import {TokenType} from '../../css/syntax/tokenizer';
-import {LengthPercentageTuple} from '../../css/types/length-percentage';
-import {Bounds} from '../../css/layout/bounds';
-import {Context} from '../../core/context';
+import { ElementContainer } from '../element-container';
+import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
+import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
+import { BACKGROUND_ORIGIN } from '../../css/property-descriptors/background-origin';
+import { TokenType } from '../../css/syntax/tokenizer';
+import { LengthPercentageTuple } from '../../css/types/length-percentage';
+import { Bounds } from '../../css/layout/bounds';
+import { Context } from '../../core/context';
 
 const CHECKBOX_BORDER_RADIUS: LengthPercentageTuple = [
     {
