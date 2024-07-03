@@ -1,3 +1,9 @@
 #!/bin/bash
-git tag v1.5.1
-git push origin v1.5.1
+
+if [ $# -ne 1 ]; then
+  echo "Usage: npm run tag <tag_name>"
+  exit 1
+fi
+
+git tag "v$1"
+git push origin "v$1"
