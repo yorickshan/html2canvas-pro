@@ -14,7 +14,8 @@
                 "test",
                 "chore",
                 "revert",
-                "build"
+                "build",
+                "ci"
             ]
         ],
         "subject-case": [0]

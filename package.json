@@ -126,7 +126,7 @@
     "start": "ts-node tests/server --port=8080 --cors=8081",
     "commitlint": "commitlint --config .commitlintrc.json -e -V",
     "tag": "sh scripts/create-tag.sh",
-    "prepare": "husky install"
+    "prepare": "if [ \"$SKIP_PREPARE\" != \"true\" ]; then husky install; fi"
   },
   "license": "MIT",
   "dependencies": {

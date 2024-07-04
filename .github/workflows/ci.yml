@@ -218,6 +218,7 @@ jobs:
                   node-version: 16
                   registry-url: 'https://registry.npmjs.org'
             - name: NPM Publish
-              run: cd npm/package && npm publish --ignore-scripts --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                  SKIP_PREPARE: true
+              run: cd npm/package && npm publish --access public
