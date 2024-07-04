@@ -179,6 +179,8 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   tag_name: ${{ github.ref }}
+                  body: |
+                    Please refer to [CHANGELOG.md](https://github.com/yorickshan/html2canvas-pro/blob/main/CHANGELOG.md) for details.
                   release_name: ${{ github.ref }}
                   draft: false
                   prerelease: ${{ contains(github.ref, '-rc.') || contains(github.ref, '-alpha.') }}
@@ -216,6 +218,6 @@ jobs:
                   node-version: 16
                   registry-url: 'https://registry.npmjs.org'
             - name: NPM Publish
-              run: cd npm/package && npm publish --access public
+              run: cd npm/package && npm publish --ignore-scripts --access public
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

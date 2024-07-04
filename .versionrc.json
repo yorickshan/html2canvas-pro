@@ -1,0 +1,12 @@
+{
+    "header": "",
+    "types": [
+      { "type": "feat", "section": "Features" },
+      { "type": "fix", "section": "Fixes" },
+      { "type": "docs", "section": "Documentation" },
+      { "type": "refactor", "section": "Refactor" },
+      { "type": "perf", "section": "Performance" },
+      { "type": "chore", "section": "Chore" },
+      { "type": "test", "section": "Chore" }
+    ]
+  }
