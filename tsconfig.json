@@ -12,10 +12,10 @@
         "sourceMap": true,
         "outDir": "dist/lib",
         "declaration": true,
+        "skipLibCheck": true,
         "declarationDir": "dist/types",
         "resolveJsonModule": true
     },
-    "include": [
-        "src"
-    ]
+    "include": ["src", "scripts/**/*.ts"],
+    "exclude": ["dist", "build", "node_modules"]
 }
