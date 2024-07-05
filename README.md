@@ -1,6 +1,6 @@
 # html2canvas-pro
 
-> A fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) with some new features.
+> A fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) with some new features. If you found this helpful, don't forget to leave a star.
 
 ## 🌟 Why html2canvas-pro?
 
