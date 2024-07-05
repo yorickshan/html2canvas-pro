@@ -11,3 +11,8 @@ export interface ScreenshotRequest {
     windowWidth: number;
     windowHeight: number;
 }
+
+export interface Argv {
+    port?: number;
+    cors?: number;
+}

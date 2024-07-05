@@ -3,7 +3,8 @@
     "compilerOptions": {
         "types": ["node", "mocha"],
         "rootDir": "../",
-        "declaration": false
+        "declaration": false,
+        "declarationDir": null
     },
     "include": ["**/*.ts"]
 }
