@@ -21,3 +21,8 @@ karma.conf.js
 karma.js
 rollup.config.ts
 .history
+.husky
+.commitlintrc.json
+.versionrc.json
+CHANGELOG.md
+tsconfig.json
