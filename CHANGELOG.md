@@ -1,4 +1,30 @@
 
+### [1.5.4](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.3...v1.5.4) (2024-07-08)
+
+
+### Performance
+
+* migrate from Chromeless to Puppeteer ([25553e3](https://github.com/yorickshan/html2canvas-pro/commit/25553e3e675cf8cb2c08a807da31d0aab0159114))
+* remove uglifyjs-webpack-plugin ([53beee8](https://github.com/yorickshan/html2canvas-pro/commit/53beee80659e729e0942b8092ba4e3950b7c72d8))
+
+
+### Documentation
+
+* **features:** update supported css properties ([95adcd9](https://github.com/yorickshan/html2canvas-pro/commit/95adcd9c48ee1608766f106eb1784b576903cc44))
+* **readme:** leave a star ([f4b551b](https://github.com/yorickshan/html2canvas-pro/commit/f4b551b43c4772ddeaa438721f0d8c6f41e20191))
+* **readme:** npm stats ([9c26fe8](https://github.com/yorickshan/html2canvas-pro/commit/9c26fe867d0db70e70e4fc41508543167e0f80f3))
+
+
+### Chore
+
+* modify npmignore ([9691d6a](https://github.com/yorickshan/html2canvas-pro/commit/9691d6a31291d07ae4437699a1d3acfb32418487))
+* upgrade jest ([82c2d1e](https://github.com/yorickshan/html2canvas-pro/commit/82c2d1e4ab30e07036c8c99e3b1ae0989cdf67c3))
+
+
+### Fixes
+
+* calculateBackgroundRendering may return width or height less than 1 [#2982](https://github.com/yorickshan/html2canvas-pro/issues/2982) ([0b1bdae](https://github.com/yorickshan/html2canvas-pro/commit/0b1bdaed3f5473ce1166632f8850f57b668e6b61))
+
 ### [1.5.3](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.2...v1.5.3) (2024-07-04)
 
 
