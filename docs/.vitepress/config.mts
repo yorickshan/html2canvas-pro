@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress'
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "html2canvas-pro",
+  base: "/html2canvas-pro/",
   description: "Next generation JavaScript Screenshots Tooling",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config

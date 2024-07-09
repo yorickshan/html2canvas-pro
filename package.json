@@ -19,7 +19,7 @@
   "engines": {
     "node": ">=8.0.0"
   },
-  "homepage": "https://yorickshan.github.io/html2canvas-pro",
+  "homepage": "https://yorickshan.github.io/html2canvas-pro/",
   "repository": {
     "type": "git",
     "url": "https://github.com/yorickshan/html2canvas-pro"
