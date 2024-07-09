@@ -2,7 +2,9 @@
 
 [![npm version](https://badgen.net/npm/v/html2canvas-pro)](https://npm.im/html2canvas-pro) [![npm downloads](https://badgen.net/npm/dm/html2canvas-pro)](https://npm.im/html2canvas-pro)
 
-> A fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) with some new features. If you found this helpful, don't forget to leave a star.
+> A fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) with some fixes and new features.
+>
+> If you found this helpful, don't forget to leave a star. 😄
 
 ## 🌟 Why html2canvas-pro?
 
