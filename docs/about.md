@@ -1,9 +1,4 @@
----
-title: "About"
-description: "Learn about html2canvas, how it works and some of its limitations"
-nextUrl: "./getting-started"
-nextTitle: "Getting Started"
----
+# About
 
 Before you get started with the script, there are a few things that are good to know regarding the 
 script and some of its limitations.
@@ -27,7 +22,7 @@ CSS properties which do not work. For a full list of supported CSS properties, c
 ## Limitations
 All the images that the script uses need to reside under the [same origin](http://en.wikipedia.org/wiki/Same_origin_policy) 
 for it to be able to read them without the assistance of a [proxy](./proxy). Similarly, if you have other `canvas` 
-elements on the page, which have been tainted with cross-origin content, they will become dirty and no longer readable by html2canvas.
+elements on the page, which have been tainted with cross-origin content, they will become dirty and no longer readable by html2canvas-pro.
 
 The script doesn't render plugin content such as Flash or Java applets.
 
