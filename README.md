@@ -15,7 +15,7 @@ html2canvas-pro has several advantages over html2canvas, including:
 - support color function ```oklab()```
 - support color function ```oklch()```
 - Support object-fit of ```<img/>```
-- Fixed some known [issues](./CHANGELOG.md)
+- Fixed some [issues](./CHANGELOG.md)
 
 ## Installation
 
