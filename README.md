@@ -4,9 +4,9 @@
 
 > A fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) with some fixes and new features.
 >
-> If you found this helpful, don't forget to leave a star. 😄
+> If you found this helpful, don't forget to leave a star 🌟.
 
-## 🌟 Why html2canvas-pro?
+## Why html2canvas-pro?
 
 html2canvas-pro has several advantages over html2canvas, including:
 - support color function ```color()``` (including relative colors)
