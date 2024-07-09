@@ -19,6 +19,7 @@
   "engines": {
     "node": ">=8.0.0"
   },
+  "homepage": "https://yorickshan.github.io/html2canvas-pro",
   "repository": {
     "type": "git",
     "url": "https://github.com/yorickshan/html2canvas-pro"
@@ -111,9 +112,8 @@
     "build:minify": "uglifyjs --compress --comments /^!/ -o dist/html2canvas-pro.min.js --mangle -- dist/html2canvas-pro.js",
     "build:reftest-result-list": "ts-node scripts/create-reftest-result-list.ts",
     "build:create-reftest-list": "ts-node scripts/create-reftest-list.ts tests/reftests/ignore.txt build/reftests.ts",
-    "build:reftest-preview": "webpack --config www/webpack.config.js",
     "release": "sh scripts/version-upgrade.sh",
-    "format": "prettier --write \"{src,www/src,tests,scripts}/**/*.ts\"",
+    "format": "prettier --write \"{src,tests,scripts}/**/*.ts\"",
     "lint": "eslint src/**/*.ts --max-warnings 0",
     "test": "npm run lint && npm run unittest && npm run karma",
     "unittest": "jest",

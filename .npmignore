@@ -8,7 +8,6 @@ examples/
 scripts/
 src/
 tests/
-www/
 tmp/
 *.iml
 .babelrc
