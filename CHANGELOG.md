@@ -1,4 +1,18 @@
 
+### [1.5.5](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.4...v1.5.5) (2024-07-09)
+
+
+### Chore
+
+* modify npmignore ([90a981f](https://github.com/yorickshan/html2canvas-pro/commit/90a981fbece06c69407396b2f1fba2955b100061))
+
+
+### Fixes
+
+* fix error image use transfrom rotate style (Update stacking-context.ts ) [#3153](https://github.com/yorickshan/html2canvas-pro/issues/3153) ([2d9ee18](https://github.com/yorickshan/html2canvas-pro/commit/2d9ee18b53638bce5df304dc471552e394157ecd))
+* incorrect typings path ([46c029f](https://github.com/yorickshan/html2canvas-pro/commit/46c029f9f02e1fdf6b62f63b7baf24a485912209))
+* vertical text alignment fix [#3151](https://github.com/yorickshan/html2canvas-pro/issues/3151) ([92f6a33](https://github.com/yorickshan/html2canvas-pro/commit/92f6a3391f92da0569e7ec41d3052ecc7a205381))
+
 ### [1.5.4](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.3...v1.5.4) (2024-07-08)
 
 
