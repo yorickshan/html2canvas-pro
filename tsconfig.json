@@ -16,6 +16,6 @@
         "declarationDir": "dist/types",
         "resolveJsonModule": true
     },
-    "include": ["src", "scripts/**/*.ts"],
+    "include": ["src"],
     "exclude": ["dist", "build", "node_modules"]
 }
