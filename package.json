@@ -1,7 +1,6 @@
 {
-  "title": "html2canvas-pro",
   "name": "html2canvas-pro",
-  "description": "Screenshots with JavaScript forked from html2canvas, fixed some known issues",
+  "description": "Screenshots with JavaScript. Next generation!",
   "main": "dist/html2canvas-pro.js",
   "module": "dist/html2canvas-pro.esm.js",
   "typings": "dist/types/index.d.ts",
@@ -12,6 +11,7 @@
     "email": "yorickshan@gmail.com",
     "url": "https://github.com/yorickshan"
   },
+  "license": "MIT",
   "keywords": [
     "html2canvas",
     "screenshot"
@@ -21,10 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:yorickshan/html2canvas-pro.git"
-  },
-  "bugs": {
-    "url": "https://github.com/yorickshan/html2canvas-pro/issues"
+    "url": "https://github.com/yorickshan/html2canvas-pro"
   },
   "devDependencies": {
     "@babel/cli": "^7.4.3",
@@ -128,7 +125,6 @@
     "tag": "sh scripts/create-tag.sh",
     "prepare": "if [ \"$SKIP_PREPARE\" != \"true\" ]; then husky install; fi"
   },
-  "license": "MIT",
   "dependencies": {
     "css-line-break": "^2.1.0",
     "text-segmentation": "^1.0.3"
