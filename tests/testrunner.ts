@@ -1,9 +1,9 @@
-import {testList, ignoredTests} from '../build/reftests';
+import { testList, ignoredTests } from '../build/reftests';
 // @ts-ignore
-import {default as platform} from 'platform';
+import { default as platform } from 'platform';
 // @ts-ignore
 import Promise from 'es6-promise';
-import {ScreenshotRequest} from './types';
+import { ScreenshotRequest } from './types';
 
 // @ts-ignore
 window.Promise = Promise;
@@ -13,7 +13,7 @@ const hasHistoryApi = typeof window.history !== 'undefined' && typeof window.his
 const uploadResults = (canvas: HTMLCanvasElement, url: string) => {
     return new Promise((resolve: () => void, reject: (error: string) => void) => {
         // @ts-ignore
-        const xhr = 'withCredentials' in new XMLHttpRequest() ? new XMLHttpRequest() : new XDomainRequest();
+        const xhr = new XMLHttpRequest();
 
         xhr.onload = () => {
             if (typeof xhr.status !== 'number' || xhr.status === 200) {
@@ -22,7 +22,7 @@ const uploadResults = (canvas: HTMLCanvasElement, url: string) => {
                 reject(`Failed to send screenshot with status ${xhr.status}`);
             }
         };
-        xhr.onerror = reject;
+        xhr.onerror = () => reject(`Network error`);
 
         const request: ScreenshotRequest = {
             screenshot: canvas.toDataURL(),
@@ -37,6 +37,7 @@ const uploadResults = (canvas: HTMLCanvasElement, url: string) => {
         };
 
         xhr.open('POST', 'http://localhost:8000/screenshot', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.send(JSON.stringify(request));
     });
 };
@@ -46,7 +47,7 @@ testList
         return !Array.isArray(ignoredTests[test]) || ignoredTests[test].indexOf(platform.name || '') === -1;
     })
     .forEach((url) => {
-        describe(url, function () {
+        describe(url, function (this: Mocha.Suite) {
             this.timeout(60000);
             this.retries(2);
             const windowWidth = 800;
@@ -61,21 +62,26 @@ testList
             before((done) => {
                 testContainer.onload = () => done();
 
-                testContainer.src = url + '?selenium&run=false&reftest&' + Math.random();
+                testContainer.src = `${url}?selenium&run=false&reftest&${Math.random()}`;
                 if (hasHistoryApi) {
                     // Chrome does not resolve relative background urls correctly inside of a nested iframe
                     try {
                         history.replaceState(null, '', url);
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error(e);
+                    }
                 }
 
                 document.body.appendChild(testContainer);
             });
+
             after(() => {
                 if (hasHistoryApi) {
                     try {
                         history.replaceState(null, '', testRunnerUrl);
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error(e);
+                    }
                 }
                 document.body.removeChild(testContainer);
             });

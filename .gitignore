@@ -18,3 +18,5 @@ tests/reftests.js
 *.log
 .rpt2_cache
 .history
+docs/.vitepress/dist
+docs/.vitepress/cache

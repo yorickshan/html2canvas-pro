@@ -1,4 +1,4 @@
-import {Logger} from '../logger';
+import { Logger } from '../logger';
 
 describe('logger', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,14 +16,14 @@ describe('logger', () => {
 
     it('should call console.info when logger enabled', () => {
         const id = Math.random().toString();
-        const logger = new Logger({id, enabled: true});
+        const logger = new Logger({ id, enabled: true });
         logger.info('testing');
         expect(infoSpy).toHaveBeenLastCalledWith(id, expect.stringMatching(/\d+ms/), 'testing');
     });
 
     it("shouldn't call console.info when logger disabled", () => {
         const id = Math.random().toString();
-        const logger = new Logger({id, enabled: false});
+        const logger = new Logger({ id, enabled: false });
         logger.info('testing');
         expect(infoSpy).not.toHaveBeenCalled();
     });

@@ -1,4 +1,4 @@
-import {Bounds} from '../css/layout/bounds';
+import { Bounds } from '../css/layout/bounds';
 import {
     isBodyElement,
     isCanvasElement,
@@ -16,14 +16,14 @@ import {
     isTextNode,
     isVideoElement
 } from './node-parser';
-import {isIdentToken, nonFunctionArgSeparator} from '../css/syntax/parser';
-import {TokenType} from '../css/syntax/tokenizer';
-import {CounterState, createCounterText} from '../css/types/functions/counter';
-import {LIST_STYLE_TYPE, listStyleType} from '../css/property-descriptors/list-style-type';
-import {CSSParsedCounterDeclaration, CSSParsedPseudoDeclaration} from '../css/index';
-import {getQuote} from '../css/property-descriptors/quotes';
-import {Context} from '../core/context';
-import {DebuggerType, isDebugging} from '../core/debugger';
+import { isIdentToken, nonFunctionArgSeparator } from '../css/syntax/parser';
+import { TokenType } from '../css/syntax/tokenizer';
+import { CounterState, createCounterText } from '../css/types/functions/counter';
+import { LIST_STYLE_TYPE, listStyleType } from '../css/property-descriptors/list-style-type';
+import { CSSParsedCounterDeclaration, CSSParsedPseudoDeclaration } from '../css/index';
+import { getQuote } from '../css/property-descriptors/quotes';
+import { Context } from '../core/context';
+import { DebuggerType, isDebugging } from '../core/debugger';
 
 export interface CloneOptions {
     ignoreElements?: (element: Element) => boolean;
@@ -129,11 +129,17 @@ export class DocumentCloner {
             return iframe;
         });
 
+        const adoptedNode = documentClone.adoptNode(this.documentElement);
+        /**
+         * The baseURI of the document will be lost after documentClone.open().
+         * We can avoid it by adding <base> element.
+         * */
+        addBase(adoptedNode, documentClone);
         documentClone.open();
         documentClone.write(`${serializeDoctype(document.doctype)}<html></html>`);
         // Chrome scrolls the parent document for some reason after the write to the cloned window???
         restoreOwnerScroll(this.referenceElement.ownerDocument, scrollX, scrollY);
-        documentClone.replaceChild(documentClone.adoptNode(this.documentElement), documentClone.documentElement);
+        documentClone.replaceChild(adoptedNode, documentClone.documentElement);
         documentClone.close();
 
         return iframeLoad;
@@ -220,7 +226,7 @@ export class DocumentCloner {
             clonedCanvas.width = canvas.width;
             clonedCanvas.height = canvas.height;
             const ctx = canvas.getContext('2d');
-            const clonedCtx = clonedCanvas.getContext('2d');
+            const clonedCtx = clonedCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
             if (clonedCtx) {
                 if (!this.options.allowTaint && ctx) {
                     clonedCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
@@ -634,4 +640,11 @@ const createStyles = (body: HTMLElement, styles: string) => {
         style.textContent = styles;
         body.appendChild(style);
     }
+};
+
+const addBase = (targetELement: HTMLElement, referenceDocument: Document) => {
+    const baseNode = referenceDocument.createElement('base');
+    baseNode.href = referenceDocument.baseURI;
+    const headEle = targetELement.getElementsByTagName('head').item(0);
+    headEle?.insertBefore(baseNode, headEle?.firstChild ?? null);
 };

@@ -1,4 +1,4 @@
-import {IPropertyTypeValueDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
+import { IPropertyTypeValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
 
 const paddingForSide = (side: string): IPropertyTypeValueDescriptor => ({
     name: `padding-${side}`,

@@ -1,4 +1,4 @@
-import {fromCodePoint, toCodePoints} from 'css-line-break';
+import { fromCodePoint, toCodePoints } from 'css-line-break';
 
 const testRangeBounds = (document: Document) => {
     const TEST_HEIGHT = 123;
@@ -170,19 +170,19 @@ export const FEATURES = {
     get SUPPORT_RANGE_BOUNDS(): boolean {
         'use strict';
         const value = testRangeBounds(document);
-        Object.defineProperty(FEATURES, 'SUPPORT_RANGE_BOUNDS', {value});
+        Object.defineProperty(FEATURES, 'SUPPORT_RANGE_BOUNDS', { value });
         return value;
     },
     get SUPPORT_WORD_BREAKING(): boolean {
         'use strict';
         const value = FEATURES.SUPPORT_RANGE_BOUNDS && testIOSLineBreak(document);
-        Object.defineProperty(FEATURES, 'SUPPORT_WORD_BREAKING', {value});
+        Object.defineProperty(FEATURES, 'SUPPORT_WORD_BREAKING', { value });
         return value;
     },
     get SUPPORT_SVG_DRAWING(): boolean {
         'use strict';
         const value = testSVG(document);
-        Object.defineProperty(FEATURES, 'SUPPORT_SVG_DRAWING', {value});
+        Object.defineProperty(FEATURES, 'SUPPORT_SVG_DRAWING', { value });
         return value;
     },
     get SUPPORT_FOREIGNOBJECT_DRAWING(): Promise<boolean> {
@@ -191,32 +191,32 @@ export const FEATURES = {
             typeof Array.from === 'function' && typeof window.fetch === 'function'
                 ? testForeignObject(document)
                 : Promise.resolve(false);
-        Object.defineProperty(FEATURES, 'SUPPORT_FOREIGNOBJECT_DRAWING', {value});
+        Object.defineProperty(FEATURES, 'SUPPORT_FOREIGNOBJECT_DRAWING', { value });
         return value;
     },
     get SUPPORT_CORS_IMAGES(): boolean {
         'use strict';
         const value = testCORS();
-        Object.defineProperty(FEATURES, 'SUPPORT_CORS_IMAGES', {value});
+        Object.defineProperty(FEATURES, 'SUPPORT_CORS_IMAGES', { value });
         return value;
     },
     get SUPPORT_RESPONSE_TYPE(): boolean {
         'use strict';
         const value = testResponseType();
-        Object.defineProperty(FEATURES, 'SUPPORT_RESPONSE_TYPE', {value});
+        Object.defineProperty(FEATURES, 'SUPPORT_RESPONSE_TYPE', { value });
         return value;
     },
     get SUPPORT_CORS_XHR(): boolean {
         'use strict';
         const value = 'withCredentials' in new XMLHttpRequest();
-        Object.defineProperty(FEATURES, 'SUPPORT_CORS_XHR', {value});
+        Object.defineProperty(FEATURES, 'SUPPORT_CORS_XHR', { value });
         return value;
     },
     get SUPPORT_NATIVE_TEXT_SEGMENTATION(): boolean {
         'use strict';
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const value = !!(typeof Intl !== 'undefined' && (Intl as any).Segmenter);
-        Object.defineProperty(FEATURES, 'SUPPORT_NATIVE_TEXT_SEGMENTATION', {value});
+        Object.defineProperty(FEATURES, 'SUPPORT_NATIVE_TEXT_SEGMENTATION', { value });
         return value;
     }
 };

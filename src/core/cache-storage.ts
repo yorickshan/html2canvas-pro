@@ -1,5 +1,5 @@
-import {FEATURES} from './features';
-import {Context} from './context';
+import { FEATURES } from './features';
+import { Context } from './context';
 
 export class CacheStorage {
     private static _link?: HTMLAnchorElement;
@@ -35,7 +35,7 @@ export interface ResourceOptions {
 
 export class Cache {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private readonly _cache: {[key: string]: Promise<any>} = {};
+    private readonly _cache: { [key: string]: Promise<any> } = {};
 
     constructor(private readonly context: Context, private readonly _options: ResourceOptions) {}
 

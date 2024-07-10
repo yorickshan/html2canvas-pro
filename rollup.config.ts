@@ -35,7 +35,6 @@ export default {
         commonjs({
             include: 'node_modules/**'
         }),
-
         // Resolve source maps to the original source
         sourceMaps(),
     ],

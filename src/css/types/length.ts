@@ -1,5 +1,5 @@
-import {CSSValue} from '../syntax/parser';
-import {DimensionToken, NumberValueToken, TokenType} from '../syntax/tokenizer';
+import { CSSValue } from '../syntax/parser';
+import { DimensionToken, NumberValueToken, TokenType } from '../syntax/tokenizer';
 
 export type Length = DimensionToken | NumberValueToken;
 

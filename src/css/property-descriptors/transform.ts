@@ -1,7 +1,7 @@
-import {IPropertyValueDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue} from '../syntax/parser';
-import {NumberValueToken, TokenType} from '../syntax/tokenizer';
-import {Context} from '../../core/context';
+import { IPropertyValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue } from '../syntax/parser';
+import { NumberValueToken, TokenType } from '../syntax/tokenizer';
+import { Context } from '../../core/context';
 export type Matrix = [number, number, number, number, number, number];
 export type Transform = Matrix | null;
 

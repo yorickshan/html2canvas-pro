@@ -1,6 +1,6 @@
-import {screenshotApp, corsApp} from './server';
-import {Server} from 'http';
-import {config as KarmaConfig, Server as KarmaServer, TestResults} from 'karma';
+import { screenshotApp, corsApp } from './server';
+import { Server } from 'http';
+import { config as KarmaConfig, Server as KarmaServer, TestResults } from 'karma';
 import * as path from 'path';
 
 const karmaTestRunner = (): Promise<void> =>

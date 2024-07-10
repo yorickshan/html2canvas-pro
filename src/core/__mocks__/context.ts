@@ -1,9 +1,9 @@
-import {logger, Logger} from './logger';
+import { logger, Logger } from './logger';
 
 export class Context {
     readonly logger: Logger = logger;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly _cache: {[key: string]: Promise<any>} = {};
+    readonly _cache: { [key: string]: Promise<any> } = {};
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly cache: any;
 

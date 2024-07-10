@@ -1,8 +1,8 @@
-import {TokenType} from '../syntax/tokenizer';
-import {ICSSImage, image, isSupportedImage} from '../types/image';
-import {IPropertyListDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue, nonFunctionArgSeparator} from '../syntax/parser';
-import {Context} from '../../core/context';
+import { TokenType } from '../syntax/tokenizer';
+import { ICSSImage, image, isSupportedImage } from '../types/image';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue, nonFunctionArgSeparator } from '../syntax/parser';
+import { Context } from '../../core/context';
 
 export const backgroundImage: IPropertyListDescriptor<ICSSImage[]> = {
     name: 'background-image',

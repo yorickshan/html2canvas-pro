@@ -1,8 +1,8 @@
-import {ElementContainer} from '../element-container';
-import {parseTree} from '../node-parser';
-import {Color, parseColor, COLORS} from '../../css/types/color';
-import {isTransparent} from '../../css/types/color-utilities';
-import {Context} from '../../core/context';
+import { ElementContainer } from '../element-container';
+import { parseTree } from '../node-parser';
+import { Color, parseColor, COLORS } from '../../css/types/color';
+import { isTransparent } from '../../css/types/color-utilities';
+import { Context } from '../../core/context';
 
 export class IFrameElementContainer extends ElementContainer {
     src: string;

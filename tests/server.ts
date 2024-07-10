@@ -1,17 +1,19 @@
+/* eslint-disable */
 import * as express from 'express';
+import yargs from 'yargs';
+import { Argv, ScreenshotRequest } from './types';
+
 const cors = require('cors');
 const path = require('path');
 const serveIndex = require('serve-index');
 const proxy = require('html2canvas-proxy');
-import yargs from 'yargs';
-import {ScreenshotRequest} from './types';
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const filenamifyUrl = require('filenamify-url');
 const mkdirp = require('mkdirp');
 
 export const app = express();
-app.use('/', serveIndex(path.resolve(__dirname, '../'), {icons: true}));
+app.use('/', serveIndex(path.resolve(__dirname, '../'), { icons: true }));
 app.use([/^\/src($|\/)/, '/'], express.static(path.resolve(__dirname, '../')));
 
 export const corsApp = express();
@@ -51,34 +53,37 @@ const writeScreenshot = (buffer: Buffer, body: ScreenshotRequest) => {
     return filename;
 };
 
-screenshotApp.post('/screenshot', (req: express.Request<{}, void, ScreenshotRequest>, res: express.Response) => {
-    if (!req.body || !req.body.screenshot) {
-        return res.sendStatus(400);
-    }
+screenshotApp.post(
+    '/screenshot',
+    (req: express.Request<Record<string, never>, void, ScreenshotRequest>, res: express.Response) => {
+        if (!req.body || !req.body.screenshot) {
+            return res.sendStatus(400);
+        }
 
-    const buffer = Buffer.from(req.body.screenshot.substring(prefix.length), 'base64');
-    const filename = writeScreenshot(buffer, req.body);
-    fs.writeFileSync(
-        path.resolve(__dirname, metadataFolder, `${filename}.json`),
-        JSON.stringify({
-            windowWidth: req.body.windowWidth,
-            windowHeight: req.body.windowHeight,
-            platform: req.body.platform,
-            devicePixelRatio: req.body.devicePixelRatio,
-            test: req.body.test,
-            id: process.env.TARGET_BROWSER,
-            screenshot: filename
-        })
-    );
-    return res.sendStatus(200);
-});
+        const buffer = Buffer.from(req.body.screenshot.substring(prefix.length), 'base64');
+        const filename = writeScreenshot(buffer, req.body);
+        fs.writeFileSync(
+            path.resolve(__dirname, metadataFolder, `${filename}.json`),
+            JSON.stringify({
+                windowWidth: req.body.windowWidth,
+                windowHeight: req.body.windowHeight,
+                platform: req.body.platform,
+                devicePixelRatio: req.body.devicePixelRatio,
+                test: req.body.test,
+                id: process.env.TARGET_BROWSER,
+                screenshot: filename
+            })
+        );
+        return res.sendStatus(200);
+    }
+);
 
 screenshotApp.use((error: Error, _req: express.Request, _res: express.Response, next: express.NextFunction) => {
     console.error(error);
     next();
 });
 
-const args = yargs(process.argv.slice(2)).number(['port', 'cors']).argv;
+const args = yargs(process.argv.slice(2)).number(['port', 'cors']).argv as Argv;
 
 if (args.port) {
     app.listen(args.port, () => {

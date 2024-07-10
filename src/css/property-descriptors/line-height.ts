@@ -1,7 +1,7 @@
-import {IPropertyTokenValueDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue, isIdentToken} from '../syntax/parser';
-import {TokenType} from '../syntax/tokenizer';
-import {getAbsoluteValue, isLengthPercentage} from '../types/length-percentage';
+import { IPropertyTokenValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue, isIdentToken } from '../syntax/parser';
+import { TokenType } from '../syntax/tokenizer';
+import { getAbsoluteValue, isLengthPercentage } from '../types/length-percentage';
 export const lineHeight: IPropertyTokenValueDescriptor = {
     name: 'line-height',
     initialValue: 'normal',

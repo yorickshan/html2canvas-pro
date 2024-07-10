@@ -1,11 +1,4 @@
----
-title: "Options"
-description: "Explore the different configuration options available for html2canvas"
-previousUrl: "./getting-started"
-previousTitle: "Getting Started"
-nextUrl: "./features"
-nextTitle: "Features"
----
+# Configuration
 
 These are all of the available configuration options.
 
@@ -20,7 +13,7 @@ These are all of the available configuration options.
 | logging | `true` | Enable logging for debug purposes
 | onclone | `null` | Callback function which is called when the Document has been cloned for rendering, can be used to modify the contents that will be rendered without affecting the original source document.
 | proxy | `null` | Url to the [proxy](./proxy) which is to be used for loading cross-origin images. If left empty, cross-origin images won't be loaded.
-| removeContainer | `true` | Whether to cleanup the cloned DOM elements html2canvas creates temporarily
+| removeContainer | `true` | Whether to cleanup the cloned DOM elements html2canvas-pro creates temporarily
 | scale | `window.devicePixelRatio` | The scale to use for rendering. Defaults to the browsers device pixel ratio.
 | useCORS | `false` | Whether to attempt to load images from a server using CORS
 | width | `Element` width | The width of the `canvas`
@@ -32,4 +25,4 @@ These are all of the available configuration options.
 | windowWidth | `Window.innerWidth` | Window width to use when rendering `Element`, which may affect things like Media queries
 | windowHeight | `Window.innerHeight` | Window height to use when rendering `Element`, which may affect things like Media queries
 
-If you wish to exclude certain `Element`s from getting rendered, you can add a `data-html2canvas-ignore` attribute to those elements and html2canvas will exclude them from the rendering.
+If you wish to exclude certain `Element`s from getting rendered, you can add a `data-html2canvas-ignore` attribute to those elements and html2canvas-pro will exclude them from the rendering.

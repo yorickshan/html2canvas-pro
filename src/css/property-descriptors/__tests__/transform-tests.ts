@@ -1,7 +1,7 @@
-import {transform} from '../transform';
-import {Parser} from '../../syntax/parser';
-import {deepStrictEqual} from 'assert';
-import {Context} from '../../../core/context';
+import { transform } from '../transform';
+import { Parser } from '../../syntax/parser';
+import { deepStrictEqual } from 'assert';
+import { Context } from '../../../core/context';
 const parseValue = (value: string) => transform.parse({} as Context, Parser.parseValue(value));
 
 describe('property-descriptors', () => {

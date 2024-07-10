@@ -4,13 +4,13 @@ export interface LoggerOptions {
 }
 
 export class Logger {
-    static instances: {[key: string]: Logger} = {};
+    static instances: { [key: string]: Logger } = {};
 
     private readonly id: string;
     private readonly enabled: boolean;
     private readonly start: number;
 
-    constructor({id, enabled}: LoggerOptions) {
+    constructor({ id, enabled }: LoggerOptions) {
         this.id = id;
         this.enabled = enabled;
         this.start = Date.now();

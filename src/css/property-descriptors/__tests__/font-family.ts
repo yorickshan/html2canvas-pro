@@ -1,7 +1,7 @@
-import {deepEqual} from 'assert';
-import {Parser} from '../../syntax/parser';
-import {fontFamily} from '../font-family';
-import {Context} from '../../../core/context';
+import { deepEqual } from 'assert';
+import { Parser } from '../../syntax/parser';
+import { fontFamily } from '../font-family';
+import { Context } from '../../../core/context';
 
 const fontFamilyParse = (value: string) => fontFamily.parse({} as Context, Parser.parseValues(value));
 

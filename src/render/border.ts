@@ -1,6 +1,6 @@
-import {Path} from './path';
-import {BoundCurves} from './bound-curves';
-import {isBezierCurve} from './bezier-curve';
+import { Path } from './path';
+import { BoundCurves } from './bound-curves';
+import { isBezierCurve } from './bezier-curve';
 
 export const parsePathForBorder = (curves: BoundCurves, borderSide: number): Path[] => {
     switch (borderSide) {

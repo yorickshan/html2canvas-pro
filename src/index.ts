@@ -1,12 +1,12 @@
-import {Bounds, parseBounds, parseDocumentSize} from './css/layout/bounds';
-import {COLORS, parseColor} from './css/types/color';
-import {isTransparent} from './css/types/color-utilities';
-import {CloneConfigurations, CloneOptions, DocumentCloner, WindowOptions} from './dom/document-cloner';
-import {isBodyElement, isHTMLElement, parseTree} from './dom/node-parser';
-import {CacheStorage} from './core/cache-storage';
-import {CanvasRenderer, RenderConfigurations, RenderOptions} from './render/canvas/canvas-renderer';
-import {ForeignObjectRenderer} from './render/canvas/foreignobject-renderer';
-import {Context, ContextOptions} from './core/context';
+import { Bounds, parseBounds, parseDocumentSize } from './css/layout/bounds';
+import { COLORS, parseColor } from './css/types/color';
+import { isTransparent } from './css/types/color-utilities';
+import { CloneConfigurations, CloneOptions, DocumentCloner, WindowOptions } from './dom/document-cloner';
+import { isBodyElement, isHTMLElement, parseTree } from './dom/node-parser';
+import { CacheStorage } from './core/cache-storage';
+import { CanvasRenderer, RenderConfigurations, RenderOptions } from './render/canvas/canvas-renderer';
+import { ForeignObjectRenderer } from './render/canvas/foreignobject-renderer';
+import { Context, ContextOptions } from './core/context';
 
 export type Options = CloneOptions &
     WindowOptions &
@@ -96,7 +96,7 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
 
     const container = await documentCloner.toIFrame(ownerDocument, windowBounds);
 
-    const {width, height, left, top} =
+    const { width, height, left, top } =
         isBodyElement(clonedElement) || isHTMLElement(clonedElement)
             ? parseDocumentSize(clonedElement.ownerDocument)
             : parseBounds(context, clonedElement);

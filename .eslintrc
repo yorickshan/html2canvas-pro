@@ -5,7 +5,7 @@
         "prettier"
     ],
     "parserOptions": {
-        "project": "./tsconfig.json",
+        "project": ["./tsconfig.json", "./tests/tsconfig.json"],
         "ecmaVersion": 2018,
         "sourceType": "module"
     },
@@ -21,6 +21,7 @@
         "@typescript-eslint/no-use-before-define": "off",
         "@typescript-eslint/no-unused-vars": "off",
         "@typescript-eslint/class-name-casing": "off",
+        "@typescript-eslint/ban-ts-comment": "off",
         "prettier/prettier": "error"
     }
 }

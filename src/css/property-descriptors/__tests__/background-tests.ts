@@ -1,12 +1,12 @@
-import {deepStrictEqual} from 'assert';
-import {Parser} from '../../syntax/parser';
-import {backgroundImage} from '../background-image';
-import {CSSImageType} from '../../types/image';
-import {pack} from '../../types/color-utilities';
-import {deg} from '../../types/angle';
+import { deepStrictEqual } from 'assert';
+import { Parser } from '../../syntax/parser';
+import { backgroundImage } from '../background-image';
+import { CSSImageType } from '../../types/image';
+import { pack } from '../../types/color-utilities';
+import { deg } from '../../types/angle';
 
 jest.mock('../../../core/context');
-import {Context} from '../../../core/context';
+import { Context } from '../../../core/context';
 
 jest.mock('../../../core/features');
 
@@ -29,8 +29,8 @@ describe('property-descriptors', () => {
             deepStrictEqual(
                 backgroundImageParse(context, 'url(http://example.com/test.jpg), url(http://example.com/test2.jpg)'),
                 [
-                    {url: 'http://example.com/test.jpg', type: CSSImageType.URL},
-                    {url: 'http://example.com/test2.jpg', type: CSSImageType.URL}
+                    { url: 'http://example.com/test.jpg', type: CSSImageType.URL },
+                    { url: 'http://example.com/test2.jpg', type: CSSImageType.URL }
                 ]
             );
             expect(context.cache.addImage).toHaveBeenCalledWith('http://example.com/test.jpg');
@@ -48,11 +48,11 @@ describe('property-descriptors', () => {
                         angle: deg(180),
                         type: CSSImageType.LINEAR_GRADIENT,
                         stops: [
-                            {color: pack(255, 255, 0, 0.5), stop: null},
-                            {color: pack(0, 0, 255, 0.5), stop: null}
+                            { color: pack(255, 255, 0, 0.5), stop: null },
+                            { color: pack(0, 0, 255, 0.5), stop: null }
                         ]
                     },
-                    {url: 'https://html2canvas.hertzen.com', type: CSSImageType.URL}
+                    { url: 'https://html2canvas.hertzen.com', type: CSSImageType.URL }
                 ]
             ));
     });

@@ -1,13 +1,13 @@
-import {sync} from 'glob';
-import {resolve, basename} from 'path';
-import {existsSync, promises} from 'fs';
-import {toMatchImageSnapshot} from 'jest-image-snapshot';
+import { sync } from 'glob';
+import { resolve, basename } from 'path';
+import { existsSync, promises } from 'fs';
+import { toMatchImageSnapshot } from 'jest-image-snapshot';
 
 const resultsDir = resolve(__dirname, '../results');
 const customSnapshotsDir = resolve(__dirname, '../tmp/snapshots');
 const customDiffDir = resolve(__dirname, '../tmp/snapshot-diffs');
 
-expect.extend({toMatchImageSnapshot});
+expect.extend({ toMatchImageSnapshot });
 
 describe('Image diff', () => {
     const files: string[] = sync('../tmp/reftests/**/*.png', {

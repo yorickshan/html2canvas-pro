@@ -1,6 +1,6 @@
-import {IPropertyListDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue, isIdentToken, parseFunctionArgs} from '../syntax/parser';
-import {Context} from '../../core/context';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue, isIdentToken, parseFunctionArgs } from '../syntax/parser';
+import { Context } from '../../core/context';
 export type BackgroundRepeat = BACKGROUND_REPEAT[];
 
 export const enum BACKGROUND_REPEAT {

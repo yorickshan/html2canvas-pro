@@ -1,7 +1,7 @@
-import {IPropertyListDescriptor, PropertyDescriptorParsingType} from '../IPropertyDescriptor';
-import {CSSValue, isNumberToken, nonWhiteSpace} from '../syntax/parser';
-import {TokenType} from '../syntax/tokenizer';
-import {Context} from '../../core/context';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { CSSValue, isNumberToken, nonWhiteSpace } from '../syntax/parser';
+import { TokenType } from '../syntax/tokenizer';
+import { Context } from '../../core/context';
 
 export interface COUNTER_INCREMENT {
     counter: string;
@@ -34,7 +34,7 @@ export const counterIncrement: IPropertyListDescriptor<CounterIncrement> = {
             const next = filtered[i + 1];
             if (counter.type === TokenType.IDENT_TOKEN) {
                 const increment = next && isNumberToken(next) ? next.number : 1;
-                increments.push({counter: counter.value, increment});
+                increments.push({ counter: counter.value, increment });
             }
         }
 

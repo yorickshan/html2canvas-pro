@@ -1,8 +1,8 @@
-import {CSSValue, isIdentToken, isNumberToken, nonFunctionArgSeparator, Parser} from '../syntax/parser';
-import {HashToken, TokenType} from '../syntax/tokenizer';
-import {ITypeDescriptor} from '../ITypeDescriptor';
-import {Context} from '../../core/context';
-import {srgbFromXYZ, srgbLinearFromXYZ} from './color-spaces/srgb';
+import { CSSValue, isIdentToken, isNumberToken, nonFunctionArgSeparator, Parser } from '../syntax/parser';
+import { HashToken, TokenType } from '../syntax/tokenizer';
+import { ITypeDescriptor } from '../ITypeDescriptor';
+import { Context } from '../../core/context';
+import { srgbFromXYZ, srgbLinearFromXYZ } from './color-spaces/srgb';
 import {
     packSrgbLinear,
     packSrgb,
@@ -25,10 +25,10 @@ import {
     xyzFromXYZ,
     xyz50FromXYZ
 } from './color-utilities';
-import {convertP3, p3FromXYZ} from './color-spaces/p3';
-import {a98FromXYZ, convertA98rgb} from './color-spaces/a98';
-import {convertProPhoto, proPhotoFromXYZ} from './color-spaces/pro-photo';
-import {convertRec2020, rec2020FromXYZ} from './color-spaces/rec2020';
+import { convertP3, p3FromXYZ } from './color-spaces/p3';
+import { a98FromXYZ, convertA98rgb } from './color-spaces/a98';
+import { convertProPhoto, proPhotoFromXYZ } from './color-spaces/pro-photo';
+import { convertRec2020, rec2020FromXYZ } from './color-spaces/rec2020';
 
 export type Color = number;
 
@@ -211,19 +211,19 @@ const _color = (context: Context, args: CSSValue[]) => {
                     green = 0xff & (_c >> 16),
                     red = 0xff & (_c >> 24);
                 from = [
-                    {type: TokenType.NUMBER_TOKEN, number: red, flags: 1},
-                    {type: TokenType.NUMBER_TOKEN, number: green, flags: 1},
-                    {type: TokenType.NUMBER_TOKEN, number: blue, flags: 1},
-                    {type: TokenType.NUMBER_TOKEN, number: alpha > 1 ? alpha / 255 : alpha, flags: 1}
+                    { type: TokenType.NUMBER_TOKEN, number: red, flags: 1 },
+                    { type: TokenType.NUMBER_TOKEN, number: green, flags: 1 },
+                    { type: TokenType.NUMBER_TOKEN, number: blue, flags: 1 },
+                    { type: TokenType.NUMBER_TOKEN, number: alpha > 1 ? alpha / 255 : alpha, flags: 1 }
                 ];
             }
         } else if (tokens[1].type === TokenType.HASH_TOKEN) {
             const [red, green, blue, alpha] = hash2rgb(tokens[1]);
             from = [
-                {type: TokenType.NUMBER_TOKEN, number: red, flags: 1},
-                {type: TokenType.NUMBER_TOKEN, number: green, flags: 1},
-                {type: TokenType.NUMBER_TOKEN, number: blue, flags: 1},
-                {type: TokenType.NUMBER_TOKEN, number: alpha > 1 ? alpha / 255 : alpha, flags: 1}
+                { type: TokenType.NUMBER_TOKEN, number: red, flags: 1 },
+                { type: TokenType.NUMBER_TOKEN, number: green, flags: 1 },
+                { type: TokenType.NUMBER_TOKEN, number: blue, flags: 1 },
+                { type: TokenType.NUMBER_TOKEN, number: alpha > 1 ? alpha / 255 : alpha, flags: 1 }
             ];
         }
 
@@ -322,7 +322,7 @@ const SUPPORTED_COLOR_FUNCTIONS: {
 export const parseColor = (context: Context, value: string): Color =>
     color.parse(context, Parser.create(value).parseComponentValue());
 
-export const COLORS: {[key: string]: Color} = {
+export const COLORS: { [key: string]: Color } = {
     ALICEBLUE: 0xf0f8ffff,
     ANTIQUEWHITE: 0xfaebd7ff,
     AQUA: 0x00ffffff,
