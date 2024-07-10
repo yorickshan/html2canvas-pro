@@ -1,5 +1,6 @@
 # html2canvas-pro
 
+<a href="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml"><img src="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml/badge.svg?branch=main" alt="build status"></a>
 [![npm version](https://badgen.net/npm/v/html2canvas-pro)](https://npm.im/html2canvas-pro) [![npm downloads](https://badgen.net/npm/dm/html2canvas-pro)](https://npm.im/html2canvas-pro)
 
 > A fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) with some fixes and new features.
