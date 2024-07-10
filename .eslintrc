@@ -21,6 +21,7 @@
         "@typescript-eslint/no-use-before-define": "off",
         "@typescript-eslint/no-unused-vars": "off",
         "@typescript-eslint/class-name-casing": "off",
+        "@typescript-eslint/ban-ts-comment": "off",
         "prettier/prettier": "error"
     }
 }
