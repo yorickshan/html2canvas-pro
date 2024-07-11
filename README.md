@@ -1,15 +1,25 @@
-# html2canvas-pro
-
-<a href="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml"><img src="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml/badge.svg?branch=main" alt="build status"></a>
-[![npm version](https://badgen.net/npm/v/html2canvas-pro)](https://npm.im/html2canvas-pro) [![npm downloads](https://badgen.net/npm/dm/html2canvas-pro)](https://npm.im/html2canvas-pro)
-
-> A fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) with some fixes and new features.
->
-> If you found this helpful, don't forget to leave a star 🌟.
+<p align="center">
+<img src="https://raw.githubusercontent.com/yorickshan/html2canvas-pro/main/docs/public/logo.png" height="150">
+</p>
+<h1 align="center">
+html2canvas-pro
+</h1>
+<p align="center">
+Next generation JavaScript screenshots tool.
+<p>
+<p align="center">
+  <a href="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml"><img src="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml/badge.svg?branch=main" alt="build status"></a>
+  <a href=https://npm.im/html2canvas-pro><img src="https://badgen.net/npm/v/html2canvas-pro" alt="npm version"></a>
+  <a href=http://npm.im/html2canvas-pro><img src="https://badgen.net/npm/dm/html2canvas-pro" alt="npm downloads"></a>
+<p>
+<p align="center">
+ <a href="https://yorickshan.github.io/html2canvas-pro/">Documentation</a> | <a href="https://yorickshan.github.io/html2canvas-pro/getting-started.html">Getting Started</a>
+</p>
+<br>
 
 ## Why html2canvas-pro?
 
-html2canvas-pro has several advantages over html2canvas, including:
+html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) that includes various fixes and new features. It offers several advantages over the original html2canvas, such as:
 - support color function ```color()``` (including relative colors)
 - support color function ```lab()```
 - support color function ```lch()```
@@ -17,6 +27,9 @@ html2canvas-pro has several advantages over html2canvas, including:
 - support color function ```oklch()```
 - Support object-fit of ```<img/>```
 - Fixed some [issues](./CHANGELOG.md)
+
+If you found this helpful, don't forget to
+leave a star 🌟.
 
 ## Installation
 

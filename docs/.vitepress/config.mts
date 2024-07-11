@@ -4,7 +4,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "html2canvas-pro",
   base: "/html2canvas-pro/",
-  description: "Next generation JavaScript Screenshots Tooling",
+  description: "Next generation JavaScript screenshots Tool",
   head: [
     ['link', { rel: 'icon', href: '/html2canvas-pro/favicon.ico' }]
   ],
