@@ -5,6 +5,9 @@ export default defineConfig({
   title: "html2canvas-pro",
   base: "/html2canvas-pro/",
   description: "Next generation JavaScript Screenshots Tooling",
+  head: [
+    ['link', { rel: 'icon', href: '/html2canvas-pro/favicon.ico' }]
+  ],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -29,6 +32,8 @@ export default defineConfig({
 
     socialLinks: [
       { icon: 'github', link: 'https://github.com/yorickshan/html2canvas-pro' }
-    ]
+    ],
+
+    logo: '/logo.png',
   }
 })

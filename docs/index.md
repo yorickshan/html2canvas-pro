@@ -6,6 +6,9 @@ hero:
   name: "html2canvas-pro"
   text: "Screenshots with JavaScript"
   tagline: A fork of niklasvh/html2canvas with some fixes and new features.
+  image:
+    src: /logo.png
+    alt: html2canvas-pro
   actions:
     - theme: brand
       text: Get Started
