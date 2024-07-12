@@ -182,7 +182,7 @@ const _color = (context: Context, args: CSSValue[]) => {
                         .replace(/g|y/, color[1].toString())
                         .replace(/b|z/, color[2].toString());
 
-                    return eval(expression);
+                    return new Function('return ' + expression)();
                 }
             }
 
