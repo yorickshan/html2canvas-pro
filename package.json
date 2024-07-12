@@ -17,7 +17,7 @@
     "screenshot"
   ],
   "engines": {
-    "node": ">=8.0.0"
+    "node": ">=16.0.0"
   },
   "homepage": "https://yorickshan.github.io/html2canvas-pro/",
   "repository": {
