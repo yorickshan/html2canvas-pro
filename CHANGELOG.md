@@ -1,4 +1,40 @@
 
+### [1.5.6](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.5...v1.5.6) (2024-07-12)
+
+
+### Features
+
+* **site:** add logo ([87aae87](https://github.com/yorickshan/html2canvas-pro/commit/87aae87178ddc43f3197a95062fcbb57e8c6888f))
+
+
+### Refactor
+
+* swap out the usage of `eval` for a function constructor ([684bb98](https://github.com/yorickshan/html2canvas-pro/commit/684bb98cc75f6f61907f83a69de8630c525857a8))
+
+
+### Fixes
+
+* ts warning ([31f4c6f](https://github.com/yorickshan/html2canvas-pro/commit/31f4c6f73bdf70e8e73ba4895a5dba599a6bd3de))
+
+
+### Documentation
+
+* **getting-started:** installing ([4cd1740](https://github.com/yorickshan/html2canvas-pro/commit/4cd17404992c80709c234f4b42fb8d4ec2cc8bc5))
+* **readme:** add logo ([c2f5175](https://github.com/yorickshan/html2canvas-pro/commit/c2f517513c7653ffca02c2edc015083a573034e7))
+* **readme:** ci badge ([cf487e3](https://github.com/yorickshan/html2canvas-pro/commit/cf487e3db3b7a4d973edce6fd8ed475f26706be4))
+* **readme:** leave a star ([24d3864](https://github.com/yorickshan/html2canvas-pro/commit/24d3864fcf9c9f6a58044e3d3543d1b8abfd1dec))
+* **readme:** leave a star ([9b91da0](https://github.com/yorickshan/html2canvas-pro/commit/9b91da069c6854d3be4c6369bec716ea1d966845))
+
+
+### Chore
+
+* optimize package.json ([7ea1a6c](https://github.com/yorickshan/html2canvas-pro/commit/7ea1a6c6616a478b5a5575d7ad3c485b4e6581d3))
+* optimize package.json ([3f6be3b](https://github.com/yorickshan/html2canvas-pro/commit/3f6be3bc597289f10a73762199d2efc745c972b1))
+* remove webpack ([e158915](https://github.com/yorickshan/html2canvas-pro/commit/e158915cb7ff2c872e05e8c1bee7d7e43973a290))
+* set base path ([0c2317b](https://github.com/yorickshan/html2canvas-pro/commit/0c2317b5570ac946ef6cbcc443b1df4f842a1764))
+* upgrade required node version ([d8c0717](https://github.com/yorickshan/html2canvas-pro/commit/d8c07177452ec4b63737d0820128a2135cf957cb))
+* upgrade rollup & plugins ([fe66e4a](https://github.com/yorickshan/html2canvas-pro/commit/fe66e4ace1d6f6f4634a267d2c13cf2477b49287))
+
 ### [1.5.5](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.4...v1.5.5) (2024-07-09)
 
 
