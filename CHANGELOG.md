@@ -1,4 +1,11 @@
 
+### [1.5.7](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.6...v1.5.7) (2024-07-18)
+
+
+### Documentation
+
+* **readme:** jsdelivr ([d3cf8b0](https://github.com/yorickshan/html2canvas-pro/commit/d3cf8b06fed3123284633df63d9e0c50ca14d39b))
+
 ### [1.5.6](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.5...v1.5.6) (2024-07-12)
 
 
