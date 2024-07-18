@@ -155,7 +155,7 @@ export class CanvasRenderer extends Renderer {
         if (letterSpacing === 0) {
             // Fixed an issue with characters moving up in non-Firefox.
             // https://github.com/niklasvh/html2canvas/issues/2107#issuecomment-692462900
-            if (navigator.userAgent.indexOf('Firefox') === -1){
+            if (navigator.userAgent.indexOf('Firefox') === -1) {
                 this.ctx.textBaseline = 'ideographic';
                 this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + text.bounds.height);
             } else {
@@ -231,18 +231,33 @@ export class CanvasRenderer extends Renderer {
 
                         if (styles.textDecorationLine.length) {
                             this.ctx.fillStyle = asString(styles.textDecorationColor || styles.color);
-                            var decorationLineHeight = 1;
+                            const decorationLineHeight = 1;
                             styles.textDecorationLine.forEach((textDecorationLine) => {
                                 // Fix the issue where textDecorationLine exhibits x-axis positioning errors on high-resolution devices due to varying devicePixelRatio, corrected by using relative values of element heights.
                                 switch (textDecorationLine) {
                                     case TEXT_DECORATION_LINE.UNDERLINE:
-                                        this.ctx.fillRect(text.bounds.left, text.bounds.top + text.bounds.height - decorationLineHeight, text.bounds.width, decorationLineHeight);
+                                        this.ctx.fillRect(
+                                            text.bounds.left,
+                                            text.bounds.top + text.bounds.height - decorationLineHeight,
+                                            text.bounds.width,
+                                            decorationLineHeight
+                                        );
                                         break;
                                     case TEXT_DECORATION_LINE.OVERLINE:
-                                        this.ctx.fillRect(text.bounds.left, text.bounds.top , text.bounds.width, decorationLineHeight);
+                                        this.ctx.fillRect(
+                                            text.bounds.left,
+                                            text.bounds.top,
+                                            text.bounds.width,
+                                            decorationLineHeight
+                                        );
                                         break;
                                     case TEXT_DECORATION_LINE.LINE_THROUGH:
-                                        this.ctx.fillRect(text.bounds.left, text.bounds.top + (text.bounds.height / 2 - decorationLineHeight / 2), text.bounds.width, decorationLineHeight);
+                                        this.ctx.fillRect(
+                                            text.bounds.left,
+                                            text.bounds.top + (text.bounds.height / 2 - decorationLineHeight / 2),
+                                            text.bounds.width,
+                                            decorationLineHeight
+                                        );
                                         break;
                                 }
                             });
