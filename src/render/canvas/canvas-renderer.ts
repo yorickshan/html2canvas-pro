@@ -188,14 +188,13 @@ export class CanvasRenderer extends Renderer {
     }
 
     async renderTextNode(text: TextContainer, styles: CSSParsedDeclaration): Promise<void> {
-        const [font, fontFamily, fontSize] = this.createFontStyle(styles);
+        const [font] = this.createFontStyle(styles);
 
         this.ctx.font = font;
 
         this.ctx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'alphabetic';
-        const { baseline } = this.fontMetrics.getMetrics(fontFamily, fontSize);
         const paintOrder = styles.paintOrder;
 
         text.textBounds.forEach((text) => {
@@ -269,7 +268,7 @@ export class CanvasRenderer extends Renderer {
                             this.ctx.lineWidth = styles.webkitTextStrokeWidth;
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
-                            this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + baseline);
+                            this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + text.bounds.height);
                         }
                         this.ctx.strokeStyle = '';
                         this.ctx.lineWidth = 0;
