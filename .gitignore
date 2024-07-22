@@ -15,6 +15,7 @@ node_modules/
 npm-debug.log
 debug.log
 tests/reftests.js
+tests/demo.html
 *.log
 .rpt2_cache
 .history
