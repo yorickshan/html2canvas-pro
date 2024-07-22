@@ -1,4 +1,16 @@
 
+### [1.5.8](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.7...v1.5.8) (2024-07-22)
+
+
+### Chore
+
+* pkg name ([1100f39](https://github.com/yorickshan/html2canvas-pro/commit/1100f390b72b45542a34927a4186f75980cb462e))
+
+
+### Fixes
+
+* -webkit-text-stroke misaligned with the text ([48e771a](https://github.com/yorickshan/html2canvas-pro/commit/48e771ac906178fb4dfce31e8539894c389d6e44))
+
 ### [1.5.7](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.6...v1.5.7) (2024-07-18)
 
 

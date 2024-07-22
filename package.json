@@ -5,7 +5,7 @@
   "module": "dist/html2canvas-pro.esm.js",
   "typings": "dist/types/index.d.ts",
   "browser": "dist/html2canvas-pro.js",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "author": {
     "name": "yorickshan",
     "email": "yorickshan@gmail.com",
