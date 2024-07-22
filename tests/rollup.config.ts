@@ -4,12 +4,12 @@ import sourceMaps from 'rollup-plugin-sourcemaps';
 import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
 import { resolve } from 'path';
-
+// eslint-disable-next-line
 const pkg = require('../package.json');
 
 const banner = `/*
- * ${pkg.title} ${pkg.version} <${pkg.homepage}>
- * Copyright (c) ${new Date().getFullYear()} ${pkg.author.name} <${pkg.author.url}>
+ * ${pkg.name} ${pkg.version} <${pkg.homepage}>
+ * Copyright (c) 2024-present yorickshan and html2canvas-pro contributors
  * Released under ${pkg.license} License
  */`;
 
