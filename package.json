@@ -44,7 +44,7 @@
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "appium-ios-simulator": "^6.1.10",
-    "base64-arraybuffer": "1.0.1",
+    "base64-arraybuffer": "1.0.2",
     "body-parser": "^1.19.0",
     "chai": "5.1.1",
     "conventional-changelog-cli": "^2.1.1",
