@@ -1,7 +1,7 @@
 const express = require('express');
 const url = require('url');
 const cors = require('cors');
-const request = require('request');
+const http = require('http');
 
 function validUrl(req, res, next) {
     if (!req.query.url) {
@@ -16,24 +16,40 @@ function validUrl(req, res, next) {
 module.exports = () => {
     const app = express.Router();
     app.get('/', cors(), validUrl, (req, res, next) => {
-        switch (req.query.responseType) {
-            case 'blob':
-                req.pipe(request(req.query.url).on('error', next)).pipe(res);
-                break;
-            case 'text':
-            default:
-                request({ url: req.query.url, encoding: 'binary' }, (error, response, body) => {
-                    if (error) {
-                        return next(error);
-                    }
-                    res.send(
-                        `data:${response.headers['content-type']};base64,${Buffer.from(
-                            body,
-                            'binary'
-                        ).toString('base64')}`
-                    );
-                });
-        }
+        const options = {
+            hostname: url.parse(req.query.url).hostname,
+            port: url.parse(req.query.url).port || 80,
+            path: url.parse(req.query.url).path,
+            method: 'GET',
+        };
+
+        const request = http.get(options, (response) => {
+            if (!response.statusCode || response.statusCode >= 400) {
+                return next(new Error(`Error fetching url: ${response.statusCode}`));
+            }
+
+            switch (req.query.responseType) {
+                case 'blob':
+                    response.pipe(res);
+                    break;
+                case 'text':
+                default:
+                    let body = '';
+                    response.on('data', (chunk) => {
+                        body += chunk.toString();
+                    });
+                    response.on('end', () => {
+                        const contentType = response.headers['content-type'];
+                        res.send(
+                            `data:${contentType};base64,${Buffer.from(body, 'binary').toString('base64')}`
+                        );
+                    });
+            }
+        });
+
+        request.on('error', (error) => {
+            next(error);
+        });
     });
 
     return app;
