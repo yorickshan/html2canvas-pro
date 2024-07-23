@@ -6,11 +6,11 @@ import { Argv, ScreenshotRequest } from './types';
 const cors = require('cors');
 const path = require('path');
 const serveIndex = require('serve-index');
-const proxy = require('html2canvas-proxy');
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const filenamifyUrl = require('filenamify-url');
 const mkdirp = require('mkdirp');
+const proxy = require('./proxy');
 
 export const app = express();
 app.use('/', serveIndex(path.resolve(__dirname, '../'), { icons: true }));
