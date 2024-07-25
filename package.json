@@ -55,7 +55,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "3.4.0",
     "express": "^4.17.1",
-    "filenamify-url": "1.0.0",
+    "filenamify-url": "3.1.0",
     "glob": "^11.0.0",
     "husky": "^8.0.0",
     "jest": "^29.7.0",
