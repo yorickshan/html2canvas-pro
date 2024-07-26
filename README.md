@@ -56,6 +56,8 @@ html2canvas(document.body).then(function(canvas) {
 
 If you want to add some features, feel free to submit PR.
 
+If you want to become a maintainer on it, please contact me.
+
 ## License
 
 [MIT](LICENSE).
