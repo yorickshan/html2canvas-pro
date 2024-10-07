@@ -41,7 +41,7 @@
     "@types/node": "^20.14.12",
     "@types/platform": "^1.3.4",
     "@types/promise-polyfill": "^6.0.3",
-    "@typescript-eslint/eslint-plugin": "^4.33.0",
+    "@typescript-eslint/eslint-plugin": "^8.8.1",
     "@typescript-eslint/parser": "^4.33.0",
     "appium-ios-simulator": "^6.1.10",
     "base64-arraybuffer": "1.0.2",
