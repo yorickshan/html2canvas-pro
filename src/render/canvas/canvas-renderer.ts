@@ -695,7 +695,7 @@ export class CanvasRenderer extends Renderer {
                 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
                 const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
 
-                processColorStops(backgroundImage.stops, lineLength).forEach((colorStop) =>
+                processColorStops(backgroundImage.stops, lineLength || 1).forEach((colorStop) =>
                     gradient.addColorStop(colorStop.stop, asString(colorStop.color))
                 );
 
