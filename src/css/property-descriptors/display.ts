@@ -64,6 +64,7 @@ const parseDisplayValue = (display: string): Display => {
         case 'table':
             return DISPLAY.TABLE;
         case 'flex':
+        case 'inline-flex':
         case '-webkit-flex':
             return DISPLAY.FLEX;
         case 'grid':
@@ -107,8 +108,6 @@ const parseDisplayValue = (display: string): Display => {
             return DISPLAY.INLINE_LIST_ITEM;
         case 'inline-table':
             return DISPLAY.INLINE_TABLE;
-        case 'inline-flex':
-            return DISPLAY.INLINE_FLEX;
         case 'inline-grid':
             return DISPLAY.INLINE_GRID;
     }
