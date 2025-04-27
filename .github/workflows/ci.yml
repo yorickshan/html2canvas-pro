@@ -39,19 +39,19 @@ jobs:
                   mv html2canvas-*.tgz html2canvas-pro.tgz
                   tar --list --verbose --file=html2canvas-pro.tgz
             - name: Upload npm pack
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: npm
                   path: html2canvas-pro.tgz
                   if-no-files-found: error
             - name: Upload dist
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: dist
                   path: dist
                   if-no-files-found: error
             - name: Upload build
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: build
                   path: build
@@ -126,12 +126,12 @@ jobs:
             - name: Npm install
               run: npm ci
             - name: Download library
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: dist
                   path: dist
             - name: Download test-runner
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: build
                   path: build
@@ -148,7 +148,7 @@ jobs:
               if: ${{ matrix.config.xvfb == true }}
               run: DISPLAY=:99 npm run karma
             - name: Upload screenshots
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: reftest-results
                   path: tmp/reftests
@@ -163,12 +163,12 @@ jobs:
         steps:
             - uses: actions/checkout@v3
             - name: Download NPM package
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: npm
                   path: npm
             - name: Download library
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: dist
                   path: dist
