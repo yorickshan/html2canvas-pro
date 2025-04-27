@@ -150,9 +150,11 @@ jobs:
             - name: Upload screenshots
               uses: actions/upload-artifact@v4
               with:
-                  name: reftest-results
+                  name: reftest-results-${{ matrix.config.targetBrowser }}
                   path: tmp/reftests
                   if-no-files-found: error
+                  compression-level: 6
+                  overwrite: false
     publish:
         runs-on: ubuntu-latest
         name: Publish NPM
