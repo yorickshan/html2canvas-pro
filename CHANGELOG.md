@@ -1,4 +1,29 @@
 
+### [1.5.9](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.8...v1.5.9) (2025-04-27)
+
+
+### Fixes
+
+* failed to execute 'addColorStop' on 'CanvasGradient' ([f84f057](https://github.com/yorickshan/html2canvas-pro/commit/f84f057ac36aa2f48a5768c10051eaa6311cb663))
+* set font correctly in text input elements ([b0203c0](https://github.com/yorickshan/html2canvas-pro/commit/b0203c041fbdd0c68ba44fa2ddb068cf9f60fc5b))
+
+
+### Documentation
+
+* **readme:** add deepwiki ([4ffcff9](https://github.com/yorickshan/html2canvas-pro/commit/4ffcff9c327567fc29dc7d031d633f645bc62744))
+* **readme:** welcome to become a maintainer ([122dafd](https://github.com/yorickshan/html2canvas-pro/commit/122dafd78f56f4c11a00118c4c2c98380246137c))
+
+
+### Chore
+
+* an artifact with this name already exists on the workflow run ([d10a0ca](https://github.com/yorickshan/html2canvas-pro/commit/d10a0ca6717babfffc7c56abb1def3500580cfff))
+* license info ([ee445f7](https://github.com/yorickshan/html2canvas-pro/commit/ee445f7e45b182dac38a4043b9ca21a369f6ea2c))
+* missing download info for actions/upload-artifact@v3 ([ef54137](https://github.com/yorickshan/html2canvas-pro/commit/ef541373184a099da8d7fcfcaed6ae4d3f93a264))
+* remove html2canvas-proxy ([5eafba5](https://github.com/yorickshan/html2canvas-pro/commit/5eafba56af7085ebf157d957065bf4bef7a8804f))
+* replace request with http ([e9d88e4](https://github.com/yorickshan/html2canvas-pro/commit/e9d88e4bf6defef0a3ee2edd773728490e69b3f0))
+* upgrade appium-xcode & node-simctl ([b61e7d1](https://github.com/yorickshan/html2canvas-pro/commit/b61e7d11ad9411199ac6b06795a6312851a9ed51))
+* upgrade glob & rimraf ([560c540](https://github.com/yorickshan/html2canvas-pro/commit/560c5409c9e3887a43bf6656f81d3d908418c048))
+
 ### [1.5.8](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.7...v1.5.8) (2024-07-22)
 
 
