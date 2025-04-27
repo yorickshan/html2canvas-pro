@@ -14,7 +14,8 @@ Next generation JavaScript screenshots tool.
   <a href="https://www.jsdelivr.com/package/npm/html2canvas-pro"><img src="https://data.jsdelivr.com/v1/package/npm/html2canvas-pro/badge" /></a>
 <p>
 <p align="center">
- <a href="https://yorickshan.github.io/html2canvas-pro/">Documentation</a> | <a href="https://yorickshan.github.io/html2canvas-pro/getting-started.html">Getting Started</a>
+  <a href="https://yorickshan.github.io/html2canvas-pro/getting-started.html">Getting Started</a>
+  | <a href="https://deepwiki.com/yorickshan/html2canvas-pro">DeepWiki</a>
 </p>
 <br>
 
