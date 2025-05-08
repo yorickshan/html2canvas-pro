@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Custom isSameOrigin test</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="../../test.js"></script>
+    <style>
+        body {
+            padding: 10px;
+        }
+        .image-container {
+            width: 200px;
+            height: 200px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+        }
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .flex {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Custom isSameOrigin tests</h1>
+
+    <main class="flex">
+        <div>
+            <div class="image-container">
+                <img id="local-image" src="/tests/assets/image.svg" />
+            </div>
+            <p>Local image (same origin)</p>
+        </div>
+
+        <div>
+            <div class="image-container">
+                <img id="external-image" src="https://yorickshan.github.io/html2canvas-pro/logo.png" />
+            </div>
+            <p>External image (different origin)</p>
+        </div>
+
+        <div>
+            <div class="image-container">
+                <img id="redirect-image" src="/redirect-image" />
+            </div>
+            <p>Redirect image (simulates redirection)</p>
+        </div>
+    </main>
+
+    <!-- canvas container -->
+    <section id="canvas-container" class="flex" style="flex-direction: column; gap: 50px;"></section>
+
+    <script type="text/javascript">
+        window.dontRun = true;
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        const h2cTests = [{
+            name: 'With customIsSameOrigin forcing all to not be same origin',
+            options: {
+                useCORS: true,
+                logging: true,
+                customIsSameOrigin: (src, oldFn) => false
+            }
+        }, {
+            name: 'With customIsSameOrigin for handling redirect',
+            options: {
+                useCORS: true,
+                logging: true,
+                customIsSameOrigin: (src, oldFn) => {
+                    // Mark the redirect-image as not same origin
+                    if (src.includes('/redirect-image')) {
+                        return false;
+                    }
+                    return oldFn(src);
+                }
+            }
+        }, {
+            name: 'With async customIsSameOrigin check',
+            options: {
+                useCORS: true,
+                logging: true,
+                customIsSameOrigin: async (src, oldFn) => {
+                    if (src.includes('/redirect-image')) {
+                        // Wait briefly to simulate async check
+                        await sleep(50);
+                        return false;
+                    }
+                    return oldFn(src);
+                }
+            }
+        }];
+
+        // execute tests
+        async function runTests() {
+            const htmlContainer = document.querySelector("main");
+            const canvasContainer = document.querySelector('#canvas-container');
+
+            for (const test of h2cTests) {
+                await sleep(1000);
+                const canvas = await html2canvas(htmlContainer, test.options);
+                const resultDiv = document.createElement('div');
+                resultDiv.classList.add("flex")
+                const p = document.createElement('p');
+                p.innerText = test.name;
+                resultDiv.appendChild(p);
+                resultDiv.appendChild(canvas);
+                canvasContainer.appendChild(resultDiv);
+            }
+        }
+
+        runTests();
+    </script>
+</body>
+</html>

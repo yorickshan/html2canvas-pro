@@ -31,6 +31,7 @@ export interface ResourceOptions {
     useCORS: boolean;
     allowTaint: boolean;
     proxy?: string;
+    customIsSameOrigin?: (this: void, src: string, oldFn: (src: string) => boolean) => boolean | Promise<boolean>;
 }
 
 export class Cache {
@@ -61,7 +62,10 @@ export class Cache {
     }
 
     private async loadImage(key: string) {
-        const isSameOrigin = CacheStorage.isSameOrigin(key);
+        const isSameOrigin: boolean =
+            typeof this._options.customIsSameOrigin === 'function'
+                ? await this._options.customIsSameOrigin(key, CacheStorage.isSameOrigin)
+                : CacheStorage.isSameOrigin(key);
         const useCORS =
             !isInlineImage(key) && this._options.useCORS === true && FEATURES.SUPPORT_CORS_IMAGES && !isSameOrigin;
         const useProxy =
