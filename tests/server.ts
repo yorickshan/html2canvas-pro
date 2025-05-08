@@ -16,10 +16,22 @@ export const app = express();
 app.use('/', serveIndex(path.resolve(__dirname, '../'), { icons: true }));
 app.use([/^\/src($|\/)/, '/'], express.static(path.resolve(__dirname, '../')));
 
+// Add route to handle redirect-image test case
+app.get('/redirect-image', (_req, res) => {
+    // Redirect to an external domain
+    res.redirect('https://yorickshan.github.io/html2canvas-pro/logo.png');
+});
+
 export const corsApp = express();
 corsApp.use('/proxy', proxy());
 corsApp.use('/cors', cors(), express.static(path.resolve(__dirname, '../')));
 corsApp.use('/', express.static(path.resolve(__dirname, '.')));
+
+// Add route to handle redirect-image test case in CORS app too
+corsApp.get('/redirect-image', (_req, res) => {
+    // Redirect to an external domain
+    res.redirect('https://yorickshan.github.io/html2canvas-pro/logo.png');
+});
 
 export const screenshotApp = express();
 screenshotApp.use(cors());
