@@ -1,4 +1,23 @@
 
+### [1.5.11](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.10...v1.5.11) (2025-05-12)
+
+
+### Features
+
+* add the `customIsSameOrigin` option to support custom same-origin checks ([dd9ef5e](https://github.com/yorickshan/html2canvas-pro/commit/dd9ef5ebb8439862f597b47c3379e5b6c9f17789))
+
+
+### Documentation
+
+* **changelog:** fixes ([e29d83d](https://github.com/yorickshan/html2canvas-pro/commit/e29d83d5cad9b8c07f99546ca05b47fbd9e945ae))
+* **configuration:** add examples and explanations for using the `customIsSameOrigin` option ([c404b8f](https://github.com/yorickshan/html2canvas-pro/commit/c404b8f9466d0af276f30daa57d6f1fb9f5597b4))
+
+
+### Chore
+
+* missing download info ([856f709](https://github.com/yorickshan/html2canvas-pro/commit/856f7094dd99a5403a8f3ae80ea97be6bc25b53c))
+* **reftests:** add custom isSameOrigin tests and redirect handling ([e371834](https://github.com/yorickshan/html2canvas-pro/commit/e371834e6db1d1c3817809d08990e70228aff624))
+
 ### [1.5.10](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.9...v1.5.10) (2025-04-27)
 
 
