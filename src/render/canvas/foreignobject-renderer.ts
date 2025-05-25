@@ -12,7 +12,9 @@ export class ForeignObjectRenderer extends Renderer {
     constructor(context: Context, options: RenderConfigurations) {
         super(context, options);
         this.canvas = options.canvas ? options.canvas : document.createElement('canvas');
+        this.canvas.style.imageRendering = options.imageSmoothingEnabled ? 'auto' : 'pixelated';
         this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
+        this.ctx.imageSmoothingEnabled = options.imageSmoothingEnabled;
         this.options = options;
         this.canvas.width = Math.floor(options.width * options.scale);
         this.canvas.height = Math.floor(options.height * options.scale);
