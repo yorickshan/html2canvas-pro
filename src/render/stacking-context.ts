@@ -2,6 +2,7 @@ import { ElementContainer, FLAGS } from '../dom/element-container';
 import { contains } from '../core/bitwise';
 import { BoundCurves, calculateBorderBoxPath, calculatePaddingBoxPath } from './bound-curves';
 import { ClipEffect, EffectTarget, IElementEffect, isClipEffect, OpacityEffect, TransformEffect } from './effects';
+import { Matrix } from '../css/property-descriptors/transform';
 import { OVERFLOW } from '../css/property-descriptors/overflow';
 import { equalPath } from './path';
 import { DISPLAY } from '../css/property-descriptors/display';
@@ -41,6 +42,18 @@ export class ElementPaint {
         this.curves = new BoundCurves(this.container);
         if (this.container.styles.opacity < 1) {
             this.effects.push(new OpacityEffect(this.container.styles.opacity));
+        }
+
+        if (this.container.styles.rotate !== null) {
+            const offsetX = this.container.bounds.left + this.container.styles.transformOrigin[0].number;
+            const offsetY = this.container.bounds.top + this.container.styles.transformOrigin[1].number;
+            // Apply rotate property if present
+            const angle = this.container.styles.rotate;
+            const rad = (angle * Math.PI) / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            const rotateMatrix: Matrix = [cos, sin, -sin, cos, 0, 0];
+            this.effects.push(new TransformEffect(offsetX, offsetY, rotateMatrix));
         }
 
         if (this.container.styles.transform !== null) {
