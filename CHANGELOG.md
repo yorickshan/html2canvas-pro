@@ -1,4 +1,16 @@
 
+### [1.5.12](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.11...v1.5.12) (2025-10-10)
+
+
+### Features
+
+* add support for CSS rotate ([ff10bb1](https://github.com/yorickshan/html2canvas-pro/commit/ff10bb1baadec0b384ada9e850d712ac65ad9cc3))
+
+
+### Documentation
+
+* **configuration:** improve configuration documentation structure and usability ([d927b8c](https://github.com/yorickshan/html2canvas-pro/commit/d927b8c0a47f54a50c0649796b73e57a0e530628))
+
 ### [1.5.11](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.10...v1.5.11) (2025-05-12)
 
 
