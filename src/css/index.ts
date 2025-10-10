@@ -50,6 +50,7 @@ import { textShadow } from './property-descriptors/text-shadow';
 import { textTransform } from './property-descriptors/text-transform';
 import { transform } from './property-descriptors/transform';
 import { transformOrigin } from './property-descriptors/transform-origin';
+import { rotate } from './property-descriptors/rotate';
 import { visibility, VISIBILITY } from './property-descriptors/visibility';
 import { wordBreak } from './property-descriptors/word-break';
 import { zIndex } from './property-descriptors/z-index';
@@ -145,6 +146,7 @@ export class CSSParsedDeclaration {
     textTransform: ReturnType<typeof textTransform.parse>;
     transform: ReturnType<typeof transform.parse>;
     transformOrigin: ReturnType<typeof transformOrigin.parse>;
+    rotate: ReturnType<typeof rotate.parse>;
     visibility: ReturnType<typeof visibility.parse>;
     webkitTextStrokeColor: Color;
     webkitTextStrokeWidth: ReturnType<typeof webkitTextStrokeWidth.parse>;
@@ -223,6 +225,7 @@ export class CSSParsedDeclaration {
         this.textTransform = parse(context, textTransform, declaration.textTransform);
         this.transform = parse(context, transform, declaration.transform);
         this.transformOrigin = parse(context, transformOrigin, declaration.transformOrigin);
+        this.rotate = parse(context, rotate, declaration.rotate);
         this.visibility = parse(context, visibility, declaration.visibility);
         this.webkitTextStrokeColor = parse(context, webkitTextStrokeColor, declaration.webkitTextStrokeColor);
         this.webkitTextStrokeWidth = parse(context, webkitTextStrokeWidth, declaration.webkitTextStrokeWidth);
@@ -240,7 +243,7 @@ export class CSSParsedDeclaration {
     }
 
     isTransformed(): boolean {
-        return this.transform !== null;
+        return this.transform !== null || this.rotate !== null;
     }
 
     isPositioned(): boolean {
