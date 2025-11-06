@@ -1,4 +1,11 @@
 
+### [1.5.13](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.12...v1.5.13) (2025-11-06)
+
+
+### Fixes
+
+* chrome_138 ignore custom properties ([5e7e132](https://github.com/yorickshan/html2canvas-pro/commit/5e7e13274a4ff6ea71c2ed386b875d08394471e5))
+
 ### [1.5.12](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.11...v1.5.12) (2025-10-10)
 
 
