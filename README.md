@@ -47,11 +47,31 @@ import html2canvas from 'html2canvas-pro';
 
 To render an `element` with html2canvas-pro with some (optional) [options](/docs/configuration.md), simply call `html2canvas(element, options);`
 
+### Basic Example
+
 ```javascript
 html2canvas(document.body).then(function(canvas) {
     document.body.appendChild(canvas);
 });
 ```
+
+### Controlling Output Dimensions
+
+⚠️ **Important**: By default, the output canvas dimensions are affected by `devicePixelRatio`. 
+
+```javascript
+// If you need exact pixel dimensions (e.g., for a specific file size):
+html2canvas(element, {
+    width: 1920,
+    height: 1080,
+    scale: 1  // Set scale to 1 for exact dimensions
+}).then(canvas => {
+    // Canvas will be exactly 1920×1080 pixels
+    const dataURL = canvas.toDataURL('image/png');
+});
+```
+
+See the [Configuration Guide](/docs/configuration.md#canvas-dimensions) for more details.
 
 ## Contribution
 

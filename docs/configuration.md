@@ -11,9 +11,51 @@ This document outlines all available configuration options for html2canvas-pro. 
 | canvas | `null` | Existing `canvas` element to use as a base for drawing on | `document.createElement('canvas')` |
 | logging | `true` | Enable logging for debug purposes | `false` |
 | removeContainer | `true` | Whether to cleanup the cloned DOM elements html2canvas-pro creates temporarily | `false` |
-| scale | `window.devicePixelRatio` | The scale to use for rendering. Defaults to the browser's device pixel ratio | `2` |
-| width | `Element` width | The width of the `canvas` | `1200` |
-| height | `Element` height | The height of the `canvas` | `800` |
+| scale | `window.devicePixelRatio` | The scale to use for rendering. Controls the canvas internal resolution. Defaults to the browser's device pixel ratio (usually `1` or `2`). Higher values produce sharper images but larger file sizes | `2` or `1` |
+| width | `Element` width | The **CSS display width** of the canvas. The actual canvas pixel width will be `width × scale`. See [Canvas Dimensions](#canvas-dimensions) below | `1200` |
+| height | `Element` height | The **CSS display height** of the canvas. The actual canvas pixel height will be `height × scale`. See [Canvas Dimensions](#canvas-dimensions) below | `800` |
+
+### Canvas Dimensions
+
+⚠️ **Important**: Understanding how `width`, `height`, and `scale` work together:
+
+- **Canvas Display Size** = `width` × `height` (CSS pixels, how it appears on screen)
+- **Canvas Internal Resolution** = `(width × scale)` × `(height × scale)` (actual pixels stored in canvas)
+
+**Example:**
+```javascript
+// This configuration:
+html2canvas(element, {
+    width: 1920,
+    height: 1080
+});
+
+// On a device with devicePixelRatio = 2 (e.g., Retina display):
+// Will produce a canvas with:
+// - Display size: 1920px × 1080px
+// - Internal resolution: 3840px × 2160px (1920×2, 1080×2)
+// - Canvas attributes: width="3840" height="2160"
+// - Canvas style: width: 1920px; height: 1080px;
+```
+
+**To get exact pixel dimensions:**
+```javascript
+// If you want the canvas to be EXACTLY 1920×1080 pixels:
+html2canvas(element, {
+    width: 1920,
+    height: 1080,
+    scale: 1  // Set scale to 1 for exact dimensions
+});
+
+// This will produce:
+// - Display size: 1920px × 1080px  
+// - Internal resolution: 1920px × 1080px
+// - Canvas attributes: width="1920" height="1080"
+```
+
+**Why does `scale` default to `devicePixelRatio`?**
+
+This produces high-quality images on high-DPI screens (like Retina displays). If you don't need the extra quality or want to control the exact output dimensions, set `scale: 1`.
 
 ## Image Handling
 
