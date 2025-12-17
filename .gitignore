@@ -21,3 +21,4 @@ tests/demo.html
 .history
 docs/.vitepress/dist
 docs/.vitepress/cache
+test*.html
