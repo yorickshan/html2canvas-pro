@@ -10,6 +10,7 @@ import { OLElementContainer } from '../dom/elements/ol-element-container';
 import { LIElementContainer } from '../dom/elements/li-element-container';
 import { createCounterText } from '../css/types/functions/counter';
 import { POSITION } from '../css/property-descriptors/position';
+import { getAbsoluteValue } from '../css/types/length-percentage';
 
 export class StackingContext {
     element: ElementPaint;
@@ -45,8 +46,9 @@ export class ElementPaint {
         }
 
         if (this.container.styles.rotate !== null) {
-            const offsetX = this.container.bounds.left + this.container.styles.transformOrigin[0].number;
-            const offsetY = this.container.bounds.top + this.container.styles.transformOrigin[1].number;
+            const origin = this.container.styles.transformOrigin;
+            const offsetX = this.container.bounds.left + getAbsoluteValue(origin[0], this.container.bounds.width);
+            const offsetY = this.container.bounds.top + getAbsoluteValue(origin[1], this.container.bounds.height);
             // Apply rotate property if present
             const angle = this.container.styles.rotate;
             const rad = (angle * Math.PI) / 180;
@@ -57,8 +59,9 @@ export class ElementPaint {
         }
 
         if (this.container.styles.transform !== null) {
-            const offsetX = this.container.bounds.left + this.container.styles.transformOrigin[0].number;
-            const offsetY = this.container.bounds.top + this.container.styles.transformOrigin[1].number;
+            const origin = this.container.styles.transformOrigin;
+            const offsetX = this.container.bounds.left + getAbsoluteValue(origin[0], this.container.bounds.width);
+            const offsetY = this.container.bounds.top + getAbsoluteValue(origin[1], this.container.bounds.height);
             const matrix = this.container.styles.transform;
             this.effects.push(new TransformEffect(offsetX, offsetY, matrix));
         }
