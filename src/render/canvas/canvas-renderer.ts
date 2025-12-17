@@ -263,7 +263,18 @@ export class CanvasRenderer extends Renderer {
                             this.ctx.lineWidth = styles.webkitTextStrokeWidth;
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
-                            this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + text.bounds.height);
+                            // Issue #110: Use baseline (fontSize) for consistent positioning with fill
+                            // Previously used text.bounds.height which caused stroke to render too low
+                            const baseline = styles.fontSize.number;
+                            if (styles.letterSpacing === 0) {
+                                this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + baseline);
+                            } else {
+                                const letters = segmentGraphemes(text.text);
+                                letters.reduce((left, letter) => {
+                                    this.ctx.strokeText(letter, left, text.bounds.top + baseline);
+                                    return left + this.ctx.measureText(letter).width;
+                                }, text.bounds.left);
+                            }
                         }
                         this.ctx.strokeStyle = '';
                         this.ctx.lineWidth = 0;
