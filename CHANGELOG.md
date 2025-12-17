@@ -1,4 +1,23 @@
 
+## [1.6.0](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.13...v1.6.0) (2025-12-17)
+
+
+### Features
+
+* calc() in background-position ([14d7f67](https://github.com/yorickshan/html2canvas-pro/commit/14d7f67e318dd4cedcb299ddca1a512982237b93))
+
+
+### Fixes
+
+* text inside inline-flex container not rendering when it's the only child [#137](https://github.com/yorickshan/html2canvas-pro/issues/137) ([11d1be6](https://github.com/yorickshan/html2canvas-pro/commit/11d1be6ff2bfbf4887b9e7baa4e864226003684a))
+* text rendered lower than in browser ([667c2cc](https://github.com/yorickshan/html2canvas-pro/commit/667c2cc97802d21094b96ff01595f159d00f7e9d))
+* webkit-text-stroke is offseted below when paint-order: stroke fill; is used [#110](https://github.com/yorickshan/html2canvas-pro/issues/110) ([0dbd1f4](https://github.com/yorickshan/html2canvas-pro/commit/0dbd1f4f5a6f0f26d3e6962d403df0dd94c623bf))
+
+
+### Documentation
+
+* controlling Output Dimensions ([9c568f3](https://github.com/yorickshan/html2canvas-pro/commit/9c568f3f50326523884ea5d4aa189e9e739ecec0))
+
 ### [1.5.13](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.12...v1.5.13) (2025-11-06)
 
 
