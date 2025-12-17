@@ -153,14 +153,9 @@ export class CanvasRenderer extends Renderer {
 
     renderTextWithLetterSpacing(text: TextBounds, letterSpacing: number, baseline: number): void {
         if (letterSpacing === 0) {
-            // Fixed an issue with characters moving up in non-Firefox.
-            // https://github.com/niklasvh/html2canvas/issues/2107#issuecomment-692462900
-            if (navigator.userAgent.indexOf('Firefox') === -1) {
-                this.ctx.textBaseline = 'ideographic';
-                this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + text.bounds.height);
-            } else {
-                this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + baseline);
-            }
+            // Use alphabetic baseline for consistent text positioning across browsers
+            // Issue #129: text.bounds.top + text.bounds.height causes text to render too low
+            this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + baseline);
         } else {
             const letters = segmentGraphemes(text.text);
             letters.reduce((left, letter) => {
