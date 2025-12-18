@@ -13,10 +13,10 @@ jobs:
         runs-on: ubuntu-latest
         name: Build
         steps:
-            - uses: actions/checkout@v3
-            - uses: actions/setup-node@v3
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
               with:
-                  node-version: 16
+                  node-version: 20
             - name: Cache node modules
               uses: actions/cache@v3
               env:
@@ -61,10 +61,10 @@ jobs:
         runs-on: ubuntu-latest
         name: Test
         steps:
-            - uses: actions/checkout@v3
-            - uses: actions/setup-node@v3
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
               with:
-                  node-version: 16
+                  node-version: 20
             - name: Cache node modules
               uses: actions/cache@v3
               env:
@@ -107,10 +107,10 @@ jobs:
             TARGET_BROWSER: ${{ matrix.config.targetBrowser }}
         needs: build
         steps:
-            - uses: actions/checkout@v3
-            - uses: actions/setup-node@v3
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
               with:
-                  node-version: 16
+                  node-version: 20
             - name: Cache node modules
               uses: actions/cache@v3
               env:
@@ -162,8 +162,10 @@ jobs:
         needs: browser-test
         permissions:
             contents: write
+            # Required for OIDC trusted publishing to npm
+            id-token: write
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
             - name: Download NPM package
               uses: actions/download-artifact@v4
               with:
@@ -215,12 +217,29 @@ jobs:
                   asset_content_type: text/javascript
             - name: Unpack npm
               run: cd npm && tar -xvzf "html2canvas-pro.tgz"
-            - uses: actions/setup-node@v3
+            - uses: actions/setup-node@v4
               with:
-                  node-version: 16
+                  node-version: 20
                   registry-url: 'https://registry.npmjs.org'
-            - name: NPM Publish
+            # NPM Publish using OIDC trusted publishing (recommended approach)
+            # This eliminates the need to create and manage npm tokens
+            # To enable: Configure trusted publishing at https://www.npmjs.com/settings/html2canvas-pro/publishing
+            - name: NPM Publish (OIDC)
+              if: ${{ vars.NPM_USE_OIDC == 'true' }}
+              env:
+                  SKIP_PREPARE: true
+              run: |
+                  cd npm/package
+                  npm publish --provenance --access public
+            # Fallback: NPM Publish using granular access token
+            # If OIDC is not configured, use a granular token with "Bypass 2FA" enabled
+            # Create token at: https://www.npmjs.com/settings/~/tokens
+            # Important: Granular write tokens have a maximum 90-day expiration
+            - name: NPM Publish (Token)
+              if: ${{ vars.NPM_USE_OIDC != 'true' }}
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
                   SKIP_PREPARE: true
-              run: cd npm/package && npm publish --access public
+              run: |
+                  cd npm/package
+                  npm publish --access public
