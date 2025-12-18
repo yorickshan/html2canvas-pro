@@ -22,3 +22,4 @@ tests/demo.html
 docs/.vitepress/dist
 docs/.vitepress/cache
 test*.html
+ISSUE*.md
