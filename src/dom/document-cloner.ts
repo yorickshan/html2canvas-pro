@@ -9,7 +9,6 @@ import {
     isImageElement,
     isScriptElement,
     isSelectElement,
-    isSlotElement,
     isStyleElement,
     isSVGElementNode,
     isTextareaElement,
@@ -192,6 +191,13 @@ export class DocumentCloner {
         const clone = document.createElement('html2canvascustomelement');
         copyCSSStyles(node.style, clone);
 
+        // Clone shadow DOM if it exists
+        // Fix for Issue #108: This is critical for Web Components with slots to work correctly
+        if (node.shadowRoot) {
+            clone.attachShadow({ mode: 'open' });
+            // The actual shadow DOM content will be cloned in cloneChildNodes
+        }
+
         return clone;
     }
 
@@ -303,19 +309,18 @@ export class DocumentCloner {
     }
 
     cloneChildNodes(node: Element, clone: HTMLElement | SVGElement, copyStyles: boolean): void {
-        for (
-            let child = node.shadowRoot ? node.shadowRoot.firstChild : node.firstChild;
-            child;
-            child = child.nextSibling
-        ) {
-            if (isElementNode(child) && isSlotElement(child) && typeof child.assignedNodes === 'function') {
-                const assignedNodes = child.assignedNodes() as ChildNode[];
-                if (assignedNodes.length) {
-                    assignedNodes.forEach((assignedNode) => this.appendChildNode(clone, assignedNode, copyStyles));
-                }
-            } else {
-                this.appendChildNode(clone, child, copyStyles);
+        // Clone shadow DOM content if it exists
+        if (node.shadowRoot && clone.shadowRoot) {
+            for (let child = node.shadowRoot.firstChild; child; child = child.nextSibling) {
+                // Clone all shadow DOM children including <slot> elements
+                // The browser will automatically handle slot assignment
+                clone.shadowRoot.appendChild(this.cloneNode(child, copyStyles));
             }
+        }
+
+        // Clone light DOM content (always, even if shadow DOM exists)
+        for (let child = node.firstChild; child; child = child.nextSibling) {
+            this.appendChildNode(clone, child, copyStyles);
         }
     }
 

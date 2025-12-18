@@ -606,9 +606,12 @@ export class CanvasRenderer extends Renderer {
     mask(paths: Path[]): void {
         this.ctx.beginPath();
         this.ctx.moveTo(0, 0);
-        this.ctx.lineTo(this.canvas.width, 0);
-        this.ctx.lineTo(this.canvas.width, this.canvas.height);
-        this.ctx.lineTo(0, this.canvas.height);
+        // Use logical dimensions (options.width/height) instead of canvas pixel dimensions
+        // because context has already been scaled by this.options.scale
+        // Fix for Issue #126: Using canvas pixel dimensions causes broken output
+        this.ctx.lineTo(this.options.width, 0);
+        this.ctx.lineTo(this.options.width, this.options.height);
+        this.ctx.lineTo(0, this.options.height);
         this.ctx.lineTo(0, 0);
         this.formatPath(paths.slice(0).reverse());
         this.ctx.closePath();
