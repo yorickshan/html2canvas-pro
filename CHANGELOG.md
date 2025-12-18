@@ -1,5 +1,5 @@
 
-## [1.6.0](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.13...v1.6.0) (2025-12-17)
+## [1.6.0](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.13...v1.6.0) (2025-12-18)
 
 
 ### Features
@@ -17,6 +17,11 @@
 ### Documentation
 
 * controlling Output Dimensions ([9c568f3](https://github.com/yorickshan/html2canvas-pro/commit/9c568f3f50326523884ea5d4aa189e9e739ecec0))
+
+
+### Chore
+
+* npm release ci ([08e8779](https://github.com/yorickshan/html2canvas-pro/commit/08e8779fa9a435549f3edf81a5b8cdf305b04f96))
 
 ### [1.5.13](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.12...v1.5.13) (2025-11-06)
 
