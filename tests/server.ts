@@ -11,7 +11,6 @@ import mkdirp from 'mkdirp';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const proxy = require('./proxy.cjs');
-const filenamifyUrl = require('filenamify-url');
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -62,7 +61,9 @@ const metadataFolder = '../tmp/reftests/metadata';
 mkdirp.sync(path.resolve(__dirname, screenshotFolder));
 mkdirp.sync(path.resolve(__dirname, metadataFolder));
 
-const writeScreenshot = (buffer: Buffer, body: ScreenshotRequest) => {
+const writeScreenshot = async (buffer: Buffer, body: ScreenshotRequest) => {
+    const { default: filenamifyUrl } = await import('filenamify-url');
+
     const filename = `${filenamifyUrl(body.test.replace(/^\/tests\/reftests\//, '').replace(/\.html$/, ''), {
         replacement: '-'
     })}!${[process.env.TARGET_BROWSER, body.platform.name, body.platform.version].join('-')}`;
