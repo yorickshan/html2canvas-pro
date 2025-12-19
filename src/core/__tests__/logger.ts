@@ -1,7 +1,6 @@
 import { Logger } from '../logger';
 
 describe('logger', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let infoSpy: any;
 
     beforeEach(() => {

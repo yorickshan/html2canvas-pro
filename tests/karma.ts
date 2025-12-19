@@ -10,7 +10,7 @@ const __dirname = dirname(__filename);
 const require = createRequire(import.meta.url);
 
 // Karma doesn't have proper ESM exports, so we use require
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const karma = require('karma');
 const { config: KarmaConfig, Server: KarmaServer } = karma;
 type TestResults = typeof karma.TestResults;

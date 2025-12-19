@@ -290,7 +290,6 @@ export class CSSParsedCounterDeclaration {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?: string | null) => {
     const tokenizer = new Tokenizer();
     const value = style !== null && typeof style !== 'undefined' ? style.toString() : descriptor.initialValue;

@@ -35,7 +35,6 @@ export interface ResourceOptions {
 }
 
 export class Cache {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private readonly _cache: { [key: string]: Promise<any> } = {};
 
     constructor(
@@ -59,7 +58,6 @@ export class Cache {
         return result;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     match(src: string): Promise<any> {
         return this._cache[src];
     }

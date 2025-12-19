@@ -262,7 +262,7 @@ export class CanvasRenderer extends Renderer {
                         if (styles.webkitTextStrokeWidth && text.text.trim().length) {
                             this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
                             this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                             this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
                             // Issue #110: Use baseline (fontSize) for consistent positioning with fill
                             // Previously used text.bounds.height which caused stroke to render too low
