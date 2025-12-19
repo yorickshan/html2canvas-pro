@@ -1,16 +1,22 @@
 /* eslint-disable */
-import * as express from 'express';
+import express from 'express';
 import yargs from 'yargs';
 import { Argv, ScreenshotRequest } from './types';
-
-const cors = require('cors');
-const path = require('path');
-const serveIndex = require('serve-index');
-const fs = require('fs');
-const bodyParser = require('body-parser');
+import cors from 'cors';
+import path from 'path';
+import serveIndex from 'serve-index';
+import fs from 'fs';
+import bodyParser from 'body-parser';
+import mkdirp from 'mkdirp';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const proxy = require('./proxy.cjs');
 const filenamifyUrl = require('filenamify-url');
-const mkdirp = require('mkdirp');
-const proxy = require('./proxy');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export const app = express();
 app.use('/', serveIndex(path.resolve(__dirname, '../'), { icons: true }));
@@ -61,7 +67,7 @@ const writeScreenshot = (buffer: Buffer, body: ScreenshotRequest) => {
         replacement: '-'
     })}!${[process.env.TARGET_BROWSER, body.platform.name, body.platform.version].join('-')}`;
 
-    fs.writeFileSync(path.resolve(__dirname, screenshotFolder, `${filename}.png`), buffer);
+    fs.writeFileSync(path.resolve(__dirname, screenshotFolder, `${filename}.png`), buffer as Uint8Array);
     return filename;
 };
 
