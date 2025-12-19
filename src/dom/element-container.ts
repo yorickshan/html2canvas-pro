@@ -19,7 +19,10 @@ export class ElementContainer {
     bounds: Bounds;
     flags = 0;
 
-    constructor(protected readonly context: Context, element: Element) {
+    constructor(
+        protected readonly context: Context,
+        element: Element
+    ) {
         if (isDebugging(element, DebuggerType.PARSE)) {
             debugger;
         }

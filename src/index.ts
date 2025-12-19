@@ -164,8 +164,8 @@ const parseBackgroundColor = (context: Context, element: HTMLElement, background
         typeof backgroundColorOverride === 'string'
             ? parseColor(context, backgroundColorOverride)
             : backgroundColorOverride === null
-            ? COLORS.TRANSPARENT
-            : 0xffffffff;
+              ? COLORS.TRANSPARENT
+              : 0xffffffff;
 
     return element === ownerDocument.documentElement
         ? isTransparent(documentBackgroundColor)

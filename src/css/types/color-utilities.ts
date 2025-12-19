@@ -168,15 +168,15 @@ export const extractLabComponents = (args: CSSValue[]): [number, number, number,
             tokens[0].type === TokenType.PERCENTAGE_TOKEN
                 ? tokens[0].number / 100
                 : isNumberToken(tokens[0])
-                ? tokens[0].number
-                : 0,
+                  ? tokens[0].number
+                  : 0,
         // eslint-disable-next-line prettier/prettier
         a =
             tokens[1].type === TokenType.PERCENTAGE_TOKEN
                 ? tokens[1].number / 100
                 : isNumberToken(tokens[1])
-                ? tokens[1].number
-                : 0,
+                  ? tokens[1].number
+                  : 0,
         b = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
         alpha = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
 
@@ -190,15 +190,15 @@ export const extractOkLchComponents = (args: CSSValue[]): [number, number, numbe
             tokens[0].type === TokenType.PERCENTAGE_TOKEN
                 ? tokens[0].number / 100
                 : isNumberToken(tokens[0])
-                ? tokens[0].number
-                : 0,
+                  ? tokens[0].number
+                  : 0,
         // eslint-disable-next-line prettier/prettier
         c =
             tokens[1].type === TokenType.PERCENTAGE_TOKEN
                 ? tokens[1].number / 100
                 : isNumberToken(tokens[1])
-                ? tokens[1].number
-                : 0,
+                  ? tokens[1].number
+                  : 0,
         h = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
         a = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
 

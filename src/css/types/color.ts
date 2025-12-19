@@ -175,10 +175,10 @@ const _color = (context: Context, args: CSSValue[]) => {
                         part.type === TokenType.FUNCTION && part.name === 'calc'
                             ? parseCalc(part.values)
                             : isNumberToken(part)
-                            ? part.number
-                            : part.type === TokenType.DELIM_TOKEN || isIdentToken(part)
-                            ? part.value
-                            : '';
+                              ? part.number
+                              : part.type === TokenType.DELIM_TOKEN || isIdentToken(part)
+                                ? part.value
+                                : '';
                 }
                 expression += ')';
                 return expression;
@@ -203,8 +203,8 @@ const _color = (context: Context, args: CSSValue[]) => {
                 tokens[1].type === TokenType.FUNCTION
                     ? tokens[1].name
                     : isIdentToken(tokens[1]) || tokens[1].type === TokenType.HASH_TOKEN
-                    ? 'rgb'
-                    : 'unknown',
+                      ? 'rgb'
+                      : 'unknown',
             to_colorspace = isIdentToken(tokens[2]) ? tokens[2].value : 'unknown';
 
         let from =

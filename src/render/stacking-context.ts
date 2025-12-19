@@ -39,7 +39,10 @@ export class ElementPaint {
     readonly curves: BoundCurves;
     listValue?: string;
 
-    constructor(readonly container: ElementContainer, readonly parent: ElementPaint | null) {
+    constructor(
+        readonly container: ElementContainer,
+        readonly parent: ElementPaint | null
+    ) {
         this.curves = new BoundCurves(this.container);
         if (this.container.styles.opacity < 1) {
             this.effects.push(new OpacityEffect(this.container.styles.opacity));

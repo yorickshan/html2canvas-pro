@@ -38,7 +38,10 @@ export class Cache {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private readonly _cache: { [key: string]: Promise<any> } = {};
 
-    constructor(private readonly context: Context, private readonly _options: ResourceOptions) {}
+    constructor(
+        private readonly context: Context,
+        private readonly _options: ResourceOptions
+    ) {}
 
     addImage(src: string): Promise<void> {
         const result = Promise.resolve();
