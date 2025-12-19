@@ -3,8 +3,10 @@ import commonjs from '@rollup/plugin-commonjs';
 import sourceMaps from 'rollup-plugin-sourcemaps';
 import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
+import { readFileSync } from 'fs';
 
-const pkg = require('./package.json');
+// Rollup v4 requires ESM, use readFileSync instead of require()
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 const banner = `/*!
  * ${pkg.name} ${pkg.version} <${pkg.homepage}>

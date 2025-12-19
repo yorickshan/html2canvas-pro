@@ -38,6 +38,7 @@ import { computeLineHeight } from '../../css/property-descriptors/line-height';
 import {
     CHECKBOX,
     INPUT_COLOR,
+    PLACEHOLDER_COLOR,
     InputElementContainer,
     RADIO
 } from '../../dom/replaced-elements/input-element-container';
@@ -153,14 +154,9 @@ export class CanvasRenderer extends Renderer {
 
     renderTextWithLetterSpacing(text: TextBounds, letterSpacing: number, baseline: number): void {
         if (letterSpacing === 0) {
-            // Fixed an issue with characters moving up in non-Firefox.
-            // https://github.com/niklasvh/html2canvas/issues/2107#issuecomment-692462900
-            if (navigator.userAgent.indexOf('Firefox') === -1) {
-                this.ctx.textBaseline = 'ideographic';
-                this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + text.bounds.height);
-            } else {
-                this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + baseline);
-            }
+            // Use alphabetic baseline for consistent text positioning across browsers
+            // Issue #129: text.bounds.top + text.bounds.height causes text to render too low
+            this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + baseline);
         } else {
             const letters = segmentGraphemes(text.text);
             letters.reduce((left, letter) => {
@@ -266,9 +262,20 @@ export class CanvasRenderer extends Renderer {
                         if (styles.webkitTextStrokeWidth && text.text.trim().length) {
                             this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
                             this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
                             this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
-                            this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + text.bounds.height);
+                            // Issue #110: Use baseline (fontSize) for consistent positioning with fill
+                            // Previously used text.bounds.height which caused stroke to render too low
+                            const baseline = styles.fontSize.number;
+                            if (styles.letterSpacing === 0) {
+                                this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + baseline);
+                            } else {
+                                const letters = segmentGraphemes(text.text);
+                                letters.reduce((left, letter) => {
+                                    this.ctx.strokeText(letter, left, text.bounds.top + baseline);
+                                    return left + this.ctx.measureText(letter).width;
+                                }, text.bounds.left);
+                            }
                         }
                         this.ctx.strokeStyle = '';
                         this.ctx.lineWidth = 0;
@@ -464,11 +471,14 @@ export class CanvasRenderer extends Renderer {
         }
 
         if (isTextInputElement(container) && container.value.length) {
-            const [fontFamily, fontSize] = this.createFontStyle(styles);
+            const [font, fontFamily, fontSize] = this.createFontStyle(styles);
             const { baseline } = this.fontMetrics.getMetrics(fontFamily, fontSize);
 
-            this.ctx.font = fontFamily;
-            this.ctx.fillStyle = asString(styles.color);
+            this.ctx.font = font;
+
+            // Fix for Issue #92: Use placeholder color when rendering placeholder text
+            const isPlaceholder = container instanceof InputElementContainer && container.isPlaceholder;
+            this.ctx.fillStyle = isPlaceholder ? asString(PLACEHOLDER_COLOR) : asString(styles.color);
 
             this.ctx.textBaseline = 'alphabetic';
             this.ctx.textAlign = canvasTextAlign(container.styles.textAlign);
@@ -486,7 +496,17 @@ export class CanvasRenderer extends Renderer {
                     break;
             }
 
-            const textBounds = bounds.add(x, 0, 0, -bounds.height / 2 + 1);
+            // Fix for Issue #92: Position text vertically centered in single-line input
+            // Only apply vertical centering for InputElementContainer, not for textarea or select
+            let verticalOffset = 0;
+            if (container instanceof InputElementContainer) {
+                const fontSizeValue = getAbsoluteValue(styles.fontSize, 0);
+                verticalOffset = (bounds.height - fontSizeValue) / 2;
+            }
+
+            // Create text bounds with horizontal and vertical offsets
+            // Height is not modified as it doesn't affect text rendering position
+            const textBounds = bounds.add(x, verticalOffset, 0, 0);
 
             this.ctx.save();
             this.path([
@@ -497,6 +517,7 @@ export class CanvasRenderer extends Renderer {
             ]);
 
             this.ctx.clip();
+
             this.renderTextWithLetterSpacing(
                 new TextBounds(container.value, textBounds),
                 styles.letterSpacing,
@@ -521,9 +542,9 @@ export class CanvasRenderer extends Renderer {
                     }
                 }
             } else if (paint.listValue && container.styles.listStyleType !== LIST_STYLE_TYPE.NONE) {
-                const [fontFamily] = this.createFontStyle(styles);
+                const [font] = this.createFontStyle(styles);
 
-                this.ctx.font = fontFamily;
+                this.ctx.font = font;
                 this.ctx.fillStyle = asString(styles.color);
 
                 this.ctx.textBaseline = 'middle';
@@ -600,9 +621,12 @@ export class CanvasRenderer extends Renderer {
     mask(paths: Path[]): void {
         this.ctx.beginPath();
         this.ctx.moveTo(0, 0);
-        this.ctx.lineTo(this.canvas.width, 0);
-        this.ctx.lineTo(this.canvas.width, this.canvas.height);
-        this.ctx.lineTo(0, this.canvas.height);
+        // Use logical dimensions (options.width/height) instead of canvas pixel dimensions
+        // because context has already been scaled by this.options.scale
+        // Fix for Issue #126: Using canvas pixel dimensions causes broken output
+        this.ctx.lineTo(this.options.width, 0);
+        this.ctx.lineTo(this.options.width, this.options.height);
+        this.ctx.lineTo(0, this.options.height);
         this.ctx.lineTo(0, 0);
         this.formatPath(paths.slice(0).reverse());
         this.ctx.closePath();

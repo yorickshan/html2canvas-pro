@@ -1,5 +1,66 @@
 # FAQ
 
+## Why is my canvas output larger/smaller than expected?
+
+When you set `width: 1920` and `height: 1080`, you might expect a canvas with exactly 1920×1080 pixels, but instead get a canvas with 3840×2160 pixels (or 2400×1350 pixels on some devices).
+
+**This is the expected behavior**, not a bug.
+
+### Understanding Canvas Dimensions
+
+The `width` and `height` options set the **CSS display size**, not the internal pixel dimensions.
+
+**Formula:**
+```
+Canvas pixel width = width × scale
+Canvas pixel height = height × scale
+```
+
+**Default behavior:**
+
+By default, `scale = window.devicePixelRatio`:
+- On standard displays: `scale = 1`
+- On Retina/high-DPI displays: `scale = 2`
+- On some displays: `scale = 1.25`, `1.5`, etc.
+
+This produces high-quality images for high-DPI screens.
+
+### Example
+
+```javascript
+// On a Retina display (devicePixelRatio = 2):
+html2canvas(element, {
+    width: 1920,
+    height: 1080
+});
+
+// Results in:
+// - Canvas CSS display size: 1920px × 1080px
+// - Canvas internal resolution: 3840px × 2160px
+// - Canvas HTML: <canvas width="3840" height="2160" style="width: 1920px; height: 1080px;">
+```
+
+### Solution
+
+If you want **exact pixel dimensions**, set `scale: 1`:
+
+```javascript
+html2canvas(element, {
+    width: 1920,
+    height: 1080,
+    scale: 1  // Now canvas will be exactly 1920×1080 pixels
+});
+```
+
+### When to use `scale: 1` vs default scale?
+
+| Use Case | Recommended Setting | Reason |
+|----------|-------------------|--------|
+| Need exact output dimensions | `scale: 1` | Predictable file size and dimensions |
+| High-quality screenshots | Default (`scale = devicePixelRatio`) | Better quality on high-DPI displays |
+| Smaller file size | `scale: 1` | Lower resolution = smaller file |
+| Print quality | `scale: 2` or higher | Higher DPI for better print quality |
+
 ## Why aren't my images rendered?
 html2canvas-pro does not get around content policy restrictions set by your browser. Drawing images that reside outside of 
 the [origin](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy) of the current page [taint the 

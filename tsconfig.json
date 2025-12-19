@@ -7,14 +7,22 @@
         "strictNullChecks": true,
         "strictPropertyInitialization": true,
         "types": ["node", "jest"],
-        "target": "es5",
-        "lib": ["es2015", "dom"],
+        "target": "es2020",
+        "module": "esnext",
+        "lib": ["es2020", "dom"],
         "sourceMap": true,
         "outDir": "dist/lib",
         "declaration": true,
         "skipLibCheck": true,
         "declarationDir": "dist/types",
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true
     },
-    "include": ["src"]
+    "include": ["src"],
+    "ts-node": {
+        "esm": true,
+        "experimentalSpecifierResolution": "node"
+    }
 }

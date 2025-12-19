@@ -19,7 +19,10 @@ export class ElementContainer {
     bounds: Bounds;
     flags = 0;
 
-    constructor(protected readonly context: Context, element: Element) {
+    constructor(
+        protected readonly context: Context,
+        element: Element
+    ) {
         if (isDebugging(element, DebuggerType.PARSE)) {
             debugger;
         }
@@ -34,6 +37,11 @@ export class ElementContainer {
             if (this.styles.transform !== null) {
                 // getBoundingClientRect takes transforms into account
                 element.style.transform = 'none';
+            }
+
+            if (this.styles.rotate !== null) {
+                // Handle rotate property similarly to transform
+                element.style.rotate = 'none';
             }
         }
 

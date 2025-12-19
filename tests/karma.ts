@@ -1,11 +1,23 @@
 import { screenshotApp, corsApp } from './server';
 import { Server } from 'http';
-import { config as KarmaConfig, Server as KarmaServer, TestResults } from 'karma';
+import { createRequire } from 'module';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
+
+// Karma doesn't have proper ESM exports, so we use require
+
+const karma = require('karma');
+const { config: KarmaConfig, Server: KarmaServer } = karma;
+type TestResults = typeof karma.TestResults;
 
 const karmaTestRunner = (): Promise<void> =>
     new Promise<void>((resolve, reject) => {
-        const karmaConfig = KarmaConfig.parseConfig(path.resolve(__dirname, '../karma.conf.js'), {});
+        const karmaConfig = KarmaConfig.parseConfig(path.resolve(__dirname, '../karma.conf.cjs'), {});
         const server = new KarmaServer(karmaConfig, (exitCode: number) => {
             if (exitCode > 0) {
                 reject(`Karma has exited with ${exitCode}`);
@@ -13,7 +25,7 @@ const karmaTestRunner = (): Promise<void> =>
                 resolve();
             }
         });
-        server.on('run_complete', (_browsers: any, _results: TestResults) => {
+        server.on('run_complete', (_browsers: unknown, _results: TestResults) => {
             server.stop();
         });
         server.start();
