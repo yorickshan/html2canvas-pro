@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>CSS rotate property test</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            body {
+                font-family: Arial;
+            }
+
+            .container {
+                margin: 50px;
+            }
+
+            .box {
+                width: 100px;
+                height: 100px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                margin: 50px;
+                display: inline-block;
+                text-align: center;
+                line-height: 100px;
+                color: white;
+                font-weight: bold;
+                border: 2px solid #333;
+            }
+
+            /* Test CSS rotate property */
+            .rotate-45 {
+                rotate: 45deg;
+            }
+
+            .rotate--45 {
+                rotate: -45deg;
+            }
+
+            .rotate-90 {
+                rotate: 90deg;
+            }
+
+            .rotate-180 {
+                rotate: 180deg;
+            }
+
+            .rotate-negative {
+                rotate: -45deg;
+            }
+
+            .rotate-360 {
+                rotate: 360deg;
+            }
+
+            /* Test combination with transform property */
+            .rotate-with-scale {
+                rotate: 30deg;
+                transform: scale(1.2);
+            }
+
+            .rotate-with-translate {
+                rotate: 45deg;
+                transform: translateX(20px);
+            }
+
+            .translate-with-rotate {
+                transform: translateX(20px);
+                rotate: 45deg;
+            }
+
+            /* Compare with transform: rotate() */
+            .transform-rotate {
+                transform: rotate(45deg);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>CSS Rotate Property Tests</h2>
+
+            <h3>Basic Rotation</h3>
+            <div class="box">Normal</div>
+            <div class="box rotate-45">45°</div>
+            <div class="box rotate-90">90°</div>
+            <div class="box rotate-180">180°</div>
+
+            <h3>Negative and Full Rotation</h3>
+            <div class="box rotate-negative">-45°</div>
+            <div class="box rotate-360">360°</div>
+
+            <h3>Combined with Transform</h3>
+            <div class="box rotate-with-scale">Scale</div>
+            <div class="box rotate-with-translate">Move</div>
+            <div class="box translate-with-rotate">Movez</div>
+            <div class="box rotate-45 transform-rotate">Double</div>
+            <div class="box rotate--45 transform-rotate">Cancel out</div>
+
+            <h3>Transform: rotate() for comparison</h3>
+            <div class="box transform-rotate">Old Way</div>
+        </div>
+    </body>
+</html>

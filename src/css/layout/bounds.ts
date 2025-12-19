@@ -1,7 +1,12 @@
 import { Context } from '../../core/context';
 
 export class Bounds {
-    constructor(readonly left: number, readonly top: number, readonly width: number, readonly height: number) {}
+    constructor(
+        readonly left: number,
+        readonly top: number,
+        readonly width: number,
+        readonly height: number
+    ) {}
 
     add(x: number, y: number, w: number, h: number): Bounds {
         return new Bounds(this.left + x, this.top + y, this.width + w, this.height + h);
@@ -17,7 +22,23 @@ export class Bounds {
     }
 
     static fromDOMRectList(context: Context, domRectList: DOMRectList): Bounds {
-        const domRect = Array.from(domRectList).find((rect) => rect.width !== 0);
+        const rects = Array.from(domRectList);
+
+        // First try to find a rect with non-zero width
+        let domRect = rects.find((rect) => rect.width !== 0);
+
+        // If not found, try to find a rect with non-zero height
+        // This handles cases like inline-flex with single child where width might be 0
+        if (!domRect) {
+            domRect = rects.find((rect) => rect.height !== 0);
+        }
+
+        // If still not found but rects exist, use the first rect
+        // Position info (left, top) might still be valid even if dimensions are 0
+        if (!domRect && rects.length > 0) {
+            domRect = rects[0];
+        }
+
         return domRect
             ? new Bounds(
                   domRect.left + context.windowBounds.left,
