@@ -1,4 +1,32 @@
 
+### [1.6.1](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.13...v1.6.1) (2025-12-19)
+
+
+### Features
+
+* calc() in background-position ([14d7f67](https://github.com/yorickshan/html2canvas-pro/commit/14d7f67e318dd4cedcb299ddca1a512982237b93))
+
+
+### Documentation
+
+* controlling Output Dimensions ([9c568f3](https://github.com/yorickshan/html2canvas-pro/commit/9c568f3f50326523884ea5d4aa189e9e739ecec0))
+
+
+### Chore
+
+* npm release ci ([08e8779](https://github.com/yorickshan/html2canvas-pro/commit/08e8779fa9a435549f3edf81a5b8cdf305b04f96))
+* upgrade filenamify-url ([89d4189](https://github.com/yorickshan/html2canvas-pro/commit/89d41892dee1a40b164aa5c24557d3a0b9886466))
+
+
+### Fixes
+
+* everything in <slot> is not rendered [#108](https://github.com/yorickshan/html2canvas-pro/issues/108) ([d940cb8](https://github.com/yorickshan/html2canvas-pro/commit/d940cb843b6b420787f52429af38bd75d119edc8))
+* placeholder padding incorrect render [#92](https://github.com/yorickshan/html2canvas-pro/issues/92) ([b31a1ce](https://github.com/yorickshan/html2canvas-pro/commit/b31a1ce22f02af4bd34dcd18d9aea88598248621))
+* text inside inline-flex container not rendering when it's the only child [#137](https://github.com/yorickshan/html2canvas-pro/issues/137) ([11d1be6](https://github.com/yorickshan/html2canvas-pro/commit/11d1be6ff2bfbf4887b9e7baa4e864226003684a))
+* text rendered lower than in browser ([667c2cc](https://github.com/yorickshan/html2canvas-pro/commit/667c2cc97802d21094b96ff01595f159d00f7e9d))
+* webkit-text-stroke is offseted below when paint-order: stroke fill; is used [#110](https://github.com/yorickshan/html2canvas-pro/issues/110) ([0dbd1f4](https://github.com/yorickshan/html2canvas-pro/commit/0dbd1f4f5a6f0f26d3e6962d403df0dd94c623bf))
+* when used with Tailwind, the oklch color is sometimes downgraded to the default black [#134](https://github.com/yorickshan/html2canvas-pro/issues/134) ([21b0672](https://github.com/yorickshan/html2canvas-pro/commit/21b06723e2f543936f58860bb681353d16749288))
+
 ## [1.6.0](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.13...v1.6.0) (2025-12-18)
 
 
