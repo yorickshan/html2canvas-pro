@@ -9,7 +9,6 @@ import {
     isImageElement,
     isScriptElement,
     isSelectElement,
-    isSlotElement,
     isStyleElement,
     isSVGElementNode,
     isTextareaElement,
@@ -128,17 +127,27 @@ export class DocumentCloner {
 
             return iframe;
         });
-
-        const adoptedNode = documentClone.adoptNode(this.documentElement);
         /**
          * The baseURI of the document will be lost after documentClone.open().
-         * We can avoid it by adding <base> element.
+         * We save it before open() to preserve the original base URI for resource resolution.
          * */
-        addBase(adoptedNode, documentClone);
+        const baseUri = documentClone.baseURI;
         documentClone.open();
         documentClone.write(`${serializeDoctype(document.doctype)}<html></html>`);
         // Chrome scrolls the parent document for some reason after the write to the cloned window???
         restoreOwnerScroll(this.referenceElement.ownerDocument, scrollX, scrollY);
+        /**
+         * Note: adoptNode() should be called AFTER documentClone.open() and close()
+         *
+         * In Chrome, calling adoptNode() before or during open/write may cause
+         * styles with uppercase characters in class names (e.g. ".MyClass") to not apply correctly.
+         *
+         * Fix:
+         *   - Make sure adoptNode() is called after documentClone.open() and close()
+         *   - This allows Chrome to properly match and apply all CSS rules including mixed-case class selectors.
+         * */
+        const adoptedNode = documentClone.adoptNode(this.documentElement);
+        addBase(adoptedNode, baseUri);
         documentClone.replaceChild(adoptedNode, documentClone.documentElement);
         documentClone.close();
 
@@ -179,8 +188,37 @@ export class DocumentCloner {
     }
 
     createCustomElementClone(node: HTMLElement): HTMLElement {
+        // Ensure html2canvascustomelement is defined
+        if (typeof window !== 'undefined' && !customElements.get('html2canvascustomelement')) {
+            try {
+                customElements.define(
+                    'html2canvascustomelement',
+                    class extends HTMLElement {
+                        constructor() {
+                            super();
+                        }
+                    }
+                );
+            } catch (e) {
+                // Already defined or cannot define
+            }
+        }
+
         const clone = document.createElement('html2canvascustomelement');
         copyCSSStyles(node.style, clone);
+
+        // Clone shadow DOM if it exists
+        // Fix for Issue #108: This is critical for Web Components with slots to work correctly
+        if (node.shadowRoot) {
+            try {
+                clone.attachShadow({ mode: 'open' });
+                // The actual shadow DOM content will be cloned in cloneChildNodes
+            } catch (e) {
+                // Some elements cannot have shadow roots attached
+                // This can happen if the element doesn't support shadow DOM
+                this.context.logger.error('Failed to attach shadow root to custom element clone:', e);
+            }
+        }
 
         return clone;
     }
@@ -293,19 +331,18 @@ export class DocumentCloner {
     }
 
     cloneChildNodes(node: Element, clone: HTMLElement | SVGElement, copyStyles: boolean): void {
-        for (
-            let child = node.shadowRoot ? node.shadowRoot.firstChild : node.firstChild;
-            child;
-            child = child.nextSibling
-        ) {
-            if (isElementNode(child) && isSlotElement(child) && typeof child.assignedNodes === 'function') {
-                const assignedNodes = child.assignedNodes() as ChildNode[];
-                if (assignedNodes.length) {
-                    assignedNodes.forEach((assignedNode) => this.appendChildNode(clone, assignedNode, copyStyles));
-                }
-            } else {
-                this.appendChildNode(clone, child, copyStyles);
+        // Clone shadow DOM content if it exists
+        if (node.shadowRoot && clone.shadowRoot) {
+            for (let child = node.shadowRoot.firstChild; child; child = child.nextSibling) {
+                // Clone all shadow DOM children including <slot> elements
+                // The browser will automatically handle slot assignment
+                clone.shadowRoot.appendChild(this.cloneNode(child, copyStyles));
             }
+        }
+
+        // Clone light DOM content (always, even if shadow DOM exists)
+        for (let child = node.firstChild; child; child = child.nextSibling) {
+            this.appendChildNode(clone, child, copyStyles);
         }
     }
 
@@ -567,7 +604,8 @@ export const copyCSSStyles = <T extends HTMLElement | SVGElement>(style: CSSStyl
     // Edge does not provide value for cssText
     for (let i = style.length - 1; i >= 0; i--) {
         const property = style.item(i);
-        if (ignoredStyleProperties.indexOf(property) === -1) {
+        // fix: Chrome_138 ignore custom properties
+        if (ignoredStyleProperties.indexOf(property) === -1 && !property.startsWith('--')) {
             target.style.setProperty(property, style.getPropertyValue(property));
         }
     }
@@ -642,9 +680,9 @@ const createStyles = (body: HTMLElement, styles: string) => {
     }
 };
 
-const addBase = (targetELement: HTMLElement, referenceDocument: Document) => {
-    const baseNode = referenceDocument.createElement('base');
-    baseNode.href = referenceDocument.baseURI;
+const addBase = (targetELement: HTMLElement, baseUri: string) => {
+    const baseNode = targetELement.ownerDocument.createElement('base');
+    baseNode.href = baseUri;
     const headEle = targetELement.getElementsByTagName('head').item(0);
     headEle?.insertBefore(baseNode, headEle?.firstChild ?? null);
 };

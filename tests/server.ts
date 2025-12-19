@@ -1,25 +1,42 @@
 /* eslint-disable */
-import * as express from 'express';
+import express from 'express';
 import yargs from 'yargs';
 import { Argv, ScreenshotRequest } from './types';
+import cors from 'cors';
+import path from 'path';
+import serveIndex from 'serve-index';
+import fs from 'fs';
+import bodyParser from 'body-parser';
+import mkdirp from 'mkdirp';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const proxy = require('./proxy.cjs');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-const cors = require('cors');
-const path = require('path');
-const serveIndex = require('serve-index');
-const fs = require('fs');
-const bodyParser = require('body-parser');
-const filenamifyUrl = require('filenamify-url');
-const mkdirp = require('mkdirp');
-const proxy = require('./proxy');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export const app = express();
 app.use('/', serveIndex(path.resolve(__dirname, '../'), { icons: true }));
 app.use([/^\/src($|\/)/, '/'], express.static(path.resolve(__dirname, '../')));
 
+// Add route to handle redirect-image test case
+app.get('/redirect-image', (_req, res) => {
+    // Redirect to an external domain
+    res.redirect('https://yorickshan.github.io/html2canvas-pro/logo.png');
+});
+
 export const corsApp = express();
 corsApp.use('/proxy', proxy());
 corsApp.use('/cors', cors(), express.static(path.resolve(__dirname, '../')));
 corsApp.use('/', express.static(path.resolve(__dirname, '.')));
+
+// Add route to handle redirect-image test case in CORS app too
+corsApp.get('/redirect-image', (_req, res) => {
+    // Redirect to an external domain
+    res.redirect('https://yorickshan.github.io/html2canvas-pro/logo.png');
+});
 
 export const screenshotApp = express();
 screenshotApp.use(cors());
@@ -44,12 +61,14 @@ const metadataFolder = '../tmp/reftests/metadata';
 mkdirp.sync(path.resolve(__dirname, screenshotFolder));
 mkdirp.sync(path.resolve(__dirname, metadataFolder));
 
-const writeScreenshot = (buffer: Buffer, body: ScreenshotRequest) => {
+const writeScreenshot = async (buffer: Buffer, body: ScreenshotRequest) => {
+    const { default: filenamifyUrl } = await import('filenamify-url');
+
     const filename = `${filenamifyUrl(body.test.replace(/^\/tests\/reftests\//, '').replace(/\.html$/, ''), {
         replacement: '-'
     })}!${[process.env.TARGET_BROWSER, body.platform.name, body.platform.version].join('-')}`;
 
-    fs.writeFileSync(path.resolve(__dirname, screenshotFolder, `${filename}.png`), buffer);
+    fs.writeFileSync(path.resolve(__dirname, screenshotFolder, `${filename}.png`), buffer as Uint8Array);
     return filename;
 };
 

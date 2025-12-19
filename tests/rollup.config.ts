@@ -3,9 +3,14 @@ import commonjs from '@rollup/plugin-commonjs';
 import sourceMaps from 'rollup-plugin-sourcemaps';
 import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
-import { resolve } from 'path';
-// eslint-disable-next-line
-const pkg = require('../package.json');
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
+
+// Rollup v4 requires ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const pkg = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf-8'));
 
 const banner = `/*
  * ${pkg.name} ${pkg.version} <${pkg.homepage}>

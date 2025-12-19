@@ -47,7 +47,8 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
         allowTaint: opts.allowTaint ?? false,
         imageTimeout: opts.imageTimeout ?? 15000,
         proxy: opts.proxy,
-        useCORS: opts.useCORS ?? false
+        useCORS: opts.useCORS ?? false,
+        customIsSameOrigin: opts.customIsSameOrigin
     };
 
     const contextOptions = {
@@ -163,8 +164,8 @@ const parseBackgroundColor = (context: Context, element: HTMLElement, background
         typeof backgroundColorOverride === 'string'
             ? parseColor(context, backgroundColorOverride)
             : backgroundColorOverride === null
-            ? COLORS.TRANSPARENT
-            : 0xffffffff;
+              ? COLORS.TRANSPARENT
+              : 0xffffffff;
 
     return element === ownerDocument.documentElement
         ? isTransparent(documentBackgroundColor)

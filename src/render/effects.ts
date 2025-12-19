@@ -21,13 +21,20 @@ export class TransformEffect implements IElementEffect {
     readonly type: EffectType = EffectType.TRANSFORM;
     readonly target: number = EffectTarget.BACKGROUND_BORDERS | EffectTarget.CONTENT;
 
-    constructor(readonly offsetX: number, readonly offsetY: number, readonly matrix: Matrix) {}
+    constructor(
+        readonly offsetX: number,
+        readonly offsetY: number,
+        readonly matrix: Matrix
+    ) {}
 }
 
 export class ClipEffect implements IElementEffect {
     readonly type: EffectType = EffectType.CLIP;
 
-    constructor(readonly path: Path[], readonly target: EffectTarget) {}
+    constructor(
+        readonly path: Path[],
+        readonly target: EffectTarget
+    ) {}
 }
 
 export class OpacityEffect implements IElementEffect {

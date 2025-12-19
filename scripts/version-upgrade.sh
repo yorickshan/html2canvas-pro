@@ -1,5 +1,7 @@
 #!/bin/bash
 
+git pull -r
+
 if [ $# -ne 1 ]; then
   echo "Usage: npm run release <version_name>."
   exit 1

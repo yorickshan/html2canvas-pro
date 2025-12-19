@@ -10,36 +10,38 @@ window.Promise = Promise;
 const testRunnerUrl = location.href;
 const hasHistoryApi = typeof window.history !== 'undefined' && typeof window.history.replaceState !== 'undefined';
 
-const uploadResults = (canvas: HTMLCanvasElement, url: string) => {
-    return new Promise((resolve: () => void, reject: (error: string) => void) => {
-        // @ts-ignore
-        const xhr = new XMLHttpRequest();
+const uploadResults = (canvas: HTMLCanvasElement, url: string): Promise<void> => {
+    return new (window as Window & { Promise: PromiseConstructor }).Promise(
+        (resolve: () => void, reject: (error: string) => void) => {
+            // @ts-ignore
+            const xhr = new XMLHttpRequest();
 
-        xhr.onload = () => {
-            if (typeof xhr.status !== 'number' || xhr.status === 200) {
-                resolve();
-            } else {
-                reject(`Failed to send screenshot with status ${xhr.status}`);
-            }
-        };
-        xhr.onerror = () => reject(`Network error`);
+            xhr.onload = () => {
+                if (typeof xhr.status !== 'number' || xhr.status === 200) {
+                    resolve();
+                } else {
+                    reject(`Failed to send screenshot with status ${xhr.status}`);
+                }
+            };
+            xhr.onerror = () => reject(`Network error`);
 
-        const request: ScreenshotRequest = {
-            screenshot: canvas.toDataURL(),
-            test: url,
-            platform: {
-                name: platform.name,
-                version: platform.version
-            },
-            devicePixelRatio: window.devicePixelRatio || 1,
-            windowWidth: window.innerWidth,
-            windowHeight: window.innerHeight
-        };
+            const request: ScreenshotRequest = {
+                screenshot: canvas.toDataURL(),
+                test: url,
+                platform: {
+                    name: platform.name || '',
+                    version: platform.version || ''
+                },
+                devicePixelRatio: window.devicePixelRatio || 1,
+                windowWidth: window.innerWidth,
+                windowHeight: window.innerHeight
+            };
 
-        xhr.open('POST', 'http://localhost:8000/screenshot', true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.send(JSON.stringify(request));
-    });
+            xhr.open('POST', 'http://localhost:8000/screenshot', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify(request));
+        }
+    );
 };
 
 testList
