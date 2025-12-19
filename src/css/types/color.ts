@@ -110,6 +110,16 @@ const rgb = (_context: Context, args: CSSValue[]): number => {
         return pack(r, g, b, a);
     }
 
+    // Handle modern CSS syntax with / separator: rgb(r g b / alpha)
+    // tokens[0] = r, tokens[1] = g, tokens[2] = b, tokens[3] = '/', tokens[4] = alpha
+    if (tokens.length === 5 && tokens[3].type === TokenType.DELIM_TOKEN && tokens[3].value === '/') {
+        const r = getTokenColorValue(tokens[0], 0);
+        const g = getTokenColorValue(tokens[1], 1);
+        const b = getTokenColorValue(tokens[2], 2);
+        const a = getTokenColorValue(tokens[4], 3);
+        return pack(r, g, b, a);
+    }
+
     return 0;
 };
 
