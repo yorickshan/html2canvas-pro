@@ -38,6 +38,7 @@ import { computeLineHeight } from '../../css/property-descriptors/line-height';
 import {
     CHECKBOX,
     INPUT_COLOR,
+    PLACEHOLDER_COLOR,
     InputElementContainer,
     RADIO
 } from '../../dom/replaced-elements/input-element-container';
@@ -474,7 +475,10 @@ export class CanvasRenderer extends Renderer {
             const { baseline } = this.fontMetrics.getMetrics(fontFamily, fontSize);
 
             this.ctx.font = font;
-            this.ctx.fillStyle = asString(styles.color);
+
+            // Fix for Issue #92: Use placeholder color when rendering placeholder text
+            const isPlaceholder = container instanceof InputElementContainer && container.isPlaceholder;
+            this.ctx.fillStyle = isPlaceholder ? asString(PLACEHOLDER_COLOR) : asString(styles.color);
 
             this.ctx.textBaseline = 'alphabetic';
             this.ctx.textAlign = canvasTextAlign(container.styles.textAlign);
@@ -492,7 +496,17 @@ export class CanvasRenderer extends Renderer {
                     break;
             }
 
-            const textBounds = bounds.add(x, 0, 0, -bounds.height / 2 + 1);
+            // Fix for Issue #92: Position text vertically centered in single-line input
+            // Only apply vertical centering for InputElementContainer, not for textarea or select
+            let verticalOffset = 0;
+            if (container instanceof InputElementContainer) {
+                const fontSizeValue = getAbsoluteValue(styles.fontSize, 0);
+                verticalOffset = (bounds.height - fontSizeValue) / 2;
+            }
+
+            // Create text bounds with horizontal and vertical offsets
+            // Height is not modified as it doesn't affect text rendering position
+            const textBounds = bounds.add(x, verticalOffset, 0, 0);
 
             this.ctx.save();
             this.path([
@@ -503,6 +517,7 @@ export class CanvasRenderer extends Renderer {
             ]);
 
             this.ctx.clip();
+
             this.renderTextWithLetterSpacing(
                 new TextBounds(container.value, textBounds),
                 styles.letterSpacing,

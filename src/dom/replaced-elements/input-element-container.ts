@@ -39,21 +39,29 @@ const getInputValue = (node: HTMLInputElement): string => {
     return value.length === 0 ? node.placeholder || '' : value;
 };
 
+const isPlaceholder = (node: HTMLInputElement): boolean => {
+    return node.value.length === 0 && !!node.placeholder;
+};
+
 export const CHECKBOX = 'checkbox';
 export const RADIO = 'radio';
 export const PASSWORD = 'password';
 export const INPUT_COLOR = 0x2a2a2aff;
+// Default placeholder color (similar to browsers: rgba(117, 117, 117, 1) or #757575)
+export const PLACEHOLDER_COLOR = 0x757575ff;
 
 export class InputElementContainer extends ElementContainer {
     readonly type: string;
     readonly checked: boolean;
     readonly value: string;
+    readonly isPlaceholder: boolean;
 
     constructor(context: Context, input: HTMLInputElement) {
         super(context, input);
         this.type = input.type.toLowerCase();
         this.checked = input.checked;
         this.value = getInputValue(input);
+        this.isPlaceholder = isPlaceholder(input);
 
         if (this.type === CHECKBOX || this.type === RADIO) {
             this.styles.backgroundColor = 0xdededeff;
