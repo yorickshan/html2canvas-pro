@@ -10,8 +10,8 @@ window.Promise = Promise;
 const testRunnerUrl = location.href;
 const hasHistoryApi = typeof window.history !== 'undefined' && typeof window.history.replaceState !== 'undefined';
 
-const uploadResults = (canvas: HTMLCanvasElement, url: string) => {
-    return new Promise((resolve: () => void, reject: (error: string) => void) => {
+const uploadResults = (canvas: HTMLCanvasElement, url: string): Promise<void> => {
+    return new (window as any).Promise((resolve: () => void, reject: (error: string) => void) => {
         // @ts-ignore
         const xhr = new XMLHttpRequest();
 
@@ -28,8 +28,8 @@ const uploadResults = (canvas: HTMLCanvasElement, url: string) => {
             screenshot: canvas.toDataURL(),
             test: url,
             platform: {
-                name: platform.name,
-                version: platform.version
+                name: platform.name || '',
+                version: platform.version || ''
             },
             devicePixelRatio: window.devicePixelRatio || 1,
             windowWidth: window.innerWidth,
