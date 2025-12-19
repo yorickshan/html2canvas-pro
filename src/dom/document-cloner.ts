@@ -188,14 +188,36 @@ export class DocumentCloner {
     }
 
     createCustomElementClone(node: HTMLElement): HTMLElement {
+        // Ensure html2canvascustomelement is defined
+        if (typeof window !== 'undefined' && !customElements.get('html2canvascustomelement')) {
+            try {
+                customElements.define(
+                    'html2canvascustomelement',
+                    class extends HTMLElement {
+                        constructor() {
+                            super();
+                        }
+                    }
+                );
+            } catch (e) {
+                // Already defined or cannot define
+            }
+        }
+
         const clone = document.createElement('html2canvascustomelement');
         copyCSSStyles(node.style, clone);
 
         // Clone shadow DOM if it exists
         // Fix for Issue #108: This is critical for Web Components with slots to work correctly
         if (node.shadowRoot) {
-            clone.attachShadow({ mode: 'open' });
-            // The actual shadow DOM content will be cloned in cloneChildNodes
+            try {
+                clone.attachShadow({ mode: 'open' });
+                // The actual shadow DOM content will be cloned in cloneChildNodes
+            } catch (e) {
+                // Some elements cannot have shadow roots attached
+                // This can happen if the element doesn't support shadow DOM
+                this.context.logger.error('Failed to attach shadow root to custom element clone:', e);
+            }
         }
 
         return clone;
