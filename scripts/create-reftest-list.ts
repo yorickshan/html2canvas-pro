@@ -1,10 +1,14 @@
 'use strict';
 
 import { readFileSync, writeFileSync } from 'fs';
-import { resolve, relative } from 'path';
+import { resolve, relative, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { sync } from 'glob';
+import slash from 'slash';
 
-const slash = require('slash');
+// ESM replacement for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 if (process.argv.length <= 2) {
     console.log('No ignore.txt file provided');

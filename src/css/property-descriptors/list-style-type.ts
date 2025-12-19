@@ -1,5 +1,5 @@
-import { IPropertyIdentValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
 import { Context } from '../../core/context';
+import { IPropertyIdentValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
 export const enum LIST_STYLE_TYPE {
     NONE = -1,
     DISC = 0,
@@ -25,7 +25,6 @@ export const enum LIST_STYLE_TYPE {
     GEORGIAN = 20,
     GUJARATI = 21,
     GURMUKHI = 22,
-    HEBREW = 22,
     HIRAGANA = 23,
     HIRAGANA_IROHA = 24,
     JAPANESE_FORMAL = 25,
@@ -54,7 +53,9 @@ export const enum LIST_STYLE_TYPE {
     TRAD_CHINESE_INFORMAL = 48,
     UPPER_ARMENIAN = 49,
     DISCLOSURE_OPEN = 50,
-    DISCLOSURE_CLOSED = 51
+    DISCLOSURE_CLOSED = 51,
+    // This was originally 22, duplicating GURMUKHI.
+    HEBREW = 52
 }
 
 export const listStyleType: IPropertyIdentValueDescriptor<LIST_STYLE_TYPE> = {

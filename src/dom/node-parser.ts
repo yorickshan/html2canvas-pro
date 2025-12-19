@@ -11,6 +11,8 @@ import { SelectElementContainer } from './elements/select-element-container';
 import { TextareaElementContainer } from './elements/textarea-element-container';
 import { IFrameElementContainer } from './replaced-elements/iframe-element-container';
 import { Context } from '../core/context';
+import { contains } from '../core/bitwise';
+import { DISPLAY } from '../css/property-descriptors/display';
 
 const LIST_OWNERS = ['OL', 'UL', 'MENU'];
 
@@ -110,7 +112,22 @@ const createsRealStackingContext = (node: Element, container: ElementContainer, 
     );
 };
 
-const createsStackingContext = (styles: CSSParsedDeclaration): boolean => styles.isPositioned() || styles.isFloating();
+const createsStackingContext = (styles: CSSParsedDeclaration): boolean => {
+    // Positioned and floating elements create stacking contexts
+    if (styles.isPositioned() || styles.isFloating()) {
+        return true;
+    }
+
+    // Fix for Issue #137: Inline-level containers (inline-flex, inline-block, etc.)
+    // should create stacking contexts to prevent their children from being added
+    // to the parent's stacking context, which causes rendering order issues
+    return (
+        contains(styles.display, DISPLAY.INLINE_FLEX) ||
+        contains(styles.display, DISPLAY.INLINE_BLOCK) ||
+        contains(styles.display, DISPLAY.INLINE_GRID) ||
+        contains(styles.display, DISPLAY.INLINE_TABLE)
+    );
+};
 
 export const isTextNode = (node: Node): node is Text => node.nodeType === Node.TEXT_NODE;
 export const isElementNode = (node: Node): node is Element => node.nodeType === Node.ELEMENT_NODE;
