@@ -1,4 +1,4 @@
-import { testList, ignoredTests } from '../build/reftests';
+import { testList, ignoredTests } from '../build/reftests.js';
 // @ts-ignore
 import { default as platform } from 'platform';
 // @ts-ignore
@@ -45,10 +45,10 @@ const uploadResults = (canvas: HTMLCanvasElement, url: string): Promise<void> =>
 };
 
 testList
-    .filter((test) => {
+    .filter((test: string) => {
         return !Array.isArray(ignoredTests[test]) || ignoredTests[test].indexOf(platform.name || '') === -1;
     })
-    .forEach((url) => {
+    .forEach((url: string) => {
         describe(url, function (this: Mocha.Suite) {
             this.timeout(60000);
             this.retries(2);
