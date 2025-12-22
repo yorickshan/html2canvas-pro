@@ -103,7 +103,7 @@
     "build:testrunner": "npx tsx --tsconfig tests/tsconfig.json ./node_modules/.bin/rollup -c tests/rollup.config.ts",
     "build:minify": "uglifyjs --compress --comments /^!/ -o dist/html2canvas-pro.min.js --mangle -- dist/html2canvas-pro.js",
     "build:reftest-result-list": "npx tsx scripts/create-reftest-result-list.ts",
-    "build:create-reftest-list": "npx tsx scripts/create-reftest-list.ts tests/reftests/ignore.txt build/reftests.ts",
+    "build:create-reftest-list": "npx tsx scripts/create-reftest-list.ts tests/reftests/ignore.txt build/reftests.js",
     "release": "sh scripts/version-upgrade.sh",
     "format": "prettier --write \"{src,tests,scripts}/**/*.ts\"",
     "lint": "eslint src/**/*.ts --max-warnings 0",

@@ -34,21 +34,24 @@ export default {
         include: 'tests/**'
     },
     plugins: [
-        // Allow node_modules resolution, so you can use 'external' to control
-        // which external modules to include in the bundle
-        // https://github.com/rollup/rollup-plugin-node-resolve#usage
-        nodeResolve(),
-        // Allow json resolution
-        json(),
         // Compile TypeScript files
         typescript({
-            tsconfig: resolve(__dirname, 'tsconfig.json')
+            tsconfig: resolve(__dirname, 'tsconfig.json'),
+            compilerOptions: {
+                outDir: 'build',
+                declarationDir: null
+            }
         }),
-        // Allow bundling cjs modules (unlike webpack, rollup doesn't understand cjs)
+        // Allow node_modules resolution
+        nodeResolve({
+            extensions: ['.ts', '.js', '.json']
+        }),
+        // Allow json resolution
+        json(),
+        // Allow bundling cjs modules
         commonjs({
             include: 'node_modules/**'
         }),
-
         // Resolve source maps to the original source
         sourceMaps()
     ]
