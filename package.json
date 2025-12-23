@@ -64,7 +64,7 @@
     "cz-conventional-changelog": "^3.3.0",
     "es6-promise": "^4.2.8",
     "eslint": "^9.13.0",
-    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "express": "^4.17.1",
     "filenamify-url": "4.0.0",
