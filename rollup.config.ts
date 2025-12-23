@@ -17,7 +17,7 @@ const banner = `/*!
 export default {
     input: `src/index.ts`,
     output: [
-        { file: pkg.main, name: 'html2canvas', format: 'umd', banner, sourcemap: true },
+        { file: pkg.main, name: 'html2canvas', format: 'umd', banner, sourcemap: true, exports: 'named' },
         { file: pkg.module, format: 'esm', banner, sourcemap: true },
     ],
     external: [],

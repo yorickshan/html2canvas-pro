@@ -6,6 +6,14 @@
   "module": "dist/html2canvas-pro.esm.js",
   "typings": "dist/types/index.d.ts",
   "browser": "dist/html2canvas-pro.js",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/html2canvas-pro.esm.js",
+      "require": "./dist/html2canvas-pro.js",
+      "default": "./dist/html2canvas-pro.esm.js"
+    }
+  },
   "version": "1.6.1",
   "author": {
     "name": "yorickshan",
