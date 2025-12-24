@@ -124,7 +124,6 @@
     "start": "npx tsx tests/server --port=8080 --cors=8081",
     "commitlint": "commitlint --config .commitlintrc.json -e -V",
     "tag": "sh scripts/create-tag.sh",
-    "prepare": "if [ \"$SKIP_PREPARE\" != \"true\" ]; then husky install; fi",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
