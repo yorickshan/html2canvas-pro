@@ -58,7 +58,7 @@
     "appium-ios-simulator": "^6.1.10",
     "base64-arraybuffer": "1.0.2",
     "body-parser": "^2.2.1",
-    "chai": "5.1.1",
+    "chai": "6.2.2",
     "conventional-changelog-cli": "^5.0.0",
     "cors": "^2.8.5",
     "cz-conventional-changelog": "^3.3.0",
