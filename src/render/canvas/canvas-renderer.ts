@@ -739,7 +739,13 @@ export class CanvasRenderer extends Renderer {
                 const x = getAbsoluteValue(position[0], width);
                 const y = getAbsoluteValue(position[position.length - 1], height);
 
-                const [rx, ry] = calculateRadius(backgroundImage, x, y, width, height);
+                let [rx, ry] = calculateRadius(backgroundImage, x, y, width, height);
+                // Handle edge case where radial gradient size is 0
+                // Use a minimum value of 0.01 to ensure gradient is still rendered
+                if (rx === 0 || ry === 0) {
+                    rx = Math.max(rx, 0.01);
+                    ry = Math.max(ry, 0.01);
+                }
                 if (rx > 0 && ry > 0) {
                     const radialGradient = this.ctx.createRadialGradient(left + x, top + y, 0, left + x, top + y, rx);
 
