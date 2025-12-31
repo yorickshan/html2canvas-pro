@@ -55,7 +55,7 @@
     "@types/serve-index": "^1.9.4",
     "@typescript-eslint/eslint-plugin": "^8.50.0",
     "@typescript-eslint/parser": "^8.50.0",
-    "appium-ios-simulator": "^6.1.10",
+    "appium-ios-simulator": "^8.0.9",
     "base64-arraybuffer": "1.0.2",
     "body-parser": "^2.2.1",
     "chai": "6.2.2",
