@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Radial gradient with explicit size - Issue #178</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="../../test.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .box {
+            width: 100px;
+            height: 100px;
+            border: 1px solid #000;
+        }
+        /* Test case from Issue #178 */
+        .test1 {
+            background: radial-gradient(0% 0% at 0% 0%, #235CFC 0%, #1EA3FF 100%);
+        }
+        /* Various explicit size tests */
+        .test2 {
+            background: radial-gradient(50% 50% at 50% 50%, #235CFC 0%, #1EA3FF 100%);
+        }
+        .test3 {
+            background: radial-gradient(100% 100% at 50% 50%, #235CFC 0%, #1EA3FF 100%);
+        }
+        .test4 {
+            background: radial-gradient(30% 60% at 70% 30%, #235CFC 0%, #1EA3FF 100%);
+        }
+        .test5 {
+            background: radial-gradient(50px 100px at 50px 50px, #235CFC 0%, #1EA3FF 100%);
+        }
+        .test6 {
+            background: radial-gradient(50% 100px at 50% 50%, #235CFC 0%, #1EA3FF 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="box test1"></div>
+        <div class="box test2"></div>
+        <div class="box test3"></div>
+        <div class="box test4"></div>
+        <div class="box test5"></div>
+        <div class="box test6"></div>
+    </div>
+</body>
+</html>
+
