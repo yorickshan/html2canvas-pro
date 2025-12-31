@@ -1,4 +1,16 @@
 
+### [1.6.3](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.2...v1.6.3) (2025-12-31)
+
+
+### Features
+
+* interactive demo ([d5783f8](https://github.com/yorickshan/html2canvas-pro/commit/d5783f8038bb212385f950031a5ba889ad0604ce))
+
+
+### Fixes
+
+* radial-gradient not support ([5e0e196](https://github.com/yorickshan/html2canvas-pro/commit/5e0e196bf9a99318b7440874364e94e97ad7677c))
+
 ### [1.6.2](https://github.com/yorickshan/html2canvas-pro/compare/v1.5.13...v1.6.2) (2025-12-23)
 
 
