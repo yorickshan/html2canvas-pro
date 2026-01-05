@@ -43,7 +43,7 @@
     "@types/chai": "^5.2.3",
     "@types/express": "^5.0.6",
     "@types/filenamify-url": "^2.0.1",
-    "@types/glob": "^8.1.0",
+    "@types/glob": "^9.0.0",
     "@types/jest": "^29.5.12",
     "@types/jest-image-snapshot": "^6.4.0",
     "@types/karma": "^6.3.0",
