@@ -133,7 +133,20 @@ export class DocumentCloner {
          * */
         const baseUri = documentClone.baseURI;
         documentClone.open();
-        documentClone.write(`${serializeDoctype(document.doctype)}<html></html>`);
+        try {
+            // fixing "This document requires 'TrustedHTML' assignment. The action has been blocked." error
+            // @ts-ignore
+            const policy = trustedTypes.createPolicy("my-policy", {
+                createHTML: (string: string) => string
+            });
+            const rawHTML = serializeDoctype(document.doctype) + "<html></html>";
+            const trustedHTML = policy.createHTML(rawHTML);
+            documentClone.write(trustedHTML);
+        } catch(e) {
+            console.log(e);
+            // if browser does not support trustedTypes
+            documentClone.write(serializeDoctype(document.doctype) + "<html></html>");
+        }
         // Chrome scrolls the parent document for some reason after the write to the cloned window???
         restoreOwnerScroll(this.referenceElement.ownerDocument, scrollX, scrollY);
         /**
