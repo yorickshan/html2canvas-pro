@@ -1,4 +1,6 @@
 
+### [1.6.4](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.3...v1.6.4) (2026-01-08)
+
 ### [1.6.3](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.2...v1.6.3) (2025-12-31)
 
 

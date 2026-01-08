@@ -14,7 +14,7 @@
       "default": "./dist/html2canvas-pro.esm.js"
     }
   },
-  "version": "1.6.3",
+  "version": "1.6.4",
   "author": {
     "name": "yorickshan",
     "email": "yorickshan@gmail.com",
