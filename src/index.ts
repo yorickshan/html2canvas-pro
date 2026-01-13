@@ -80,6 +80,7 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
         allowTaint: opts.allowTaint ?? false,
         onclone: opts.onclone,
         ignoreElements: opts.ignoreElements,
+        iframeContainer: opts.iframeContainer,
         inlineImages: foreignObjectRendering,
         copyStyles: foreignObjectRendering
     };

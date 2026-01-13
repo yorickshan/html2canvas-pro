@@ -28,6 +28,7 @@ export interface CloneOptions {
     ignoreElements?: (element: Element) => boolean;
     onclone?: (document: Document, element: HTMLElement) => void;
     allowTaint?: boolean;
+    iframeContainer?: HTMLElement | ShadowRoot;
 }
 
 export interface WindowOptions {
@@ -43,6 +44,28 @@ export type CloneConfigurations = CloneOptions & {
 };
 
 const IGNORE_ATTRIBUTE = 'data-html2canvas-ignore';
+
+/**
+ * Find the parent ShadowRoot of an element, if any
+ * @param element - The element to check
+ * @returns The parent ShadowRoot or null
+ */
+const findParentShadowRoot = (element: Element): ShadowRoot | null => {
+    let current: Node | null = element;
+    while (current) {
+        // Check if we've reached a shadow root boundary
+        if (current.parentNode && (current.parentNode as ShadowRoot).host) {
+            return current.parentNode as ShadowRoot;
+        }
+        // Use getRootNode to check if we're in a shadow root
+        const root = current.getRootNode();
+        if (root && root !== current.ownerDocument && (root as ShadowRoot).host) {
+            return root as ShadowRoot;
+        }
+        current = current.parentNode;
+    }
+    return null;
+};
 
 export class DocumentCloner {
     private readonly scrolledElements: [Element, number, number][];
@@ -65,11 +88,23 @@ export class DocumentCloner {
             throw new Error('Cloned element does not have an owner document');
         }
 
+        // Auto-detect Shadow Root if not explicitly provided
+        if (!this.options.iframeContainer) {
+            const shadowRoot = findParentShadowRoot(element);
+            if (shadowRoot) {
+                this.options.iframeContainer = shadowRoot;
+            }
+        }
+
         this.documentElement = this.cloneNode(element.ownerDocument.documentElement, false) as HTMLElement;
     }
 
     toIFrame(ownerDocument: Document, windowSize: Bounds): Promise<HTMLIFrameElement> {
-        const iframe: HTMLIFrameElement = createIFrameContainer(ownerDocument, windowSize);
+        const iframe: HTMLIFrameElement = createIFrameContainer(
+            ownerDocument,
+            windowSize,
+            this.options.iframeContainer
+        );
 
         if (!iframe.contentWindow) {
             return Promise.reject(`Unable to find iframe window`);
@@ -200,23 +235,8 @@ export class DocumentCloner {
     }
 
     createCustomElementClone(node: HTMLElement): HTMLElement {
-        // Ensure html2canvascustomelement is defined
-        if (typeof window !== 'undefined' && !customElements.get('html2canvascustomelement')) {
-            try {
-                customElements.define(
-                    'html2canvascustomelement',
-                    class extends HTMLElement {
-                        constructor() {
-                            super();
-                        }
-                    }
-                );
-            } catch (e) {
-                // Already defined or cannot define
-            }
-        }
-
-        const clone = document.createElement('html2canvascustomelement');
+        const clone = document.createElement('div');
+        clone.className = node.className;
         copyCSSStyles(node.style, clone);
 
         // Clone shadow DOM if it exists
@@ -547,7 +567,11 @@ enum PseudoElementType {
     AFTER
 }
 
-const createIFrameContainer = (ownerDocument: Document, bounds: Bounds): HTMLIFrameElement => {
+const createIFrameContainer = (
+    ownerDocument: Document,
+    bounds: Bounds,
+    customContainer?: HTMLElement | ShadowRoot
+): HTMLIFrameElement => {
     const cloneIframeContainer = ownerDocument.createElement('iframe');
 
     cloneIframeContainer.className = 'html2canvas-container';
@@ -560,7 +584,10 @@ const createIFrameContainer = (ownerDocument: Document, bounds: Bounds): HTMLIFr
     cloneIframeContainer.height = bounds.height.toString();
     cloneIframeContainer.scrolling = 'no'; // ios won't scroll without it
     cloneIframeContainer.setAttribute(IGNORE_ATTRIBUTE, 'true');
-    ownerDocument.body.appendChild(cloneIframeContainer);
+
+    // Use custom container if provided, otherwise use body
+    const container = customContainer || ownerDocument.body;
+    container.appendChild(cloneIframeContainer);
 
     return cloneIframeContainer;
 };
