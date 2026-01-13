@@ -83,6 +83,7 @@ import { webkitTextStrokeColor } from './property-descriptors/webkit-text-stroke
 import { webkitTextStrokeWidth } from './property-descriptors/webkit-text-stroke-width';
 import { Context } from '../core/context';
 import { objectFit } from './property-descriptors/object-fit';
+import { textOverflow } from './property-descriptors/text-overflow';
 
 export class CSSParsedDeclaration {
     animationDuration: ReturnType<typeof duration.parse>;
@@ -144,6 +145,7 @@ export class CSSParsedDeclaration {
     textDecorationLine: ReturnType<typeof textDecorationLine.parse>;
     textShadow: ReturnType<typeof textShadow.parse>;
     textTransform: ReturnType<typeof textTransform.parse>;
+    textOverflow: ReturnType<typeof textOverflow.parse>;
     transform: ReturnType<typeof transform.parse>;
     transformOrigin: ReturnType<typeof transformOrigin.parse>;
     rotate: ReturnType<typeof rotate.parse>;
@@ -223,6 +225,7 @@ export class CSSParsedDeclaration {
         );
         this.textShadow = parse(context, textShadow, declaration.textShadow);
         this.textTransform = parse(context, textTransform, declaration.textTransform);
+        this.textOverflow = parse(context, textOverflow, declaration.textOverflow);
         this.transform = parse(context, transform, declaration.transform);
         this.transformOrigin = parse(context, transformOrigin, declaration.transformOrigin);
         this.rotate = parse(context, rotate, declaration.rotate);
