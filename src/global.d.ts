@@ -5,6 +5,7 @@ interface CSSStyleDeclaration {
     textDecorationThickness: string;
     textUnderlineOffset: string;
     overflowWrap: string;
+    rotate: string;
 }
 
 interface DocumentType extends Node, ChildNode {
