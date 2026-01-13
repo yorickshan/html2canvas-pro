@@ -76,6 +76,7 @@ Options that control how the content is rendered to the canvas.
 | ----------- | :-----: | ----------- | ------- |
 | foreignObjectRendering | `false` | Whether to use ForeignObject rendering if the browser supports it | `true` |
 | ignoreElements | `(element) => false` | Predicate function which removes the matching elements from the render | `(el) => el.classList.contains('no-capture')` |
+| iframeContainer | `null` | Custom parent node for the temporary iframe container. Useful for Shadow DOM scenarios. If not provided, will auto-detect Shadow Root or use `document.body` | `document.querySelector('#my-shadow-host').shadowRoot` |
 | onclone | `null` | Callback function which is called when the Document has been cloned for rendering, can be used to modify the contents that will be rendered without affecting the original source document | `(doc) => doc.querySelector('.date').textContent = new Date().toISOString()` |
 | x | `Element` x-offset | Crop canvas x-coordinate | `10` |
 | y | `Element` y-offset | Crop canvas y-coordinate | `20` |
@@ -152,6 +153,48 @@ html2canvas(element, {
     // any other options...
 });
 ```
+
+## Shadow DOM Support
+
+The `iframeContainer` option allows you to specify where the temporary iframe should be created. This is particularly useful when rendering elements inside Shadow DOM, as styles defined within the Shadow Root need to be accessible to the cloned content.
+
+### Automatic Detection
+
+By default, html2canvas-pro will automatically detect if the target element is inside a Shadow Root and use it as the iframe container:
+
+```javascript
+// Element inside Shadow DOM
+const shadowHost = document.querySelector('#my-web-component');
+const shadowRoot = shadowHost.shadowRoot;
+const elementInShadow = shadowRoot.querySelector('.content');
+
+// Auto-detection: iframe will be created inside the Shadow Root
+html2canvas(elementInShadow).then(canvas => {
+    document.body.appendChild(canvas);
+});
+```
+
+### Manual Configuration
+
+You can also explicitly specify the iframe container:
+
+```javascript
+const shadowHost = document.querySelector('#my-web-component');
+const shadowRoot = shadowHost.shadowRoot;
+const elementInShadow = shadowRoot.querySelector('.content');
+
+html2canvas(elementInShadow, {
+    iframeContainer: shadowRoot  // Explicitly use Shadow Root
+}).then(canvas => {
+    document.body.appendChild(canvas);
+});
+```
+
+### Use Cases
+
+1. **Web Components with Shadow DOM**: When capturing custom elements that use Shadow DOM
+2. **Scoped Styles**: When the element has styles defined in `<style>` tags within the Shadow Root
+3. **Slot Content**: When rendering slotted content that depends on Shadow DOM styles
 
 ## Complete Example
 
