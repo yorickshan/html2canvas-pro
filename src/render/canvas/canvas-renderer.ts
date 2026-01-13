@@ -52,6 +52,8 @@ import { Renderer } from '../renderer';
 import { Context } from '../../core/context';
 import { DIRECTION } from '../../css/property-descriptors/direction';
 import { OBJECT_FIT } from '../../css/property-descriptors/object-fit';
+import { TEXT_OVERFLOW } from '../../css/property-descriptors/text-overflow';
+import { OVERFLOW } from '../../css/property-descriptors/overflow';
 
 export type RenderConfigurations = RenderOptions & {
     backgroundColor: Color | null;
@@ -167,6 +169,35 @@ export class CanvasRenderer extends Renderer {
         }
     }
 
+    // Helper method to truncate text and add ellipsis if needed
+    private truncateTextWithEllipsis(text: string, maxWidth: number, letterSpacing: number): string {
+        const ellipsis = '...';
+        const ellipsisWidth = this.ctx.measureText(ellipsis).width;
+
+        if (letterSpacing === 0) {
+            let truncated = text;
+            while (this.ctx.measureText(truncated).width + ellipsisWidth > maxWidth && truncated.length > 0) {
+                truncated = truncated.slice(0, -1);
+            }
+            return truncated + ellipsis;
+        } else {
+            const letters = segmentGraphemes(text);
+            let width = ellipsisWidth;
+            let result: string[] = [];
+
+            for (const letter of letters) {
+                const letterWidth = this.ctx.measureText(letter).width + letterSpacing;
+                if (width + letterWidth > maxWidth) {
+                    break;
+                }
+                result.push(letter);
+                width += letterWidth;
+            }
+
+            return result.join('') + ellipsis;
+        }
+    }
+
     private createFontStyle(styles: CSSParsedDeclaration): string[] {
         const fontVariant = styles.fontVariant
             .filter((variant) => variant === 'normal' || variant === 'small-caps')
@@ -183,7 +214,7 @@ export class CanvasRenderer extends Renderer {
         ];
     }
 
-    async renderTextNode(text: TextContainer, styles: CSSParsedDeclaration): Promise<void> {
+    async renderTextNode(text: TextContainer, styles: CSSParsedDeclaration, containerBounds?: Bounds): Promise<void> {
         const [font] = this.createFontStyle(styles);
 
         this.ctx.font = font;
@@ -193,6 +224,117 @@ export class CanvasRenderer extends Renderer {
         this.ctx.textBaseline = 'alphabetic';
         const paintOrder = styles.paintOrder;
 
+        // Check if we need to apply text-overflow: ellipsis
+        const shouldApplyEllipsis =
+            styles.textOverflow === TEXT_OVERFLOW.ELLIPSIS && containerBounds && styles.overflowX === OVERFLOW.HIDDEN;
+
+        // Calculate total text width if ellipsis might be needed
+        let needsEllipsis = false;
+        let truncatedText = '';
+        if (shouldApplyEllipsis && text.textBounds.length > 0) {
+            // Measure the full text content
+            // Note: text.textBounds may contain whitespace characters from HTML formatting
+            // We need to collapse them like the browser does for white-space: nowrap
+            let fullText = text.textBounds.map((tb) => tb.text).join('');
+
+            // Collapse whitespace: replace sequences of whitespace (including newlines) with single spaces
+            // and trim leading/trailing whitespace
+            fullText = fullText.replace(/\s+/g, ' ').trim();
+
+            const fullTextWidth = this.ctx.measureText(fullText).width;
+            const availableWidth = containerBounds.width;
+
+            if (fullTextWidth > availableWidth) {
+                needsEllipsis = true;
+                truncatedText = this.truncateTextWithEllipsis(fullText, availableWidth, styles.letterSpacing);
+            }
+        }
+
+        // If ellipsis is needed, render the truncated text once
+        if (needsEllipsis) {
+            const firstBound = text.textBounds[0];
+            paintOrder.forEach((paintOrderLayer) => {
+                switch (paintOrderLayer) {
+                    case PAINT_ORDER_LAYER.FILL:
+                        this.ctx.fillStyle = asString(styles.color);
+
+                        if (styles.letterSpacing === 0) {
+                            this.ctx.fillText(
+                                truncatedText,
+                                firstBound.bounds.left,
+                                firstBound.bounds.top + styles.fontSize.number
+                            );
+                        } else {
+                            const letters = segmentGraphemes(truncatedText);
+                            letters.reduce((left, letter) => {
+                                this.ctx.fillText(letter, left, firstBound.bounds.top + styles.fontSize.number);
+                                return left + this.ctx.measureText(letter).width + styles.letterSpacing;
+                            }, firstBound.bounds.left);
+                        }
+
+                        const textShadows: TextShadow = styles.textShadow;
+                        if (textShadows.length && truncatedText.trim().length) {
+                            textShadows
+                                .slice(0)
+                                .reverse()
+                                .forEach((textShadow) => {
+                                    this.ctx.shadowColor = asString(textShadow.color);
+                                    this.ctx.shadowOffsetX = textShadow.offsetX.number * this.options.scale;
+                                    this.ctx.shadowOffsetY = textShadow.offsetY.number * this.options.scale;
+                                    this.ctx.shadowBlur = textShadow.blur.number;
+
+                                    if (styles.letterSpacing === 0) {
+                                        this.ctx.fillText(
+                                            truncatedText,
+                                            firstBound.bounds.left,
+                                            firstBound.bounds.top + styles.fontSize.number
+                                        );
+                                    } else {
+                                        const letters = segmentGraphemes(truncatedText);
+                                        letters.reduce((left, letter) => {
+                                            this.ctx.fillText(
+                                                letter,
+                                                left,
+                                                firstBound.bounds.top + styles.fontSize.number
+                                            );
+                                            return left + this.ctx.measureText(letter).width + styles.letterSpacing;
+                                        }, firstBound.bounds.left);
+                                    }
+                                });
+
+                            this.ctx.shadowColor = '';
+                            this.ctx.shadowOffsetX = 0;
+                            this.ctx.shadowOffsetY = 0;
+                            this.ctx.shadowBlur = 0;
+                        }
+                        break;
+                    case PAINT_ORDER_LAYER.STROKE:
+                        if (styles.webkitTextStrokeWidth && truncatedText.trim().length) {
+                            this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
+                            this.ctx.lineWidth = styles.webkitTextStrokeWidth;
+                            this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
+
+                            if (styles.letterSpacing === 0) {
+                                this.ctx.strokeText(
+                                    truncatedText,
+                                    firstBound.bounds.left,
+                                    firstBound.bounds.top + styles.fontSize.number
+                                );
+                            } else {
+                                const letters = segmentGraphemes(truncatedText);
+                                letters.reduce((left, letter) => {
+                                    this.ctx.strokeText(letter, left, firstBound.bounds.top + styles.fontSize.number);
+                                    return left + this.ctx.measureText(letter).width + styles.letterSpacing;
+                                }, firstBound.bounds.left);
+                            }
+                        }
+                        break;
+                }
+            });
+            return;
+        }
+
+        // Normal rendering (no ellipsis needed)
         text.textBounds.forEach((text) => {
             paintOrder.forEach((paintOrderLayer) => {
                 switch (paintOrderLayer) {
@@ -379,8 +521,11 @@ export class CanvasRenderer extends Renderer {
         const container = paint.container;
         const curves = paint.curves;
         const styles = container.styles;
+        // Use content box for text overflow calculation (excludes padding and border)
+        // This matches browser behavior where text-overflow uses the content width
+        const textBounds = contentBox(container);
         for (const child of container.textNodes) {
-            await this.renderTextNode(child, styles);
+            await this.renderTextNode(child, styles, textBounds);
         }
 
         if (container instanceof ImageElementContainer) {
