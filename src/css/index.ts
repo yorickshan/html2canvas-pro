@@ -64,6 +64,9 @@ import { time } from './types/time';
 import { opacity } from './property-descriptors/opacity';
 import { textDecorationColor } from './property-descriptors/text-decoration-color';
 import { textDecorationLine } from './property-descriptors/text-decoration-line';
+import { textDecorationStyle } from './property-descriptors/text-decoration-style';
+import { textDecorationThickness } from './property-descriptors/text-decoration-thickness';
+import { textUnderlineOffset } from './property-descriptors/text-underline-offset';
 import { isLengthPercentage, LengthPercentage, ZERO_LENGTH } from './types/length-percentage';
 import { fontFamily } from './property-descriptors/font-family';
 import { fontSize } from './property-descriptors/font-size';
@@ -143,6 +146,9 @@ export class CSSParsedDeclaration {
     textAlign: ReturnType<typeof textAlign.parse>;
     textDecorationColor: Color;
     textDecorationLine: ReturnType<typeof textDecorationLine.parse>;
+    textDecorationStyle: ReturnType<typeof textDecorationStyle.parse>;
+    textDecorationThickness: ReturnType<typeof textDecorationThickness.parse>;
+    textUnderlineOffset: ReturnType<typeof textUnderlineOffset.parse>;
     textShadow: ReturnType<typeof textShadow.parse>;
     textTransform: ReturnType<typeof textTransform.parse>;
     textOverflow: ReturnType<typeof textOverflow.parse>;
@@ -223,6 +229,9 @@ export class CSSParsedDeclaration {
             textDecorationLine,
             declaration.textDecorationLine ?? declaration.textDecoration
         );
+        this.textDecorationStyle = parse(context, textDecorationStyle, declaration.textDecorationStyle);
+        this.textDecorationThickness = parse(context, textDecorationThickness, declaration.textDecorationThickness);
+        this.textUnderlineOffset = parse(context, textUnderlineOffset, declaration.textUnderlineOffset);
         this.textShadow = parse(context, textShadow, declaration.textShadow);
         this.textTransform = parse(context, textTransform, declaration.textTransform);
         this.textOverflow = parse(context, textOverflow, declaration.textOverflow);

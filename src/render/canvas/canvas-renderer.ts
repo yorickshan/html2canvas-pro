@@ -30,6 +30,7 @@ import { contains } from '../../core/bitwise';
 import { calculateGradientDirection, calculateRadius, processColorStops } from '../../css/types/functions/gradient';
 import { FIFTY_PERCENT, getAbsoluteValue } from '../../css/types/length-percentage';
 import { TEXT_DECORATION_LINE } from '../../css/property-descriptors/text-decoration-line';
+import { TEXT_DECORATION_STYLE } from '../../css/property-descriptors/text-decoration-style';
 import { FontMetrics } from '../font-metrics';
 import { DISPLAY } from '../../css/property-descriptors/display';
 import { Bounds } from '../../css/layout/bounds';
@@ -166,6 +167,135 @@ export class CanvasRenderer extends Renderer {
 
                 return left + this.ctx.measureText(letter).width;
             }, text.bounds.left);
+        }
+    }
+
+    private renderTextDecoration(bounds: Bounds, styles: CSSParsedDeclaration): void {
+        this.ctx.fillStyle = asString(styles.textDecorationColor || styles.color);
+
+        // Calculate decoration line thickness
+        let thickness = 1; // default
+        if (typeof styles.textDecorationThickness === 'number') {
+            thickness = styles.textDecorationThickness;
+        } else if (styles.textDecorationThickness === 'from-font') {
+            // Use a reasonable default based on font size
+            thickness = Math.max(1, Math.floor(styles.fontSize.number * 0.05));
+        }
+        // 'auto' uses default thickness of 1
+
+        // Calculate underline offset
+        let underlineOffset = 0;
+        if (typeof styles.textUnderlineOffset === 'number') {
+            // It's a pixel value
+            underlineOffset = styles.textUnderlineOffset;
+        }
+        // 'auto' uses default offset of 0
+
+        const decorationStyle = styles.textDecorationStyle;
+
+        styles.textDecorationLine.forEach((textDecorationLine) => {
+            let y = 0;
+
+            switch (textDecorationLine) {
+                case TEXT_DECORATION_LINE.UNDERLINE:
+                    y = bounds.top + bounds.height - thickness + underlineOffset;
+                    break;
+                case TEXT_DECORATION_LINE.OVERLINE:
+                    y = bounds.top;
+                    break;
+                case TEXT_DECORATION_LINE.LINE_THROUGH:
+                    y = bounds.top + (bounds.height / 2 - thickness / 2);
+                    break;
+                default:
+                    return;
+            }
+
+            this.drawDecorationLine(bounds.left, y, bounds.width, thickness, decorationStyle);
+        });
+    }
+
+    private drawDecorationLine(x: number, y: number, width: number, thickness: number, style: number): void {
+        switch (style) {
+            case TEXT_DECORATION_STYLE.SOLID:
+                // Solid line (default)
+                this.ctx.fillRect(x, y, width, thickness);
+                break;
+
+            case TEXT_DECORATION_STYLE.DOUBLE:
+                // Double line
+                const gap = Math.max(1, thickness);
+                this.ctx.fillRect(x, y, width, thickness);
+                this.ctx.fillRect(x, y + thickness + gap, width, thickness);
+                break;
+
+            case TEXT_DECORATION_STYLE.DOTTED:
+                // Dotted line
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.setLineDash([thickness, thickness * 2]);
+                this.ctx.lineWidth = thickness;
+                this.ctx.strokeStyle = this.ctx.fillStyle;
+                this.ctx.moveTo(x, y + thickness / 2);
+                this.ctx.lineTo(x + width, y + thickness / 2);
+                this.ctx.stroke();
+                this.ctx.restore();
+                break;
+
+            case TEXT_DECORATION_STYLE.DASHED:
+                // Dashed line
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.setLineDash([thickness * 3, thickness * 2]);
+                this.ctx.lineWidth = thickness;
+                this.ctx.strokeStyle = this.ctx.fillStyle;
+                this.ctx.moveTo(x, y + thickness / 2);
+                this.ctx.lineTo(x + width, y + thickness / 2);
+                this.ctx.stroke();
+                this.ctx.restore();
+                break;
+
+            case TEXT_DECORATION_STYLE.WAVY:
+                // Wavy line (approximation using quadratic curves)
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.lineWidth = thickness;
+                this.ctx.strokeStyle = this.ctx.fillStyle;
+
+                const amplitude = thickness * 2;
+                const wavelength = thickness * 4;
+                let currentX = x;
+
+                this.ctx.moveTo(currentX, y + thickness / 2);
+
+                while (currentX < x + width) {
+                    const nextX = Math.min(currentX + wavelength / 2, x + width);
+                    this.ctx.quadraticCurveTo(
+                        currentX + wavelength / 4,
+                        y + thickness / 2 - amplitude,
+                        nextX,
+                        y + thickness / 2
+                    );
+                    currentX = nextX;
+
+                    if (currentX < x + width) {
+                        const nextX2 = Math.min(currentX + wavelength / 2, x + width);
+                        this.ctx.quadraticCurveTo(
+                            currentX + wavelength / 4,
+                            y + thickness / 2 + amplitude,
+                            nextX2,
+                            y + thickness / 2
+                        );
+                        currentX = nextX2;
+                    }
+                }
+
+                this.ctx.stroke();
+                this.ctx.restore();
+                break;
+
+            default:
+                // Fallback to solid
+                this.ctx.fillRect(x, y, width, thickness);
         }
     }
 
@@ -367,37 +497,7 @@ export class CanvasRenderer extends Renderer {
                         }
 
                         if (styles.textDecorationLine.length) {
-                            this.ctx.fillStyle = asString(styles.textDecorationColor || styles.color);
-                            const decorationLineHeight = 1;
-                            styles.textDecorationLine.forEach((textDecorationLine) => {
-                                // Fix the issue where textDecorationLine exhibits x-axis positioning errors on high-resolution devices due to varying devicePixelRatio, corrected by using relative values of element heights.
-                                switch (textDecorationLine) {
-                                    case TEXT_DECORATION_LINE.UNDERLINE:
-                                        this.ctx.fillRect(
-                                            text.bounds.left,
-                                            text.bounds.top + text.bounds.height - decorationLineHeight,
-                                            text.bounds.width,
-                                            decorationLineHeight
-                                        );
-                                        break;
-                                    case TEXT_DECORATION_LINE.OVERLINE:
-                                        this.ctx.fillRect(
-                                            text.bounds.left,
-                                            text.bounds.top,
-                                            text.bounds.width,
-                                            decorationLineHeight
-                                        );
-                                        break;
-                                    case TEXT_DECORATION_LINE.LINE_THROUGH:
-                                        this.ctx.fillRect(
-                                            text.bounds.left,
-                                            text.bounds.top + (text.bounds.height / 2 - decorationLineHeight / 2),
-                                            text.bounds.width,
-                                            decorationLineHeight
-                                        );
-                                        break;
-                                }
-                            });
+                            this.renderTextDecoration(text.bounds, styles);
                         }
                         break;
                     case PAINT_ORDER_LAYER.STROKE:

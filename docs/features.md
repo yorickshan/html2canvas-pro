@@ -54,7 +54,9 @@ Below is a list of all the supported CSS properties and values.
  - text-decoration
    - text-decoration-color
    - text-decoration-line
-   - text-decoration-style (**Only supports `solid`**)
+   - text-decoration-style (`solid`, `double`, `dotted`, `dashed`, `wavy`)
+   - text-decoration-thickness
+   - text-underline-offset
  - text-overflow
  - text-shadow
  - text-transform
