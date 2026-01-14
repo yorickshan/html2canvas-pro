@@ -96,6 +96,16 @@ If you wish to exclude certain `Element`s from getting rendered, you can add a `
 </div>
 ```
 
+## Content-Security-Policy (CSP)
+
+### CSP Nonce
+
+```javascript
+import html2canvas from 'html2canvas-pro';
+
+html2canvas.setCspNonce(document.querySelector('meta[name="csp-nonce"]').nonce);
+```
+
 ## Custom isSameOrigin Usage
 
 The `customIsSameOrigin` option allows you to override the default same-origin detection logic, which is particularly useful in the following scenarios:
