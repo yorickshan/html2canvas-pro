@@ -17,12 +17,20 @@ export type Options = CloneOptions &
         removeContainer?: boolean;
     };
 
+let cspNonce: string | undefined;
+
+const setCspNonce = (nonce: string) => {
+    cspNonce = nonce;
+};
+
 const html2canvas = (element: HTMLElement, options: Partial<Options> = {}): Promise<HTMLCanvasElement> => {
     return renderElement(element, options);
 };
 
+html2canvas.setCspNonce = setCspNonce;
+
 export default html2canvas;
-export { html2canvas };
+export { html2canvas, setCspNonce };
 
 if (typeof window !== 'undefined') {
     CacheStorage.setContext(window);
@@ -82,7 +90,8 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
         ignoreElements: opts.ignoreElements,
         iframeContainer: opts.iframeContainer,
         inlineImages: foreignObjectRendering,
-        copyStyles: foreignObjectRendering
+        copyStyles: foreignObjectRendering,
+        cspNonce
     };
 
     context.logger.debug(

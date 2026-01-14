@@ -41,6 +41,7 @@ export interface WindowOptions {
 export type CloneConfigurations = CloneOptions & {
     inlineImages: boolean;
     copyStyles: boolean;
+    cspNonce?: string;
 };
 
 const IGNORE_ATTRIBUTE = 'data-html2canvas-ignore';
@@ -267,6 +268,9 @@ export class DocumentCloner {
                 }, '');
                 const style = node.cloneNode(false) as HTMLStyleElement;
                 style.textContent = css;
+                if (this.options.cspNonce) {
+                    style.nonce = this.options.cspNonce;
+                }
                 return style;
             }
         } catch (e) {
@@ -276,7 +280,11 @@ export class DocumentCloner {
                 throw e;
             }
         }
-        return node.cloneNode(false) as HTMLStyleElement;
+        const cloned = node.cloneNode(false) as HTMLStyleElement;
+        if (this.options.cspNonce) {
+            cloned.nonce = this.options.cspNonce;
+        }
+        return cloned;
     }
 
     createCanvasClone(canvas: HTMLCanvasElement): HTMLImageElement | HTMLCanvasElement {
@@ -401,7 +409,7 @@ export class DocumentCloner {
                 this.clonedReferenceElement = clone;
             }
             if (isBodyElement(clone)) {
-                createPseudoHideStyles(clone);
+                createPseudoHideStyles(clone, this.options.cspNonce);
             }
 
             const counters = this.counters.parse(new CSSParsedCounterDeclaration(this.context, style));
@@ -702,19 +710,23 @@ const PSEUDO_HIDE_ELEMENT_STYLE = `{
     display: none !important;
 }`;
 
-const createPseudoHideStyles = (body: HTMLElement) => {
+const createPseudoHideStyles = (body: HTMLElement, cspNonce?: string) => {
     createStyles(
         body,
         `.${PSEUDO_HIDE_ELEMENT_CLASS_BEFORE}${PSEUDO_BEFORE}${PSEUDO_HIDE_ELEMENT_STYLE}
-         .${PSEUDO_HIDE_ELEMENT_CLASS_AFTER}${PSEUDO_AFTER}${PSEUDO_HIDE_ELEMENT_STYLE}`
+         .${PSEUDO_HIDE_ELEMENT_CLASS_AFTER}${PSEUDO_AFTER}${PSEUDO_HIDE_ELEMENT_STYLE}`,
+        cspNonce
     );
 };
 
-const createStyles = (body: HTMLElement, styles: string) => {
+const createStyles = (body: HTMLElement, styles: string, cspNonce?: string) => {
     const document = body.ownerDocument;
     if (document) {
         const style = document.createElement('style');
         style.textContent = styles;
+        if (cspNonce) {
+            style.nonce = cspNonce;
+        }
         body.appendChild(style);
     }
 };
