@@ -1,4 +1,14 @@
 
+### [1.6.5](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.4...v1.6.5) (2026-01-19)
+
+
+### Features
+
+* iframeContainer ([924e1cc](https://github.com/yorickshan/html2canvas-pro/commit/924e1cc8d7d17601174d009a7cf3e681e28c086c))
+* support rotate ([d2fde50](https://github.com/yorickshan/html2canvas-pro/commit/d2fde50caa406700c9723e022db7ed7ab3366a5c))
+* text decoration enhancement ([df9c189](https://github.com/yorickshan/html2canvas-pro/commit/df9c189d82e2b1f16a0c4467c70a38efa72ed3e6))
+* text-overflow: ellipsis ([5325e7a](https://github.com/yorickshan/html2canvas-pro/commit/5325e7abb444f42ab0b0d8897cbef6c5452faf2d))
+
 ### [1.6.4](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.3...v1.6.4) (2026-01-08)
 
 ### [1.6.3](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.2...v1.6.3) (2025-12-31)
