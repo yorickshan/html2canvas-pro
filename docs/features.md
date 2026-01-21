@@ -65,6 +65,7 @@ Below is a list of all the supported CSS properties and values.
  - visibility
  - white-space
  - width
+ - webkit-line-clamp
  - webkit-text-stroke
  - word-break
  - word-spacing

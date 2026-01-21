@@ -6,6 +6,8 @@ interface CSSStyleDeclaration {
     textUnderlineOffset: string;
     overflowWrap: string;
     rotate: string;
+    webkitLineClamp: string;
+    webkitBoxOrient: string;
 }
 
 interface DocumentType extends Node, ChildNode {

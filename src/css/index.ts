@@ -84,6 +84,7 @@ import { boxShadow } from './property-descriptors/box-shadow';
 import { paintOrder } from './property-descriptors/paint-order';
 import { webkitTextStrokeColor } from './property-descriptors/webkit-text-stroke-color';
 import { webkitTextStrokeWidth } from './property-descriptors/webkit-text-stroke-width';
+import { webkitLineClamp } from './property-descriptors/webkit-line-clamp';
 import { Context } from '../core/context';
 import { objectFit } from './property-descriptors/object-fit';
 import { textOverflow } from './property-descriptors/text-overflow';
@@ -158,6 +159,7 @@ export class CSSParsedDeclaration {
     visibility: ReturnType<typeof visibility.parse>;
     webkitTextStrokeColor: Color;
     webkitTextStrokeWidth: ReturnType<typeof webkitTextStrokeWidth.parse>;
+    webkitLineClamp: ReturnType<typeof webkitLineClamp.parse>;
     wordBreak: ReturnType<typeof wordBreak.parse>;
     zIndex: ReturnType<typeof zIndex.parse>;
     objectFit: ReturnType<typeof objectFit.parse>;
@@ -241,6 +243,7 @@ export class CSSParsedDeclaration {
         this.visibility = parse(context, visibility, declaration.visibility);
         this.webkitTextStrokeColor = parse(context, webkitTextStrokeColor, declaration.webkitTextStrokeColor);
         this.webkitTextStrokeWidth = parse(context, webkitTextStrokeWidth, declaration.webkitTextStrokeWidth);
+        this.webkitLineClamp = parse(context, webkitLineClamp, declaration.webkitLineClamp);
         this.wordBreak = parse(context, wordBreak, declaration.wordBreak);
         this.zIndex = parse(context, zIndex, declaration.zIndex);
         this.objectFit = parse(context, objectFit, declaration.objectFit);
