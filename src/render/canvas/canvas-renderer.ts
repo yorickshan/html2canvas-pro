@@ -170,6 +170,33 @@ export class CanvasRenderer extends Renderer {
         }
     }
 
+    /**
+     * Helper method to render text with paint order support
+     * Reduces code duplication in line-clamp and normal rendering
+     */
+    private renderTextBoundWithPaintOrder(
+        textBound: TextBounds,
+        styles: CSSParsedDeclaration,
+        paintOrderLayers: number[]
+    ): void {
+        paintOrderLayers.forEach((paintOrderLayer: number) => {
+            switch (paintOrderLayer) {
+                case PAINT_ORDER_LAYER.FILL:
+                    this.ctx.fillStyle = asString(styles.color);
+                    this.renderTextWithLetterSpacing(textBound, styles.letterSpacing, styles.fontSize.number);
+                    break;
+                case PAINT_ORDER_LAYER.STROKE:
+                    if (styles.webkitTextStrokeWidth && textBound.text.trim().length) {
+                        this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
+                        this.ctx.lineWidth = styles.webkitTextStrokeWidth;
+                        this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
+                        this.renderTextWithLetterSpacing(textBound, styles.letterSpacing, styles.fontSize.number);
+                    }
+                    break;
+            }
+        });
+    }
+
     private renderTextDecoration(bounds: Bounds, styles: CSSParsedDeclaration): void {
         this.ctx.fillStyle = asString(styles.textDecorationColor || styles.color);
 
@@ -354,29 +381,148 @@ export class CanvasRenderer extends Renderer {
         this.ctx.textBaseline = 'alphabetic';
         const paintOrder = styles.paintOrder;
 
+        // Calculate line height for text layout detection (used by both line-clamp and ellipsis)
+        const lineHeight = styles.fontSize.number * 1.5;
+
+        // Check if we need to apply -webkit-line-clamp
+        // This limits text to a specific number of lines with ellipsis
+        const shouldApplyLineClamp =
+            styles.webkitLineClamp > 0 &&
+            (styles.display & DISPLAY.BLOCK) !== 0 &&
+            styles.overflowY === OVERFLOW.HIDDEN &&
+            text.textBounds.length > 0;
+
+        if (shouldApplyLineClamp) {
+            // Group text bounds by lines based on their Y position
+            const lines: TextBounds[][] = [];
+            let currentLine: TextBounds[] = [];
+            let currentLineTop = text.textBounds[0].bounds.top;
+
+            text.textBounds.forEach((tb) => {
+                // If this text bound is on a different line, start a new line
+                if (Math.abs(tb.bounds.top - currentLineTop) >= lineHeight * 0.5) {
+                    if (currentLine.length > 0) {
+                        lines.push(currentLine);
+                    }
+                    currentLine = [tb];
+                    currentLineTop = tb.bounds.top;
+                } else {
+                    currentLine.push(tb);
+                }
+            });
+
+            // Don't forget the last line
+            if (currentLine.length > 0) {
+                lines.push(currentLine);
+            }
+
+            // Only render up to webkitLineClamp lines
+            const maxLines = styles.webkitLineClamp;
+            if (lines.length > maxLines) {
+                // Render only the first (maxLines - 1) complete lines
+                for (let i = 0; i < maxLines - 1; i++) {
+                    lines[i].forEach((textBound) => {
+                        this.renderTextBoundWithPaintOrder(textBound, styles, paintOrder);
+                    });
+                }
+
+                // For the last line, truncate with ellipsis
+                const lastLine = lines[maxLines - 1];
+                if (lastLine && lastLine.length > 0 && containerBounds) {
+                    const lastLineText = lastLine.map((tb) => tb.text).join('');
+                    const firstBound = lastLine[0];
+                    const availableWidth = containerBounds.width - (firstBound.bounds.left - containerBounds.left);
+                    const truncatedText = this.truncateTextWithEllipsis(
+                        lastLineText,
+                        availableWidth,
+                        styles.letterSpacing
+                    );
+
+                    paintOrder.forEach((paintOrderLayer) => {
+                        switch (paintOrderLayer) {
+                            case PAINT_ORDER_LAYER.FILL:
+                                this.ctx.fillStyle = asString(styles.color);
+                                if (styles.letterSpacing === 0) {
+                                    this.ctx.fillText(
+                                        truncatedText,
+                                        firstBound.bounds.left,
+                                        firstBound.bounds.top + styles.fontSize.number
+                                    );
+                                } else {
+                                    const letters = segmentGraphemes(truncatedText);
+                                    letters.reduce((left, letter) => {
+                                        this.ctx.fillText(letter, left, firstBound.bounds.top + styles.fontSize.number);
+                                        return left + this.ctx.measureText(letter).width + styles.letterSpacing;
+                                    }, firstBound.bounds.left);
+                                }
+                                break;
+                            case PAINT_ORDER_LAYER.STROKE:
+                                if (styles.webkitTextStrokeWidth && truncatedText.trim().length) {
+                                    this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
+                                    this.ctx.lineWidth = styles.webkitTextStrokeWidth;
+                                    this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
+                                    if (styles.letterSpacing === 0) {
+                                        this.ctx.strokeText(
+                                            truncatedText,
+                                            firstBound.bounds.left,
+                                            firstBound.bounds.top + styles.fontSize.number
+                                        );
+                                    } else {
+                                        const letters = segmentGraphemes(truncatedText);
+                                        letters.reduce((left, letter) => {
+                                            this.ctx.strokeText(
+                                                letter,
+                                                left,
+                                                firstBound.bounds.top + styles.fontSize.number
+                                            );
+                                            return left + this.ctx.measureText(letter).width + styles.letterSpacing;
+                                        }, firstBound.bounds.left);
+                                    }
+                                }
+                                break;
+                        }
+                    });
+                }
+                return; // Don't render anything else
+            }
+            // If lines.length <= maxLines, fall through to normal rendering
+        }
+
         // Check if we need to apply text-overflow: ellipsis
+        // Issue #203: Only apply ellipsis for single-line text overflow
+        // Multi-line text truncation (like -webkit-line-clamp) should not be affected
         const shouldApplyEllipsis =
-            styles.textOverflow === TEXT_OVERFLOW.ELLIPSIS && containerBounds && styles.overflowX === OVERFLOW.HIDDEN;
+            styles.textOverflow === TEXT_OVERFLOW.ELLIPSIS &&
+            containerBounds &&
+            styles.overflowX === OVERFLOW.HIDDEN &&
+            text.textBounds.length > 0;
 
         // Calculate total text width if ellipsis might be needed
         let needsEllipsis = false;
         let truncatedText = '';
-        if (shouldApplyEllipsis && text.textBounds.length > 0) {
-            // Measure the full text content
-            // Note: text.textBounds may contain whitespace characters from HTML formatting
-            // We need to collapse them like the browser does for white-space: nowrap
-            let fullText = text.textBounds.map((tb) => tb.text).join('');
+        if (shouldApplyEllipsis) {
+            // Check if all text bounds are on approximately the same line (single-line scenario)
+            // For multi-line text (like -webkit-line-clamp), textBounds will have different Y positions
+            const firstTop = text.textBounds[0].bounds.top;
+            const isSingleLine = text.textBounds.every((tb) => Math.abs(tb.bounds.top - firstTop) < lineHeight * 0.5);
 
-            // Collapse whitespace: replace sequences of whitespace (including newlines) with single spaces
-            // and trim leading/trailing whitespace
-            fullText = fullText.replace(/\s+/g, ' ').trim();
+            if (isSingleLine) {
+                // Measure the full text content
+                // Note: text.textBounds may contain whitespace characters from HTML formatting
+                // We need to collapse them like the browser does for white-space: nowrap
+                let fullText = text.textBounds.map((tb) => tb.text).join('');
 
-            const fullTextWidth = this.ctx.measureText(fullText).width;
-            const availableWidth = containerBounds.width;
+                // Collapse whitespace: replace sequences of whitespace (including newlines) with single spaces
+                // and trim leading/trailing whitespace
+                fullText = fullText.replace(/\s+/g, ' ').trim();
 
-            if (fullTextWidth > availableWidth) {
-                needsEllipsis = true;
-                truncatedText = this.truncateTextWithEllipsis(fullText, availableWidth, styles.letterSpacing);
+                const fullTextWidth = this.ctx.measureText(fullText).width;
+                const availableWidth = containerBounds.width;
+
+                if (fullTextWidth > availableWidth) {
+                    needsEllipsis = true;
+                    truncatedText = this.truncateTextWithEllipsis(fullText, availableWidth, styles.letterSpacing);
+                }
             }
         }
 
