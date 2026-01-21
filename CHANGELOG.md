@@ -1,4 +1,11 @@
 
+### [1.6.6](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.5...v1.6.6) (2026-01-21)
+
+
+### Fixes
+
+* not support line-clam ([5fffeca](https://github.com/yorickshan/html2canvas-pro/commit/5fffeca3ea5bd2f966836cc2e2b587163fe8a3d4))
+
 ### [1.6.5](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.4...v1.6.5) (2026-01-19)
 
 
