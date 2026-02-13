@@ -1,4 +1,16 @@
 
+### [1.6.7](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.6...v1.6.7) (2026-02-13)
+
+
+### Chore
+
+* **release:** 1.6.6 ([222b73f](https://github.com/yorickshan/html2canvas-pro/commit/222b73f17887f8fec42722f6f67dc98ba0dd54f7))
+
+
+### Fixes
+
+* v1.6.1+ broke my previews after the first shadow-root [#206](https://github.com/yorickshan/html2canvas-pro/issues/206) ([5cc1af9](https://github.com/yorickshan/html2canvas-pro/commit/5cc1af9a0c6c2cd27ac3d28dd67071dfd64bf4da))
+
 ### [1.6.6](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.5...v1.6.6) (2026-01-21)
 
 
