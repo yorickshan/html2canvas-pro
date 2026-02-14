@@ -67,6 +67,7 @@ export interface RenderOptions {
     y: number;
     width: number;
     height: number;
+    imageSmoothingEnabled: boolean;
 }
 
 const MASK_OFFSET = 10000;
@@ -80,7 +81,9 @@ export class CanvasRenderer extends Renderer {
     constructor(context: Context, options: RenderConfigurations) {
         super(context, options);
         this.canvas = options.canvas ? options.canvas : document.createElement('canvas');
+        this.canvas.style.imageRendering = options.imageSmoothingEnabled ? 'auto' : 'pixelated';
         this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
+        this.ctx.imageSmoothingEnabled = options.imageSmoothingEnabled;
         if (!options.canvas) {
             this.canvas.width = Math.floor(options.width * options.scale);
             this.canvas.height = Math.floor(options.height * options.scale);
@@ -803,7 +806,8 @@ export class CanvasRenderer extends Renderer {
                 x: 0,
                 y: 0,
                 width: container.width,
-                height: container.height
+                height: container.height,
+                imageSmoothingEnabled: this.options.imageSmoothingEnabled
             });
 
             const canvas = await iframeRenderer.render(container.tree);
@@ -1067,9 +1071,11 @@ export class CanvasRenderer extends Renderer {
 
         const ownerDocument = this.canvas.ownerDocument ?? document;
         const canvas = ownerDocument.createElement('canvas');
+        canvas.style.imageRendering = this.options.imageSmoothingEnabled ? 'auto' : 'pixelated';
         canvas.width = Math.max(1, width);
         canvas.height = Math.max(1, height);
         const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+        ctx.imageSmoothingEnabled = this.options.imageSmoothingEnabled;
         ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height);
         return canvas;
     }
@@ -1105,9 +1111,11 @@ export class CanvasRenderer extends Renderer {
                 const [lineLength, x0, x1, y0, y1] = calculateGradientDirection(backgroundImage.angle, width, height);
 
                 const canvas = document.createElement('canvas');
+                canvas.style.imageRendering = this.options.imageSmoothingEnabled ? 'auto' : 'pixelated';
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+                ctx.imageSmoothingEnabled = this.options.imageSmoothingEnabled;
                 const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
 
                 processColorStops(backgroundImage.stops, lineLength || 1).forEach((colorStop) =>

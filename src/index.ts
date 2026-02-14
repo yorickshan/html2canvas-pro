@@ -122,7 +122,8 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
         x: (opts.x ?? 0) + left,
         y: (opts.y ?? 0) + top,
         width: opts.width ?? Math.ceil(width),
-        height: opts.height ?? Math.ceil(height)
+        height: opts.height ?? Math.ceil(height),
+        imageSmoothingEnabled: opts.imageSmoothingEnabled ?? true
     };
 
     let canvas;
