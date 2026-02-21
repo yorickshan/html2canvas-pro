@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Smoothing Demo - html2canvas-pro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .demo-section {
+            margin-bottom: 40px;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .demo-item {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        .pixel-art {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #ff0000 25%, #00ff00 25%, #00ff00 50%, #0000ff 50%, #0000ff 75%, #ffff00 75%);
+            margin: 10px auto;
+        }
+        .pixelated {
+            image-rendering: pixelated;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+        .smooth {
+            image-rendering: smooth;
+        }
+        .auto {
+            image-rendering: auto;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .output {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: #f5f5f5;
+        }
+        canvas {
+            border: 1px solid #999;
+            display: block;
+            margin: 10px auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Smoothing Demo</h1>
+    <p>This demo shows how html2canvas-pro handles different image-rendering CSS properties and global imageSmoothing options.</p>
+
+    <div class="demo-section">
+        <h2>Test 1: CSS image-rendering Property</h2>
+        <p>These images use different CSS <code>image-rendering</code> values:</p>
+        <div class="demo-grid" id="css-demo">
+            <div class="demo-item">
+                <h3>pixelated</h3>
+                <div class="pixel-art pixelated"></div>
+                <p>CSS: <code>image-rendering: pixelated</code></p>
+            </div>
+            <div class="demo-item">
+                <h3>crisp-edges</h3>
+                <div class="pixel-art" style="image-rendering: crisp-edges;"></div>
+                <p>CSS: <code>image-rendering: crisp-edges</code></p>
+            </div>
+            <div class="demo-item">
+                <h3>smooth (default)</h3>
+                <div class="pixel-art smooth"></div>
+                <p>CSS: <code>image-rendering: smooth</code></p>
+            </div>
+            <div class="demo-item">
+                <h3>auto</h3>
+                <div class="pixel-art auto"></div>
+                <p>CSS: <code>image-rendering: auto</code></p>
+            </div>
+        </div>
+        <button onclick="renderCssDemo()">Render with CSS Properties</button>
+        <div class="output" id="css-output"></div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Test 2: Global imageSmoothing Option</h2>
+        <p>Same image rendered with different global options:</p>
+        <div class="demo-grid" id="global-demo">
+            <div class="demo-item">
+                <h3>Original</h3>
+                <div class="pixel-art"></div>
+            </div>
+        </div>
+        <button onclick="renderWithSmoothing()">Render with Smoothing (default)</button>
+        <button onclick="renderWithoutSmoothing()">Render without Smoothing</button>
+        <button onclick="renderWithQuality()">Render with High Quality</button>
+        <div class="output" id="global-output"></div>
+    </div>
+
+    <div class="demo-section">
+        <h2>Test 3: Low Resolution Image Upscaling</h2>
+        <p>A small pixel art image upscaled to show the smoothing difference:</p>
+        <div class="demo-grid" id="upscale-demo">
+            <div class="demo-item">
+                <h3>8x8 Pixel Art</h3>
+                <canvas id="small-pixel-art" width="8" height="8"></canvas>
+            </div>
+        </div>
+        <button onclick="renderUpscaleSmooth()">Upscale with Smoothing</button>
+        <button onclick="renderUpscalePixelated()">Upscale Pixelated</button>
+        <div class="output" id="upscale-output"></div>
+    </div>
+
+    <script src="../dist/html2canvas-pro.js"></script>
+    <script>
+        // Create a simple pixel art on canvas
+        function createPixelArt() {
+            const canvas = document.getElementById('small-pixel-art');
+            const ctx = canvas.getContext('2d');
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff', '#000000'];
+            
+            for (let y = 0; y < 8; y++) {
+                for (let x = 0; x < 8; x++) {
+                    ctx.fillStyle = colors[(x + y) % colors.length];
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+        createPixelArt();
+
+        async function renderCssDemo() {
+            const element = document.getElementById('css-demo');
+            const output = document.getElementById('css-output');
+            output.innerHTML = '<p>Rendering with CSS image-rendering properties...</p>';
+            
+            try {
+                const canvas = await html2canvas(element, { logging: true });
+                output.innerHTML = '<h3>Result:</h3>';
+                output.appendChild(canvas);
+                console.log('CSS demo rendered successfully');
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function renderWithSmoothing() {
+            const element = document.getElementById('global-demo');
+            const output = document.getElementById('global-output');
+            output.innerHTML = '<p>Rendering with smoothing enabled (default)...</p>';
+            
+            try {
+                const canvas = await html2canvas(element, {
+                    imageSmoothing: true,
+                    logging: true
+                });
+                output.innerHTML = '<h3>Result (smoothing=true):</h3>';
+                output.appendChild(canvas);
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function renderWithoutSmoothing() {
+            const element = document.getElementById('global-demo');
+            const output = document.getElementById('global-output');
+            output.innerHTML = '<p>Rendering without smoothing (pixelated)...</p>';
+            
+            try {
+                const canvas = await html2canvas(element, {
+                    imageSmoothing: false,
+                    logging: true
+                });
+                output.innerHTML = '<h3>Result (smoothing=false):</h3>';
+                output.appendChild(canvas);
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function renderWithQuality() {
+            const element = document.getElementById('global-demo');
+            const output = document.getElementById('global-output');
+            output.innerHTML = '<p>Rendering with high quality smoothing...</p>';
+            
+            try {
+                const canvas = await html2canvas(element, {
+                    imageSmoothing: true,
+                    imageSmoothingQuality: 'high',
+                    logging: true
+                });
+                output.innerHTML = '<h3>Result (quality=high):</h3>';
+                output.appendChild(canvas);
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function renderUpscaleSmooth() {
+            const canvas = document.getElementById('small-pixel-art');
+            const output = document.getElementById('upscale-output');
+            output.innerHTML = '<p>Upscaling with smoothing...</p>';
+            
+            try {
+                const result = await html2canvas(canvas.parentElement, {
+                    imageSmoothing: true,
+                    scale: 4,
+                    logging: true
+                });
+                output.innerHTML = '<h3>Result (smooth, 4x scale):</h3>';
+                output.appendChild(result);
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function renderUpscalePixelated() {
+            const canvas = document.getElementById('small-pixel-art');
+            const output = document.getElementById('upscale-output');
+            output.innerHTML = '<p>Upscaling without smoothing (pixelated)...</p>';
+            
+            try {
+                const result = await html2canvas(canvas.parentElement, {
+                    imageSmoothing: false,
+                    scale: 4,
+                    logging: true
+                });
+                output.innerHTML = '<h3>Result (pixelated, 4x scale):</h3>';
+                output.appendChild(result);
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

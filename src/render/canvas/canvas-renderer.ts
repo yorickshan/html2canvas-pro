@@ -22,6 +22,7 @@ import { getAbsoluteValue } from '../../css/types/length-percentage';
 import { FontMetrics } from '../font-metrics';
 import { DISPLAY } from '../../css/property-descriptors/display';
 import { Bounds } from '../../css/layout/bounds';
+import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering';
 import { LIST_STYLE_TYPE } from '../../css/property-descriptors/list-style-type';
 import { computeLineHeight } from '../../css/property-descriptors/line-height';
 import {
@@ -45,6 +46,21 @@ import { OBJECT_FIT } from '../../css/property-descriptors/object-fit';
 
 export type RenderConfigurations = RenderOptions & {
     backgroundColor: Color | null;
+    /**
+     * Enable/disable image smoothing (anti-aliasing).
+     * When disabled, images are rendered with pixel-perfect sharpness (no interpolation).
+     * CSS `image-rendering` property on individual elements takes precedence.
+     * @default browser default (usually true)
+     */
+    imageSmoothing?: boolean;
+    /**
+     * Image smoothing quality level when imageSmoothing is enabled.
+     * Higher quality may be slower for large images.
+     * Only supported in modern browsers (Chrome 54+, Firefox 94+, Safari 17+).
+     * Falls back gracefully in older browsers.
+     * @default browser default
+     */
+    imageSmoothingQuality?: 'low' | 'medium' | 'high';
 };
 
 export interface RenderOptions {
@@ -81,6 +97,14 @@ export class CanvasRenderer extends Renderer {
         this.ctx.scale(this.options.scale, this.options.scale);
         this.ctx.translate(-options.x, -options.y);
         this.ctx.textBaseline = 'bottom';
+
+        // Set image smoothing options
+        if (options.imageSmoothing !== undefined) {
+            this.ctx.imageSmoothingEnabled = options.imageSmoothing;
+        }
+        if (options.imageSmoothingQuality) {
+            this.ctx.imageSmoothingQuality = options.imageSmoothingQuality;
+        }
 
         // Initialize specialized renderers
         this.backgroundRenderer = new BackgroundRenderer({
@@ -243,7 +267,31 @@ export class CanvasRenderer extends Renderer {
         if (container instanceof ImageElementContainer) {
             try {
                 const image = await this.context.cache.match(container.src);
+
+                // Apply image smoothing based on CSS image-rendering property and global options
+                const prevSmoothing = this.ctx.imageSmoothingEnabled;
+
+                // CSS image-rendering property overrides global settings
+                if (
+                    styles.imageRendering === IMAGE_RENDERING.PIXELATED ||
+                    styles.imageRendering === IMAGE_RENDERING.CRISP_EDGES
+                ) {
+                    this.context.logger.debug(
+                        `Disabling image smoothing for ${container.src} due to CSS image-rendering: ${styles.imageRendering === IMAGE_RENDERING.PIXELATED ? 'pixelated' : 'crisp-edges'}`
+                    );
+                    this.ctx.imageSmoothingEnabled = false;
+                } else if (styles.imageRendering === IMAGE_RENDERING.SMOOTH) {
+                    this.context.logger.debug(
+                        `Enabling image smoothing for ${container.src} due to CSS image-rendering: smooth`
+                    );
+                    this.ctx.imageSmoothingEnabled = true;
+                }
+                // IMAGE_RENDERING.AUTO: keep current global setting
+
                 this.renderReplacedElement(container, curves, image);
+
+                // Restore previous smoothing state
+                this.ctx.imageSmoothingEnabled = prevSmoothing;
             } catch (e) {
                 this.context.logger.error(`Error loading image ${container.src}`);
             }

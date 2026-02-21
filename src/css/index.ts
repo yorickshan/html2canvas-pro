@@ -88,6 +88,7 @@ import { webkitLineClamp } from './property-descriptors/webkit-line-clamp';
 import { Context } from '../core/context';
 import { objectFit } from './property-descriptors/object-fit';
 import { textOverflow } from './property-descriptors/text-overflow';
+import { imageRendering } from './property-descriptors/image-rendering';
 
 export class CSSParsedDeclaration {
     animationDuration: ReturnType<typeof duration.parse>;
@@ -163,6 +164,7 @@ export class CSSParsedDeclaration {
     wordBreak: ReturnType<typeof wordBreak.parse>;
     zIndex: ReturnType<typeof zIndex.parse>;
     objectFit: ReturnType<typeof objectFit.parse>;
+    imageRendering: ReturnType<typeof imageRendering.parse>;
 
     constructor(context: Context, declaration: CSSStyleDeclaration) {
         this.animationDuration = parse(context, duration, declaration.animationDuration);
@@ -247,6 +249,7 @@ export class CSSParsedDeclaration {
         this.wordBreak = parse(context, wordBreak, declaration.wordBreak);
         this.zIndex = parse(context, zIndex, declaration.zIndex);
         this.objectFit = parse(context, objectFit, declaration.objectFit);
+        this.imageRendering = parse(context, imageRendering, declaration.imageRendering);
     }
 
     isVisible(): boolean {

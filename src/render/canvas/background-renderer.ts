@@ -19,6 +19,7 @@ import { FIFTY_PERCENT, getAbsoluteValue } from '../../css/types/length-percenta
 import { asString } from '../../css/types/color-utilities';
 import { isBezierCurve } from '../bezier-curve';
 import { Vector } from '../vector';
+import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering';
 
 /**
  * Dependencies required for BackgroundRenderer
@@ -96,7 +97,10 @@ export class BackgroundRenderer {
                 imageHeight,
                 imageWidth / imageHeight
             ]);
-            const pattern = this.ctx.createPattern(this.resizeImage(image, width, height), 'repeat') as CanvasPattern;
+            const pattern = this.ctx.createPattern(
+                this.resizeImage(image, width, height, container.styles.imageRendering),
+                'repeat'
+            ) as CanvasPattern;
             this.renderRepeat(path, pattern, x, y);
         }
     }
@@ -199,9 +203,15 @@ export class BackgroundRenderer {
      * @param image - Source image
      * @param width - Target width
      * @param height - Target height
+     * @param imageRendering - CSS image-rendering property value
      * @returns Resized canvas or original image
      */
-    private resizeImage(image: HTMLImageElement, width: number, height: number): HTMLCanvasElement | HTMLImageElement {
+    private resizeImage(
+        image: HTMLImageElement,
+        width: number,
+        height: number,
+        imageRendering: IMAGE_RENDERING
+    ): HTMLCanvasElement | HTMLImageElement {
         // https://github.com/niklasvh/html2canvas/pull/2911
         // if (image.width === width && image.height === height) {
         //     return image;
@@ -212,6 +222,26 @@ export class BackgroundRenderer {
         canvas.width = Math.max(1, width);
         canvas.height = Math.max(1, height);
         const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+
+        // Apply image smoothing based on CSS image-rendering property
+        if (imageRendering === IMAGE_RENDERING.PIXELATED || imageRendering === IMAGE_RENDERING.CRISP_EDGES) {
+            this.context.logger.debug(`Disabling image smoothing for background image due to CSS image-rendering`);
+            ctx.imageSmoothingEnabled = false;
+        } else if (imageRendering === IMAGE_RENDERING.SMOOTH) {
+            this.context.logger.debug(
+                `Enabling image smoothing for background image due to CSS image-rendering: smooth`
+            );
+            ctx.imageSmoothingEnabled = true;
+        } else {
+            // AUTO: inherit from main renderer context
+            ctx.imageSmoothingEnabled = this.ctx.imageSmoothingEnabled;
+        }
+
+        // Inherit quality setting
+        if (this.ctx.imageSmoothingQuality) {
+            ctx.imageSmoothingQuality = this.ctx.imageSmoothingQuality;
+        }
+
         ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height);
         return canvas;
     }
