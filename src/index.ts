@@ -22,6 +22,31 @@ export type Options = CloneOptions &
         validator?: Validator;
         skipValidation?: boolean;
         enablePerformanceMonitoring?: boolean;
+        /**
+         * Enable/disable image smoothing (anti-aliasing) globally.
+         * - `false`: Pixel-perfect rendering for pixel art, sprites, and retro graphics
+         * - `true`: Smooth rendering for photos and high-quality images
+         * - CSS `image-rendering` property on individual elements takes precedence
+         * @default true (browser default)
+         * @example
+         * // Pixel art game screenshot
+         * html2canvas(element, { imageSmoothing: false, scale: 2 });
+         *
+         * // High-quality photo
+         * html2canvas(element, { imageSmoothing: true, imageSmoothingQuality: 'high' });
+         */
+        imageSmoothing?: boolean;
+        /**
+         * Image smoothing quality level when imageSmoothing is enabled.
+         * - `'low'`: Faster, lower quality (good for preview)
+         * - `'medium'`: Balanced (default in most browsers)
+         * - `'high'`: Slower, best quality (good for final export)
+         *
+         * Browser support: Chrome 54+, Firefox 94+, Safari 17+
+         * Falls back gracefully in older browsers.
+         * @default browser default (usually 'low' or 'medium')
+         */
+        imageSmoothingQuality?: 'low' | 'medium' | 'high';
     };
 
 /**
@@ -77,6 +102,8 @@ export {
     createDefaultValidator,
     PerformanceMonitor
 };
+
+export { IMAGE_RENDERING } from './css/property-descriptors/image-rendering';
 
 const renderElement = async (
     element: HTMLElement,
@@ -196,7 +223,9 @@ const renderElement = async (
         x: (opts.x ?? 0) + left,
         y: (opts.y ?? 0) + top,
         width: opts.width ?? Math.ceil(width),
-        height: opts.height ?? Math.ceil(height)
+        height: opts.height ?? Math.ceil(height),
+        imageSmoothing: opts.imageSmoothing,
+        imageSmoothingQuality: opts.imageSmoothingQuality
     };
 
     let canvas;

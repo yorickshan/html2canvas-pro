@@ -435,8 +435,10 @@
                     scale: 2
                 });
                 
-                canvasResults.innerHTML = '<h3>基础测试结果：</h3>';
-                canvasResults.appendChild(canvas);
+                const section = document.createElement('div');
+                section.innerHTML = '<h3>基础测试结果：</h3>';
+                section.appendChild(canvas);
+                canvasResults.appendChild(section);
                 
                 addLog(`✅ 基础测试完成 (${canvas.width}x${canvas.height})`, 'success');
                 updateStatus('基础测试通过', 'pass');
@@ -457,7 +459,11 @@
                 { id: 'effects-test', name: 'EffectsRenderer' }
             ];
             
-            canvasResults.innerHTML = '<h3>渲染器测试结果：</h3>';
+            const rendererSection = document.createElement('div');
+            const rendererTitle = document.createElement('h3');
+            rendererTitle.textContent = '渲染器测试结果：';
+            rendererSection.appendChild(rendererTitle);
+            
             let passCount = 0;
             
             for (const test of tests) {
@@ -470,9 +476,11 @@
                     });
                     
                     const wrapper = document.createElement('div');
-                    wrapper.innerHTML = `<h4>${test.name} ✅</h4>`;
+                    const title = document.createElement('h4');
+                    title.textContent = `${test.name} ✅`;
+                    wrapper.appendChild(title);
                     wrapper.appendChild(canvas);
-                    canvasResults.appendChild(wrapper);
+                    rendererSection.appendChild(wrapper);
                     
                     addLog(`✅ ${test.name} 测试通过`, 'success');
                     passCount++;
@@ -480,6 +488,8 @@
                     addLog(`❌ ${test.name} 测试失败: ${error.message}`, 'error');
                 }
             }
+            
+            canvasResults.appendChild(rendererSection);
             
             const status = passCount === tests.length ? 'pass' : 'fail';
             updateStatus(`渲染器测试: ${passCount}/${tests.length} 通过`, status);
@@ -503,8 +513,15 @@
                 addLog('📊 应该看到详细的性能分析数据', 'success');
                 updateStatus('性能监控正常', 'pass');
                 
-                canvasResults.innerHTML += '<h3>性能监控测试：</h3><p>请查看浏览器控制台的性能数据输出</p>';
-                canvasResults.appendChild(canvas);
+                const perfSection = document.createElement('div');
+                const perfTitle = document.createElement('h3');
+                perfTitle.textContent = '性能监控测试：';
+                const perfDesc = document.createElement('p');
+                perfDesc.textContent = '请查看浏览器控制台的性能数据输出';
+                perfSection.appendChild(perfTitle);
+                perfSection.appendChild(perfDesc);
+                perfSection.appendChild(canvas);
+                canvasResults.appendChild(perfSection);
             } catch (error) {
                 addLog(`❌ 性能监控测试失败: ${error.message}`, 'error');
                 updateStatus('性能监控失败', 'fail');

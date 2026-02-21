@@ -28,6 +28,7 @@ html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/
 - support color function ```oklab()```
 - support color function ```oklch()```
 - Support object-fit of ```<img/>```
+- **Image smoothing control** - Support CSS `image-rendering` property and global `imageSmoothing` option for pixel art and retro graphics
 - Fixed some [issues](./CHANGELOG.md)
 
 If you found this helpful, don't forget to

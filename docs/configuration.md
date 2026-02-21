@@ -64,6 +64,8 @@ Options that control how images are processed and loaded.
 | Option Name | Default | Description | Example |
 | ----------- | :-----: | ----------- | ------- |
 | customIsSameOrigin | `null` | Custom function to determine if an image URL is same-origin. Accepts two parameters: `(src: string, oldFn: (src: string) => boolean) => boolean \| Promise<boolean>` where `src` is the image URL and `oldFn` is the default same-origin check function | See examples below |
+| imageSmoothing | `true` | Whether to apply smoothing to images. Set to `false` for pixel-perfect rendering of pixel art, sprites, and low-res images. Also respects CSS `image-rendering` property | `false` |
+| imageSmoothingQuality | browser default | Quality level for image smoothing when `imageSmoothing` is enabled: `'low'`, `'medium'`, or `'high'`. Higher quality may be slower for large images | `'high'` |
 | imageTimeout | `15000` | Timeout for loading an image (in milliseconds). Set to `0` to disable timeout | `30000` |
 | proxy | `null` | Url to the [proxy](./proxy) which is to be used for loading cross-origin images. If left empty, cross-origin images won't be loaded | `"https://proxy.example.com/"` |
 | useCORS | `false` | Whether to attempt to load images from a server using CORS | `true` |
