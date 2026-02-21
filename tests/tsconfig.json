@@ -4,7 +4,9 @@
         "types": ["node", "mocha"],
         "rootDir": "../",
         "declaration": false,
-        "declarationDir": null
+        "declarationDir": null,
+        "skipLibCheck": true,
+        "typeRoots": ["../node_modules/@types", "./types"]
     },
-    "include": ["**/*.ts"]
+    "include": ["**/*.ts", "types/**/*.d.ts"]
 }

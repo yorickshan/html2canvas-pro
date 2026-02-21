@@ -4,6 +4,7 @@ import { rgb2rgbLinear, rgbLinear2xyz, srgbLinear2rgb, xyz2rgbLinear } from './c
 import { TokenType } from '../syntax/tokenizer';
 import { angle, deg } from './angle';
 import { getAbsoluteValue, isLengthPercentage } from './length-percentage';
+import { clamp, multiplyMatrices } from './color-math';
 
 type Color = number;
 
@@ -36,17 +37,8 @@ export const getTokenColorValue = (token: CSSValue, i: number): number => {
 export const isRelativeTransform = (tokens: CSSValue[]): boolean =>
     (tokens[0].type === TokenType.IDENT_TOKEN ? tokens[0].value : 'unknown') === 'from';
 
-export const clamp = (value: number, min: number, max: number) => {
-    return Math.min(Math.max(value, min), max);
-};
-
-export const multiplyMatrices = (A: number[], B: number[]): [number, number, number] => {
-    return [
-        A[0] * B[0] + A[1] * B[1] + A[2] * B[2],
-        A[3] * B[0] + A[4] * B[1] + A[5] * B[2],
-        A[6] * B[0] + A[7] * B[1] + A[8] * B[2]
-    ];
-};
+// Re-export from color-math to maintain backward compatibility
+export { clamp, multiplyMatrices };
 
 export const packSrgb = (args: number[]): number => {
     return pack(

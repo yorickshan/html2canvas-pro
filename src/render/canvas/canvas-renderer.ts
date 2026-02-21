@@ -3,34 +3,22 @@ import { Color } from '../../css/types/color';
 import { asString, isTransparent } from '../../css/types/color-utilities';
 import { ElementContainer, FLAGS } from '../../dom/element-container';
 import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
-import { CSSParsedDeclaration } from '../../css';
-import { TextContainer } from '../../dom/text-container';
 import { Path, transformPath } from '../path';
 import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
 import { BoundCurves, calculateBorderBoxPath, calculateContentBoxPath, calculatePaddingBoxPath } from '../bound-curves';
-import { BezierCurve, isBezierCurve } from '../bezier-curve';
+import { isBezierCurve } from '../bezier-curve';
 import { Vector } from '../vector';
-import { CSSImageType, CSSURLImage, isLinearGradient, isRadialGradient } from '../../css/types/image';
-import {
-    parsePathForBorder,
-    parsePathForBorderDoubleInner,
-    parsePathForBorderDoubleOuter,
-    parsePathForBorderStroke
-} from '../border';
-import { calculateBackgroundRendering, getBackgroundValueForIndex } from '../background';
-import { isDimensionToken } from '../../css/syntax/parser';
-import { segmentGraphemes, TextBounds } from '../../css/layout/text';
+import { CSSImageType, CSSURLImage } from '../../css/types/image';
+import { getBackgroundValueForIndex } from '../background';
+import { TextBounds } from '../../css/layout/text';
 import { ImageElementContainer } from '../../dom/replaced-elements/image-element-container';
 import { contentBox } from '../box-sizing';
 import { CanvasElementContainer } from '../../dom/replaced-elements/canvas-element-container';
 import { SVGElementContainer } from '../../dom/replaced-elements/svg-element-container';
 import { ReplacedElementContainer } from '../../dom/replaced-elements';
-import { EffectTarget, IElementEffect, isClipEffect, isOpacityEffect, isTransformEffect } from '../effects';
+import { EffectTarget } from '../effects';
 import { contains } from '../../core/bitwise';
-import { calculateGradientDirection, calculateRadius, processColorStops } from '../../css/types/functions/gradient';
-import { FIFTY_PERCENT, getAbsoluteValue } from '../../css/types/length-percentage';
-import { TEXT_DECORATION_LINE } from '../../css/property-descriptors/text-decoration-line';
-import { TEXT_DECORATION_STYLE } from '../../css/property-descriptors/text-decoration-style';
+import { getAbsoluteValue } from '../../css/types/length-percentage';
 import { FontMetrics } from '../font-metrics';
 import { DISPLAY } from '../../css/property-descriptors/display';
 import { Bounds } from '../../css/layout/bounds';
@@ -47,14 +35,13 @@ import { TEXT_ALIGN } from '../../css/property-descriptors/text-align';
 import { TextareaElementContainer } from '../../dom/elements/textarea-element-container';
 import { SelectElementContainer } from '../../dom/elements/select-element-container';
 import { IFrameElementContainer } from '../../dom/replaced-elements/iframe-element-container';
-import { TextShadow } from '../../css/property-descriptors/text-shadow';
-import { PAINT_ORDER_LAYER } from '../../css/property-descriptors/paint-order';
 import { Renderer } from '../renderer';
 import { Context } from '../../core/context';
-import { DIRECTION } from '../../css/property-descriptors/direction';
+import { BackgroundRenderer } from './background-renderer';
+import { BorderRenderer } from './border-renderer';
+import { EffectsRenderer } from './effects-renderer';
+import { TextRenderer } from './text-renderer';
 import { OBJECT_FIT } from '../../css/property-descriptors/object-fit';
-import { TEXT_OVERFLOW } from '../../css/property-descriptors/text-overflow';
-import { OVERFLOW } from '../../css/property-descriptors/overflow';
 
 export type RenderConfigurations = RenderOptions & {
     backgroundColor: Color | null;
@@ -74,8 +61,11 @@ const MASK_OFFSET = 10000;
 export class CanvasRenderer extends Renderer {
     canvas: HTMLCanvasElement;
     ctx: CanvasRenderingContext2D;
-    private readonly _activeEffects: IElementEffect[] = [];
     private readonly fontMetrics: FontMetrics;
+    private readonly backgroundRenderer: BackgroundRenderer;
+    private readonly borderRenderer: BorderRenderer;
+    private readonly effectsRenderer: EffectsRenderer;
+    private readonly textRenderer: TextRenderer;
 
     constructor(context: Context, options: RenderConfigurations) {
         super(context, options);
@@ -91,50 +81,38 @@ export class CanvasRenderer extends Renderer {
         this.ctx.scale(this.options.scale, this.options.scale);
         this.ctx.translate(-options.x, -options.y);
         this.ctx.textBaseline = 'bottom';
-        this._activeEffects = [];
+
+        // Initialize specialized renderers
+        this.backgroundRenderer = new BackgroundRenderer({
+            ctx: this.ctx,
+            context: this.context,
+            canvas: this.canvas,
+            options: {
+                width: options.width,
+                height: options.height,
+                scale: options.scale
+            }
+        });
+
+        this.borderRenderer = new BorderRenderer(
+            { ctx: this.ctx },
+            {
+                path: (paths) => this.path(paths),
+                formatPath: (paths) => this.formatPath(paths)
+            }
+        );
+
+        this.effectsRenderer = new EffectsRenderer({ ctx: this.ctx }, { path: (paths) => this.path(paths) });
+
+        this.textRenderer = new TextRenderer({
+            ctx: this.ctx,
+            context: this.context,
+            options: { scale: options.scale }
+        });
+
         this.context.logger.debug(
             `Canvas renderer initialized (${options.width}x${options.height}) with scale ${options.scale}`
         );
-    }
-
-    applyEffects(effects: IElementEffect[]): void {
-        while (this._activeEffects.length) {
-            this.popEffect();
-        }
-
-        effects.forEach((effect) => this.applyEffect(effect));
-    }
-
-    applyEffect(effect: IElementEffect): void {
-        this.ctx.save();
-        if (isOpacityEffect(effect)) {
-            this.ctx.globalAlpha = effect.opacity;
-        }
-
-        if (isTransformEffect(effect)) {
-            this.ctx.translate(effect.offsetX, effect.offsetY);
-            this.ctx.transform(
-                effect.matrix[0],
-                effect.matrix[1],
-                effect.matrix[2],
-                effect.matrix[3],
-                effect.matrix[4],
-                effect.matrix[5]
-            );
-            this.ctx.translate(-effect.offsetX, -effect.offsetY);
-        }
-
-        if (isClipEffect(effect)) {
-            this.path(effect.path);
-            this.ctx.clip();
-        }
-
-        this._activeEffects.push(effect);
-    }
-
-    popEffect(): void {
-        this._activeEffects.pop();
-        this.ctx.restore();
     }
 
     async renderStack(stack: StackingContext): Promise<void> {
@@ -155,524 +133,12 @@ export class CanvasRenderer extends Renderer {
         }
     }
 
-    renderTextWithLetterSpacing(text: TextBounds, letterSpacing: number, baseline: number): void {
-        if (letterSpacing === 0) {
-            // Use alphabetic baseline for consistent text positioning across browsers
-            // Issue #129: text.bounds.top + text.bounds.height causes text to render too low
-            this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + baseline);
-        } else {
-            const letters = segmentGraphemes(text.text);
-            letters.reduce((left, letter) => {
-                this.ctx.fillText(letter, left, text.bounds.top + baseline);
-
-                return left + this.ctx.measureText(letter).width;
-            }, text.bounds.left);
-        }
-    }
-
     /**
      * Helper method to render text with paint order support
      * Reduces code duplication in line-clamp and normal rendering
      */
-    private renderTextBoundWithPaintOrder(
-        textBound: TextBounds,
-        styles: CSSParsedDeclaration,
-        paintOrderLayers: number[]
-    ): void {
-        paintOrderLayers.forEach((paintOrderLayer: number) => {
-            switch (paintOrderLayer) {
-                case PAINT_ORDER_LAYER.FILL:
-                    this.ctx.fillStyle = asString(styles.color);
-                    this.renderTextWithLetterSpacing(textBound, styles.letterSpacing, styles.fontSize.number);
-                    break;
-                case PAINT_ORDER_LAYER.STROKE:
-                    if (styles.webkitTextStrokeWidth && textBound.text.trim().length) {
-                        this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
-                        this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                        this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
-                        this.renderTextWithLetterSpacing(textBound, styles.letterSpacing, styles.fontSize.number);
-                    }
-                    break;
-            }
-        });
-    }
-
-    private renderTextDecoration(bounds: Bounds, styles: CSSParsedDeclaration): void {
-        this.ctx.fillStyle = asString(styles.textDecorationColor || styles.color);
-
-        // Calculate decoration line thickness
-        let thickness = 1; // default
-        if (typeof styles.textDecorationThickness === 'number') {
-            thickness = styles.textDecorationThickness;
-        } else if (styles.textDecorationThickness === 'from-font') {
-            // Use a reasonable default based on font size
-            thickness = Math.max(1, Math.floor(styles.fontSize.number * 0.05));
-        }
-        // 'auto' uses default thickness of 1
-
-        // Calculate underline offset
-        let underlineOffset = 0;
-        if (typeof styles.textUnderlineOffset === 'number') {
-            // It's a pixel value
-            underlineOffset = styles.textUnderlineOffset;
-        }
-        // 'auto' uses default offset of 0
-
-        const decorationStyle = styles.textDecorationStyle;
-
-        styles.textDecorationLine.forEach((textDecorationLine) => {
-            let y = 0;
-
-            switch (textDecorationLine) {
-                case TEXT_DECORATION_LINE.UNDERLINE:
-                    y = bounds.top + bounds.height - thickness + underlineOffset;
-                    break;
-                case TEXT_DECORATION_LINE.OVERLINE:
-                    y = bounds.top;
-                    break;
-                case TEXT_DECORATION_LINE.LINE_THROUGH:
-                    y = bounds.top + (bounds.height / 2 - thickness / 2);
-                    break;
-                default:
-                    return;
-            }
-
-            this.drawDecorationLine(bounds.left, y, bounds.width, thickness, decorationStyle);
-        });
-    }
-
-    private drawDecorationLine(x: number, y: number, width: number, thickness: number, style: number): void {
-        switch (style) {
-            case TEXT_DECORATION_STYLE.SOLID:
-                // Solid line (default)
-                this.ctx.fillRect(x, y, width, thickness);
-                break;
-
-            case TEXT_DECORATION_STYLE.DOUBLE:
-                // Double line
-                const gap = Math.max(1, thickness);
-                this.ctx.fillRect(x, y, width, thickness);
-                this.ctx.fillRect(x, y + thickness + gap, width, thickness);
-                break;
-
-            case TEXT_DECORATION_STYLE.DOTTED:
-                // Dotted line
-                this.ctx.save();
-                this.ctx.beginPath();
-                this.ctx.setLineDash([thickness, thickness * 2]);
-                this.ctx.lineWidth = thickness;
-                this.ctx.strokeStyle = this.ctx.fillStyle;
-                this.ctx.moveTo(x, y + thickness / 2);
-                this.ctx.lineTo(x + width, y + thickness / 2);
-                this.ctx.stroke();
-                this.ctx.restore();
-                break;
-
-            case TEXT_DECORATION_STYLE.DASHED:
-                // Dashed line
-                this.ctx.save();
-                this.ctx.beginPath();
-                this.ctx.setLineDash([thickness * 3, thickness * 2]);
-                this.ctx.lineWidth = thickness;
-                this.ctx.strokeStyle = this.ctx.fillStyle;
-                this.ctx.moveTo(x, y + thickness / 2);
-                this.ctx.lineTo(x + width, y + thickness / 2);
-                this.ctx.stroke();
-                this.ctx.restore();
-                break;
-
-            case TEXT_DECORATION_STYLE.WAVY:
-                // Wavy line (approximation using quadratic curves)
-                this.ctx.save();
-                this.ctx.beginPath();
-                this.ctx.lineWidth = thickness;
-                this.ctx.strokeStyle = this.ctx.fillStyle;
-
-                const amplitude = thickness * 2;
-                const wavelength = thickness * 4;
-                let currentX = x;
-
-                this.ctx.moveTo(currentX, y + thickness / 2);
-
-                while (currentX < x + width) {
-                    const nextX = Math.min(currentX + wavelength / 2, x + width);
-                    this.ctx.quadraticCurveTo(
-                        currentX + wavelength / 4,
-                        y + thickness / 2 - amplitude,
-                        nextX,
-                        y + thickness / 2
-                    );
-                    currentX = nextX;
-
-                    if (currentX < x + width) {
-                        const nextX2 = Math.min(currentX + wavelength / 2, x + width);
-                        this.ctx.quadraticCurveTo(
-                            currentX + wavelength / 4,
-                            y + thickness / 2 + amplitude,
-                            nextX2,
-                            y + thickness / 2
-                        );
-                        currentX = nextX2;
-                    }
-                }
-
-                this.ctx.stroke();
-                this.ctx.restore();
-                break;
-
-            default:
-                // Fallback to solid
-                this.ctx.fillRect(x, y, width, thickness);
-        }
-    }
 
     // Helper method to truncate text and add ellipsis if needed
-    private truncateTextWithEllipsis(text: string, maxWidth: number, letterSpacing: number): string {
-        const ellipsis = '...';
-        const ellipsisWidth = this.ctx.measureText(ellipsis).width;
-
-        if (letterSpacing === 0) {
-            let truncated = text;
-            while (this.ctx.measureText(truncated).width + ellipsisWidth > maxWidth && truncated.length > 0) {
-                truncated = truncated.slice(0, -1);
-            }
-            return truncated + ellipsis;
-        } else {
-            const letters = segmentGraphemes(text);
-            let width = ellipsisWidth;
-            let result: string[] = [];
-
-            for (const letter of letters) {
-                const letterWidth = this.ctx.measureText(letter).width + letterSpacing;
-                if (width + letterWidth > maxWidth) {
-                    break;
-                }
-                result.push(letter);
-                width += letterWidth;
-            }
-
-            return result.join('') + ellipsis;
-        }
-    }
-
-    private createFontStyle(styles: CSSParsedDeclaration): string[] {
-        const fontVariant = styles.fontVariant
-            .filter((variant) => variant === 'normal' || variant === 'small-caps')
-            .join('');
-        const fontFamily = fixIOSSystemFonts(styles.fontFamily).join(', ');
-        const fontSize = isDimensionToken(styles.fontSize)
-            ? `${styles.fontSize.number}${styles.fontSize.unit}`
-            : `${styles.fontSize.number}px`;
-
-        return [
-            [styles.fontStyle, fontVariant, styles.fontWeight, fontSize, fontFamily].join(' '),
-            fontFamily,
-            fontSize
-        ];
-    }
-
-    async renderTextNode(text: TextContainer, styles: CSSParsedDeclaration, containerBounds?: Bounds): Promise<void> {
-        const [font] = this.createFontStyle(styles);
-
-        this.ctx.font = font;
-
-        this.ctx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
-        this.ctx.textAlign = 'left';
-        this.ctx.textBaseline = 'alphabetic';
-        const paintOrder = styles.paintOrder;
-
-        // Calculate line height for text layout detection (used by both line-clamp and ellipsis)
-        const lineHeight = styles.fontSize.number * 1.5;
-
-        // Check if we need to apply -webkit-line-clamp
-        // This limits text to a specific number of lines with ellipsis
-        const shouldApplyLineClamp =
-            styles.webkitLineClamp > 0 &&
-            (styles.display & DISPLAY.BLOCK) !== 0 &&
-            styles.overflowY === OVERFLOW.HIDDEN &&
-            text.textBounds.length > 0;
-
-        if (shouldApplyLineClamp) {
-            // Group text bounds by lines based on their Y position
-            const lines: TextBounds[][] = [];
-            let currentLine: TextBounds[] = [];
-            let currentLineTop = text.textBounds[0].bounds.top;
-
-            text.textBounds.forEach((tb) => {
-                // If this text bound is on a different line, start a new line
-                if (Math.abs(tb.bounds.top - currentLineTop) >= lineHeight * 0.5) {
-                    if (currentLine.length > 0) {
-                        lines.push(currentLine);
-                    }
-                    currentLine = [tb];
-                    currentLineTop = tb.bounds.top;
-                } else {
-                    currentLine.push(tb);
-                }
-            });
-
-            // Don't forget the last line
-            if (currentLine.length > 0) {
-                lines.push(currentLine);
-            }
-
-            // Only render up to webkitLineClamp lines
-            const maxLines = styles.webkitLineClamp;
-            if (lines.length > maxLines) {
-                // Render only the first (maxLines - 1) complete lines
-                for (let i = 0; i < maxLines - 1; i++) {
-                    lines[i].forEach((textBound) => {
-                        this.renderTextBoundWithPaintOrder(textBound, styles, paintOrder);
-                    });
-                }
-
-                // For the last line, truncate with ellipsis
-                const lastLine = lines[maxLines - 1];
-                if (lastLine && lastLine.length > 0 && containerBounds) {
-                    const lastLineText = lastLine.map((tb) => tb.text).join('');
-                    const firstBound = lastLine[0];
-                    const availableWidth = containerBounds.width - (firstBound.bounds.left - containerBounds.left);
-                    const truncatedText = this.truncateTextWithEllipsis(
-                        lastLineText,
-                        availableWidth,
-                        styles.letterSpacing
-                    );
-
-                    paintOrder.forEach((paintOrderLayer) => {
-                        switch (paintOrderLayer) {
-                            case PAINT_ORDER_LAYER.FILL:
-                                this.ctx.fillStyle = asString(styles.color);
-                                if (styles.letterSpacing === 0) {
-                                    this.ctx.fillText(
-                                        truncatedText,
-                                        firstBound.bounds.left,
-                                        firstBound.bounds.top + styles.fontSize.number
-                                    );
-                                } else {
-                                    const letters = segmentGraphemes(truncatedText);
-                                    letters.reduce((left, letter) => {
-                                        this.ctx.fillText(letter, left, firstBound.bounds.top + styles.fontSize.number);
-                                        return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                                    }, firstBound.bounds.left);
-                                }
-                                break;
-                            case PAINT_ORDER_LAYER.STROKE:
-                                if (styles.webkitTextStrokeWidth && truncatedText.trim().length) {
-                                    this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
-                                    this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                                    this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
-                                    if (styles.letterSpacing === 0) {
-                                        this.ctx.strokeText(
-                                            truncatedText,
-                                            firstBound.bounds.left,
-                                            firstBound.bounds.top + styles.fontSize.number
-                                        );
-                                    } else {
-                                        const letters = segmentGraphemes(truncatedText);
-                                        letters.reduce((left, letter) => {
-                                            this.ctx.strokeText(
-                                                letter,
-                                                left,
-                                                firstBound.bounds.top + styles.fontSize.number
-                                            );
-                                            return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                                        }, firstBound.bounds.left);
-                                    }
-                                }
-                                break;
-                        }
-                    });
-                }
-                return; // Don't render anything else
-            }
-            // If lines.length <= maxLines, fall through to normal rendering
-        }
-
-        // Check if we need to apply text-overflow: ellipsis
-        // Issue #203: Only apply ellipsis for single-line text overflow
-        // Multi-line text truncation (like -webkit-line-clamp) should not be affected
-        const shouldApplyEllipsis =
-            styles.textOverflow === TEXT_OVERFLOW.ELLIPSIS &&
-            containerBounds &&
-            styles.overflowX === OVERFLOW.HIDDEN &&
-            text.textBounds.length > 0;
-
-        // Calculate total text width if ellipsis might be needed
-        let needsEllipsis = false;
-        let truncatedText = '';
-        if (shouldApplyEllipsis) {
-            // Check if all text bounds are on approximately the same line (single-line scenario)
-            // For multi-line text (like -webkit-line-clamp), textBounds will have different Y positions
-            const firstTop = text.textBounds[0].bounds.top;
-            const isSingleLine = text.textBounds.every((tb) => Math.abs(tb.bounds.top - firstTop) < lineHeight * 0.5);
-
-            if (isSingleLine) {
-                // Measure the full text content
-                // Note: text.textBounds may contain whitespace characters from HTML formatting
-                // We need to collapse them like the browser does for white-space: nowrap
-                let fullText = text.textBounds.map((tb) => tb.text).join('');
-
-                // Collapse whitespace: replace sequences of whitespace (including newlines) with single spaces
-                // and trim leading/trailing whitespace
-                fullText = fullText.replace(/\s+/g, ' ').trim();
-
-                const fullTextWidth = this.ctx.measureText(fullText).width;
-                const availableWidth = containerBounds.width;
-
-                if (fullTextWidth > availableWidth) {
-                    needsEllipsis = true;
-                    truncatedText = this.truncateTextWithEllipsis(fullText, availableWidth, styles.letterSpacing);
-                }
-            }
-        }
-
-        // If ellipsis is needed, render the truncated text once
-        if (needsEllipsis) {
-            const firstBound = text.textBounds[0];
-            paintOrder.forEach((paintOrderLayer) => {
-                switch (paintOrderLayer) {
-                    case PAINT_ORDER_LAYER.FILL:
-                        this.ctx.fillStyle = asString(styles.color);
-
-                        if (styles.letterSpacing === 0) {
-                            this.ctx.fillText(
-                                truncatedText,
-                                firstBound.bounds.left,
-                                firstBound.bounds.top + styles.fontSize.number
-                            );
-                        } else {
-                            const letters = segmentGraphemes(truncatedText);
-                            letters.reduce((left, letter) => {
-                                this.ctx.fillText(letter, left, firstBound.bounds.top + styles.fontSize.number);
-                                return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                            }, firstBound.bounds.left);
-                        }
-
-                        const textShadows: TextShadow = styles.textShadow;
-                        if (textShadows.length && truncatedText.trim().length) {
-                            textShadows
-                                .slice(0)
-                                .reverse()
-                                .forEach((textShadow) => {
-                                    this.ctx.shadowColor = asString(textShadow.color);
-                                    this.ctx.shadowOffsetX = textShadow.offsetX.number * this.options.scale;
-                                    this.ctx.shadowOffsetY = textShadow.offsetY.number * this.options.scale;
-                                    this.ctx.shadowBlur = textShadow.blur.number;
-
-                                    if (styles.letterSpacing === 0) {
-                                        this.ctx.fillText(
-                                            truncatedText,
-                                            firstBound.bounds.left,
-                                            firstBound.bounds.top + styles.fontSize.number
-                                        );
-                                    } else {
-                                        const letters = segmentGraphemes(truncatedText);
-                                        letters.reduce((left, letter) => {
-                                            this.ctx.fillText(
-                                                letter,
-                                                left,
-                                                firstBound.bounds.top + styles.fontSize.number
-                                            );
-                                            return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                                        }, firstBound.bounds.left);
-                                    }
-                                });
-
-                            this.ctx.shadowColor = '';
-                            this.ctx.shadowOffsetX = 0;
-                            this.ctx.shadowOffsetY = 0;
-                            this.ctx.shadowBlur = 0;
-                        }
-                        break;
-                    case PAINT_ORDER_LAYER.STROKE:
-                        if (styles.webkitTextStrokeWidth && truncatedText.trim().length) {
-                            this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
-                            this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                            this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
-
-                            if (styles.letterSpacing === 0) {
-                                this.ctx.strokeText(
-                                    truncatedText,
-                                    firstBound.bounds.left,
-                                    firstBound.bounds.top + styles.fontSize.number
-                                );
-                            } else {
-                                const letters = segmentGraphemes(truncatedText);
-                                letters.reduce((left, letter) => {
-                                    this.ctx.strokeText(letter, left, firstBound.bounds.top + styles.fontSize.number);
-                                    return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                                }, firstBound.bounds.left);
-                            }
-                        }
-                        break;
-                }
-            });
-            return;
-        }
-
-        // Normal rendering (no ellipsis needed)
-        text.textBounds.forEach((text) => {
-            paintOrder.forEach((paintOrderLayer) => {
-                switch (paintOrderLayer) {
-                    case PAINT_ORDER_LAYER.FILL:
-                        this.ctx.fillStyle = asString(styles.color);
-                        this.renderTextWithLetterSpacing(text, styles.letterSpacing, styles.fontSize.number);
-                        const textShadows: TextShadow = styles.textShadow;
-
-                        if (textShadows.length && text.text.trim().length) {
-                            textShadows
-                                .slice(0)
-                                .reverse()
-                                .forEach((textShadow) => {
-                                    this.ctx.shadowColor = asString(textShadow.color);
-                                    this.ctx.shadowOffsetX = textShadow.offsetX.number * this.options.scale;
-                                    this.ctx.shadowOffsetY = textShadow.offsetY.number * this.options.scale;
-                                    this.ctx.shadowBlur = textShadow.blur.number;
-
-                                    this.renderTextWithLetterSpacing(
-                                        text,
-                                        styles.letterSpacing,
-                                        styles.fontSize.number
-                                    );
-                                });
-
-                            this.ctx.shadowColor = '';
-                            this.ctx.shadowOffsetX = 0;
-                            this.ctx.shadowOffsetY = 0;
-                            this.ctx.shadowBlur = 0;
-                        }
-
-                        if (styles.textDecorationLine.length) {
-                            this.renderTextDecoration(text.bounds, styles);
-                        }
-                        break;
-                    case PAINT_ORDER_LAYER.STROKE:
-                        if (styles.webkitTextStrokeWidth && text.text.trim().length) {
-                            this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
-                            this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-
-                            this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
-                            // Issue #110: Use baseline (fontSize) for consistent positioning with fill
-                            // Previously used text.bounds.height which caused stroke to render too low
-                            const baseline = styles.fontSize.number;
-                            if (styles.letterSpacing === 0) {
-                                this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + baseline);
-                            } else {
-                                const letters = segmentGraphemes(text.text);
-                                letters.reduce((left, letter) => {
-                                    this.ctx.strokeText(letter, left, text.bounds.top + baseline);
-                                    return left + this.ctx.measureText(letter).width;
-                                }, text.bounds.left);
-                            }
-                        }
-                        this.ctx.strokeStyle = '';
-                        this.ctx.lineWidth = 0;
-                        this.ctx.lineJoin = 'miter';
-                        break;
-                }
-            });
-        });
-    }
 
     renderReplacedElement(
         container: ReplacedElementContainer,
@@ -763,7 +229,7 @@ export class CanvasRenderer extends Renderer {
     }
 
     async renderNodeContent(paint: ElementPaint): Promise<void> {
-        this.applyEffects(paint.getEffects(EffectTarget.CONTENT));
+        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.CONTENT));
         const container = paint.container;
         const curves = paint.curves;
         const styles = container.styles;
@@ -771,7 +237,7 @@ export class CanvasRenderer extends Renderer {
         // This matches browser behavior where text-overflow uses the content width
         const textBounds = contentBox(container);
         for (const child of container.textNodes) {
-            await this.renderTextNode(child, styles, textBounds);
+            await this.textRenderer.renderTextNode(child, styles, textBounds);
         }
 
         if (container instanceof ImageElementContainer) {
@@ -862,7 +328,7 @@ export class CanvasRenderer extends Renderer {
         }
 
         if (isTextInputElement(container) && container.value.length) {
-            const [font, fontFamily, fontSize] = this.createFontStyle(styles);
+            const [font, fontFamily, fontSize] = this.textRenderer.createFontStyle(styles);
             const { baseline } = this.fontMetrics.getMetrics(fontFamily, fontSize);
 
             this.ctx.font = font;
@@ -909,7 +375,7 @@ export class CanvasRenderer extends Renderer {
 
             this.ctx.clip();
 
-            this.renderTextWithLetterSpacing(
+            this.textRenderer.renderTextWithLetterSpacing(
                 new TextBounds(container.value, textBounds),
                 styles.letterSpacing,
                 baseline
@@ -933,7 +399,7 @@ export class CanvasRenderer extends Renderer {
                     }
                 }
             } else if (paint.listValue && container.styles.listStyleType !== LIST_STYLE_TYPE.NONE) {
-                const [font] = this.createFontStyle(styles);
+                const [font] = this.textRenderer.createFontStyle(styles);
 
                 this.ctx.font = font;
                 this.ctx.fillStyle = asString(styles.color);
@@ -947,7 +413,7 @@ export class CanvasRenderer extends Renderer {
                     computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 1
                 );
 
-                this.renderTextWithLetterSpacing(
+                this.textRenderer.renderTextWithLetterSpacing(
                     new TextBounds(paint.listValue, bounds),
                     styles.letterSpacing,
                     computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 2
@@ -1051,147 +517,8 @@ export class CanvasRenderer extends Renderer {
         });
     }
 
-    renderRepeat(path: Path[], pattern: CanvasPattern | CanvasGradient, offsetX: number, offsetY: number): void {
-        this.path(path);
-        this.ctx.fillStyle = pattern;
-        this.ctx.translate(offsetX, offsetY);
-        this.ctx.fill();
-        this.ctx.translate(-offsetX, -offsetY);
-    }
-
-    resizeImage(image: HTMLImageElement, width: number, height: number): HTMLCanvasElement | HTMLImageElement {
-        // https://github.com/niklasvh/html2canvas/pull/2911
-        // if (image.width === width && image.height === height) {
-        //     return image;
-        // }
-
-        const ownerDocument = this.canvas.ownerDocument ?? document;
-        const canvas = ownerDocument.createElement('canvas');
-        canvas.width = Math.max(1, width);
-        canvas.height = Math.max(1, height);
-        const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-        ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height);
-        return canvas;
-    }
-
-    async renderBackgroundImage(container: ElementContainer): Promise<void> {
-        let index = container.styles.backgroundImage.length - 1;
-        for (const backgroundImage of container.styles.backgroundImage.slice(0).reverse()) {
-            if (backgroundImage.type === CSSImageType.URL) {
-                let image;
-                const url = (backgroundImage as CSSURLImage).url;
-                try {
-                    image = await this.context.cache.match(url);
-                } catch (e) {
-                    this.context.logger.error(`Error loading background-image ${url}`);
-                }
-
-                if (image) {
-                    const imageWidth = isNaN(image.width) || image.width === 0 ? 1 : image.width;
-                    const imageHeight = isNaN(image.height) || image.height === 0 ? 1 : image.height;
-                    const [path, x, y, width, height] = calculateBackgroundRendering(container, index, [
-                        imageWidth,
-                        imageHeight,
-                        imageWidth / imageHeight
-                    ]);
-                    const pattern = this.ctx.createPattern(
-                        this.resizeImage(image, width, height),
-                        'repeat'
-                    ) as CanvasPattern;
-                    this.renderRepeat(path, pattern, x, y);
-                }
-            } else if (isLinearGradient(backgroundImage)) {
-                const [path, x, y, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
-                const [lineLength, x0, x1, y0, y1] = calculateGradientDirection(backgroundImage.angle, width, height);
-
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-                const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
-
-                processColorStops(backgroundImage.stops, lineLength || 1).forEach((colorStop) =>
-                    gradient.addColorStop(colorStop.stop, asString(colorStop.color))
-                );
-
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, width, height);
-                if (width > 0 && height > 0) {
-                    const pattern = this.ctx.createPattern(canvas, 'repeat') as CanvasPattern;
-                    this.renderRepeat(path, pattern, x, y);
-                }
-            } else if (isRadialGradient(backgroundImage)) {
-                const [path, left, top, width, height] = calculateBackgroundRendering(container, index, [
-                    null,
-                    null,
-                    null
-                ]);
-                const position = backgroundImage.position.length === 0 ? [FIFTY_PERCENT] : backgroundImage.position;
-                const x = getAbsoluteValue(position[0], width);
-                const y = getAbsoluteValue(position[position.length - 1], height);
-
-                let [rx, ry] = calculateRadius(backgroundImage, x, y, width, height);
-                // Handle edge case where radial gradient size is 0
-                // Use a minimum value of 0.01 to ensure gradient is still rendered
-                if (rx === 0 || ry === 0) {
-                    rx = Math.max(rx, 0.01);
-                    ry = Math.max(ry, 0.01);
-                }
-                if (rx > 0 && ry > 0) {
-                    const radialGradient = this.ctx.createRadialGradient(left + x, top + y, 0, left + x, top + y, rx);
-
-                    processColorStops(backgroundImage.stops, rx * 2).forEach((colorStop) =>
-                        radialGradient.addColorStop(colorStop.stop, asString(colorStop.color))
-                    );
-
-                    this.path(path);
-                    this.ctx.fillStyle = radialGradient;
-                    if (rx !== ry) {
-                        // transforms for elliptical radial gradient
-                        const midX = container.bounds.left + 0.5 * container.bounds.width;
-                        const midY = container.bounds.top + 0.5 * container.bounds.height;
-                        const f = ry / rx;
-                        const invF = 1 / f;
-
-                        this.ctx.save();
-                        this.ctx.translate(midX, midY);
-                        this.ctx.transform(1, 0, 0, f, 0, 0);
-                        this.ctx.translate(-midX, -midY);
-
-                        this.ctx.fillRect(left, invF * (top - midY) + midY, width, height * invF);
-                        this.ctx.restore();
-                    } else {
-                        this.ctx.fill();
-                    }
-                }
-            }
-            index--;
-        }
-    }
-
-    async renderSolidBorder(color: Color, side: number, curvePoints: BoundCurves): Promise<void> {
-        this.path(parsePathForBorder(curvePoints, side));
-        this.ctx.fillStyle = asString(color);
-        this.ctx.fill();
-    }
-
-    async renderDoubleBorder(color: Color, width: number, side: number, curvePoints: BoundCurves): Promise<void> {
-        if (width < 3) {
-            await this.renderSolidBorder(color, side, curvePoints);
-            return;
-        }
-
-        const outerPaths = parsePathForBorderDoubleOuter(curvePoints, side);
-        this.path(outerPaths);
-        this.ctx.fillStyle = asString(color);
-        this.ctx.fill();
-        const innerPaths = parsePathForBorderDoubleInner(curvePoints, side);
-        this.path(innerPaths);
-        this.ctx.fill();
-    }
-
     async renderNodeBackgroundAndBorders(paint: ElementPaint): Promise<void> {
-        this.applyEffects(paint.getEffects(EffectTarget.BACKGROUND_BORDERS));
+        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.BACKGROUND_BORDERS));
         const styles = paint.container.styles;
         const hasBackground = !isTransparent(styles.backgroundColor) || styles.backgroundImage.length;
 
@@ -1217,7 +544,7 @@ export class CanvasRenderer extends Renderer {
                 this.ctx.fill();
             }
 
-            await this.renderBackgroundImage(paint.container);
+            await this.backgroundRenderer.renderBackgroundImage(paint.container);
 
             this.ctx.restore();
 
@@ -1261,7 +588,7 @@ export class CanvasRenderer extends Renderer {
         for (const border of borders) {
             if (border.style !== BORDER_STYLE.NONE && !isTransparent(border.color) && border.width > 0) {
                 if (border.style === BORDER_STYLE.DASHED) {
-                    await this.renderDashedDottedBorder(
+                    await this.borderRenderer.renderDashedDottedBorder(
                         border.color,
                         border.width,
                         side,
@@ -1269,7 +596,7 @@ export class CanvasRenderer extends Renderer {
                         BORDER_STYLE.DASHED
                     );
                 } else if (border.style === BORDER_STYLE.DOTTED) {
-                    await this.renderDashedDottedBorder(
+                    await this.borderRenderer.renderDashedDottedBorder(
                         border.color,
                         border.width,
                         side,
@@ -1277,123 +604,13 @@ export class CanvasRenderer extends Renderer {
                         BORDER_STYLE.DOTTED
                     );
                 } else if (border.style === BORDER_STYLE.DOUBLE) {
-                    await this.renderDoubleBorder(border.color, border.width, side, paint.curves);
+                    await this.borderRenderer.renderDoubleBorder(border.color, border.width, side, paint.curves);
                 } else {
-                    await this.renderSolidBorder(border.color, side, paint.curves);
+                    await this.borderRenderer.renderSolidBorder(border.color, side, paint.curves);
                 }
             }
             side++;
         }
-    }
-
-    async renderDashedDottedBorder(
-        color: Color,
-        width: number,
-        side: number,
-        curvePoints: BoundCurves,
-        style: BORDER_STYLE
-    ): Promise<void> {
-        this.ctx.save();
-
-        const strokePaths = parsePathForBorderStroke(curvePoints, side);
-        const boxPaths = parsePathForBorder(curvePoints, side);
-
-        if (style === BORDER_STYLE.DASHED) {
-            this.path(boxPaths);
-            this.ctx.clip();
-        }
-
-        let startX, startY, endX, endY;
-        if (isBezierCurve(boxPaths[0])) {
-            startX = (boxPaths[0] as BezierCurve).start.x;
-            startY = (boxPaths[0] as BezierCurve).start.y;
-        } else {
-            startX = (boxPaths[0] as Vector).x;
-            startY = (boxPaths[0] as Vector).y;
-        }
-        if (isBezierCurve(boxPaths[1])) {
-            endX = (boxPaths[1] as BezierCurve).end.x;
-            endY = (boxPaths[1] as BezierCurve).end.y;
-        } else {
-            endX = (boxPaths[1] as Vector).x;
-            endY = (boxPaths[1] as Vector).y;
-        }
-
-        let length;
-        if (side === 0 || side === 2) {
-            length = Math.abs(startX - endX);
-        } else {
-            length = Math.abs(startY - endY);
-        }
-
-        this.ctx.beginPath();
-        if (style === BORDER_STYLE.DOTTED) {
-            this.formatPath(strokePaths);
-        } else {
-            this.formatPath(boxPaths.slice(0, 2));
-        }
-
-        let dashLength = width < 3 ? width * 3 : width * 2;
-        let spaceLength = width < 3 ? width * 2 : width;
-        if (style === BORDER_STYLE.DOTTED) {
-            dashLength = width;
-            spaceLength = width;
-        }
-
-        let useLineDash = true;
-        if (length <= dashLength * 2) {
-            useLineDash = false;
-        } else if (length <= dashLength * 2 + spaceLength) {
-            const multiplier = length / (2 * dashLength + spaceLength);
-            dashLength *= multiplier;
-            spaceLength *= multiplier;
-        } else {
-            const numberOfDashes = Math.floor((length + spaceLength) / (dashLength + spaceLength));
-            const minSpace = (length - numberOfDashes * dashLength) / (numberOfDashes - 1);
-            const maxSpace = (length - (numberOfDashes + 1) * dashLength) / numberOfDashes;
-            spaceLength =
-                maxSpace <= 0 || Math.abs(spaceLength - minSpace) < Math.abs(spaceLength - maxSpace)
-                    ? minSpace
-                    : maxSpace;
-        }
-
-        if (useLineDash) {
-            if (style === BORDER_STYLE.DOTTED) {
-                this.ctx.setLineDash([0, dashLength + spaceLength]);
-            } else {
-                this.ctx.setLineDash([dashLength, spaceLength]);
-            }
-        }
-
-        if (style === BORDER_STYLE.DOTTED) {
-            this.ctx.lineCap = 'round';
-            this.ctx.lineWidth = width;
-        } else {
-            this.ctx.lineWidth = width * 2 + 1.1;
-        }
-        this.ctx.strokeStyle = asString(color);
-        this.ctx.stroke();
-        this.ctx.setLineDash([]);
-
-        // dashed round edge gap
-        if (style === BORDER_STYLE.DASHED) {
-            if (isBezierCurve(boxPaths[0])) {
-                const path1 = boxPaths[3] as BezierCurve;
-                const path2 = boxPaths[0] as BezierCurve;
-                this.ctx.beginPath();
-                this.formatPath([new Vector(path1.end.x, path1.end.y), new Vector(path2.start.x, path2.start.y)]);
-                this.ctx.stroke();
-            }
-            if (isBezierCurve(boxPaths[1])) {
-                const path1 = boxPaths[1] as BezierCurve;
-                const path2 = boxPaths[2] as BezierCurve;
-                this.ctx.beginPath();
-                this.formatPath([new Vector(path1.end.x, path1.end.y), new Vector(path2.start.x, path2.start.y)]);
-                this.ctx.stroke();
-            }
-        }
-
-        this.ctx.restore();
     }
 
     async render(element: ElementContainer): Promise<HTMLCanvasElement> {
@@ -1405,7 +622,7 @@ export class CanvasRenderer extends Renderer {
         const stack = parseStackingContexts(element);
 
         await this.renderStack(stack);
-        this.applyEffects([]);
+        this.effectsRenderer.applyEffects([]);
         return this.canvas;
     }
 }
@@ -1445,13 +662,4 @@ const canvasTextAlign = (textAlign: TEXT_ALIGN): CanvasTextAlign => {
         default:
             return 'left';
     }
-};
-
-// see https://github.com/niklasvh/html2canvas/pull/2645
-const iOSBrokenFonts = ['-apple-system', 'system-ui'];
-
-const fixIOSSystemFonts = (fontFamilies: string[]): string[] => {
-    return /iPhone OS 15_(0|1)/.test(window.navigator.userAgent)
-        ? fontFamilies.filter((fontFamily) => iOSBrokenFonts.indexOf(fontFamily) === -1)
-        : fontFamilies;
 };

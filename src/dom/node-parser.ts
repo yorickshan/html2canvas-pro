@@ -12,6 +12,18 @@ import { TextareaElementContainer } from './elements/textarea-element-container'
 import { IFrameElementContainer } from './replaced-elements/iframe-element-container';
 import { Context } from '../core/context';
 import { contains } from '../core/bitwise';
+import {
+    isElementNode,
+    isTextNode,
+    isSVGElementNode,
+    isHTMLElementNode,
+    isLIElement,
+    isOLElement,
+    isCustomElement
+} from './node-type-guards';
+
+// Re-export type guards for backward compatibility
+export { isElementNode, isTextNode, isSVGElementNode, isHTMLElementNode, isLIElement, isOLElement, isCustomElement };
 import { DISPLAY } from '../css/property-descriptors/display';
 
 const LIST_OWNERS = ['OL', 'UL', 'MENU'];
@@ -90,7 +102,7 @@ const createContainer = (context: Context, element: Element): ElementContainer =
     }
 
     if (isIFrameElement(element)) {
-        return new IFrameElementContainer(context, element);
+        return new IFrameElementContainer(context, element, parseTree);
     }
 
     return new ElementContainer(context, element);
@@ -129,14 +141,7 @@ const createsStackingContext = (styles: CSSParsedDeclaration): boolean => {
     );
 };
 
-export const isTextNode = (node: Node): node is Text => node.nodeType === Node.TEXT_NODE;
-export const isElementNode = (node: Node): node is Element => node.nodeType === Node.ELEMENT_NODE;
-export const isHTMLElementNode = (node: Node): node is HTMLElement =>
-    isElementNode(node) && typeof (node as HTMLElement).style !== 'undefined' && !isSVGElementNode(node);
-export const isSVGElementNode = (element: Element): element is SVGElement =>
-    typeof (element as SVGElement).className === 'object';
-export const isLIElement = (node: Element): node is HTMLLIElement => node.tagName === 'LI';
-export const isOLElement = (node: Element): node is HTMLOListElement => node.tagName === 'OL';
+// Type guards moved to node-type-guards.ts and re-exported above
 export const isInputElement = (node: Element): node is HTMLInputElement => node.tagName === 'INPUT';
 export const isHTMLElement = (node: Element): node is HTMLHtmlElement => node.tagName === 'HTML';
 export const isSVGElement = (node: Element): node is SVGSVGElement => node.tagName === 'svg';
@@ -151,4 +156,4 @@ export const isTextareaElement = (node: Element): node is HTMLTextAreaElement =>
 export const isSelectElement = (node: Element): node is HTMLSelectElement => node.tagName === 'SELECT';
 export const isSlotElement = (node: Element): node is HTMLSlotElement => node.tagName === 'SLOT';
 // https://html.spec.whatwg.org/multipage/custom-elements.html#valid-custom-element-name
-export const isCustomElement = (node: Element): node is HTMLElement => node.tagName.indexOf('-') > 0;
+// isCustomElement moved to node-type-guards.ts and re-exported above

@@ -109,7 +109,7 @@ export class DocumentCloner {
         );
 
         if (!iframe.contentWindow) {
-            return Promise.reject(`Unable to find iframe window`);
+            throw new Error('Unable to find iframe window');
         }
 
         const scrollX = (ownerDocument.defaultView as Window).pageXOffset;
@@ -145,7 +145,7 @@ export class DocumentCloner {
             const referenceElement = this.clonedReferenceElement;
 
             if (typeof referenceElement === 'undefined') {
-                return Promise.reject(`Error finding the ${this.referenceElement.nodeName} in the cloned document`);
+                throw new Error(`Error finding the ${this.referenceElement.nodeName} in the cloned document`);
             }
 
             if (documentClone.fonts && documentClone.fonts.ready) {
@@ -229,8 +229,8 @@ export class DocumentCloner {
             }
         }
 
-        if (isCustomElement(clone)) {
-            return this.createCustomElementClone(clone);
+        if (isCustomElement(clone) && !isSVGElementNode(clone)) {
+            return this.createCustomElementClone(clone as HTMLElement);
         }
 
         return clone;

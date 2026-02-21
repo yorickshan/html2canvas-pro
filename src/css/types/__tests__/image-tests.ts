@@ -14,10 +14,17 @@ jest.mock('../../../core/features');
 jest.mock('../../../core/context');
 import { Context } from '../../../core/context';
 
+import { Html2CanvasConfig } from '../../../config';
+
 describe('types', () => {
     let context: Context;
     beforeEach(() => {
-        context = new Context({} as any, {} as any);
+        const mockWindow = {
+            location: { href: 'http://example.com' },
+            document: { createElement: () => ({ href: '' }) }
+        } as any;
+        const config = new Html2CanvasConfig({ window: mockWindow });
+        context = new Context({} as any, {} as any, config);
     });
 
     describe('<image>', () => {

@@ -2,7 +2,7 @@
  * SRGB related functions
  */
 
-import { clamp, multiplyMatrices } from '../color-utilities';
+import { clamp, multiplyMatrices } from '../color-math';
 
 /**
  * Convert XYZ to linear-light sRGB

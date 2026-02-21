@@ -3,10 +3,13 @@ import { COLORS, parseColor } from './css/types/color';
 import { isTransparent } from './css/types/color-utilities';
 import { CloneConfigurations, CloneOptions, DocumentCloner, WindowOptions } from './dom/document-cloner';
 import { isBodyElement, isHTMLElement, parseTree } from './dom/node-parser';
-import { CacheStorage } from './core/cache-storage';
+import { ElementContainer } from './dom/element-container';
 import { CanvasRenderer, RenderConfigurations, RenderOptions } from './render/canvas/canvas-renderer';
 import { ForeignObjectRenderer } from './render/canvas/foreignobject-renderer';
 import { Context, ContextOptions } from './core/context';
+import { Html2CanvasConfig, ConfigOptions, setDefaultConfig } from './config';
+import { createDefaultValidator, Validator, ValidationResult } from './core/validator';
+import { PerformanceMonitor } from './core/performance-monitor';
 
 export type Options = CloneOptions &
     WindowOptions &
@@ -15,30 +18,90 @@ export type Options = CloneOptions &
         backgroundColor: string | null;
         foreignObjectRendering: boolean;
         removeContainer?: boolean;
+        cspNonce?: string;
+        validator?: Validator;
+        skipValidation?: boolean;
+        enablePerformanceMonitoring?: boolean;
     };
 
-let cspNonce: string | undefined;
+/**
+ * Main html2canvas function with improved configuration management
+ *
+ * @param element - Element to render
+ * @param options - Rendering options
+ * @param config - Optional configuration (for advanced use cases)
+ * @returns Promise resolving to rendered canvas
+ */
+const html2canvas = (
+    element: HTMLElement,
+    options: Partial<Options> = {},
+    config?: Html2CanvasConfig
+): Promise<HTMLCanvasElement> => {
+    // Create configuration from element if not provided
+    const finalConfig =
+        config ||
+        Html2CanvasConfig.fromElement(element, {
+            cspNonce: options.cspNonce,
+            cache: options.cache
+        });
 
-const setCspNonce = (nonce: string) => {
-    cspNonce = nonce;
+    return renderElement(element, options, finalConfig);
 };
 
-const html2canvas = (element: HTMLElement, options: Partial<Options> = {}): Promise<HTMLCanvasElement> => {
-    return renderElement(element, options);
+/**
+ * Set CSP nonce for inline styles
+ * @deprecated Use options.cspNonce instead
+ */
+const setCspNonce = (nonce: string) => {
+    console.warn(
+        '[html2canvas-pro] setCspNonce is deprecated. ' +
+            'Pass cspNonce in options instead: html2canvas(element, { cspNonce: "..." })'
+    );
+
+    // For backward compatibility, set default config
+    if (typeof window !== 'undefined') {
+        setDefaultConfig(new Html2CanvasConfig({ window, cspNonce: nonce }));
+    }
 };
 
 html2canvas.setCspNonce = setCspNonce;
 
 export default html2canvas;
-export { html2canvas, setCspNonce };
+export {
+    html2canvas,
+    setCspNonce,
+    Html2CanvasConfig,
+    ConfigOptions,
+    Validator,
+    ValidationResult,
+    createDefaultValidator,
+    PerformanceMonitor
+};
 
-if (typeof window !== 'undefined') {
-    CacheStorage.setContext(window);
-}
+const renderElement = async (
+    element: HTMLElement,
+    opts: Partial<Options>,
+    config: Html2CanvasConfig
+): Promise<HTMLCanvasElement> => {
+    // Input validation (unless explicitly skipped)
+    if (!opts.skipValidation) {
+        const validator = opts.validator || createDefaultValidator();
 
-const renderElement = async (element: HTMLElement, opts: Partial<Options>): Promise<HTMLCanvasElement> => {
+        // Validate element
+        const elementValidation = validator.validateElement(element);
+        if (!elementValidation.valid) {
+            throw new Error(elementValidation.error);
+        }
+
+        // Validate options
+        const optionsValidation = validator.validateOptions(opts);
+        if (!optionsValidation.valid) {
+            throw new Error(`Invalid options: ${optionsValidation.error}`);
+        }
+    }
+
     if (!element || typeof element !== 'object') {
-        return Promise.reject('Invalid element provided as first argument');
+        throw new Error('Invalid element provided as first argument');
     }
     const ownerDocument = element.ownerDocument;
 
@@ -62,7 +125,7 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
 
     const contextOptions = {
         logging: opts.logging ?? true,
-        cache: opts.cache,
+        cache: opts.cache ?? config.cache,
         ...resourceOptions
     };
 
@@ -80,7 +143,16 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
         windowOptions.windowHeight
     );
 
-    const context = new Context(contextOptions, windowBounds);
+    const context = new Context(contextOptions, windowBounds, config);
+
+    // Initialize performance monitoring if enabled
+    const performanceMonitoring = opts.enablePerformanceMonitoring ?? opts.logging ?? false;
+    const perfMonitor = new PerformanceMonitor(context, performanceMonitoring);
+
+    perfMonitor.start('total', {
+        width: windowOptions.windowWidth,
+        height: windowOptions.windowHeight
+    });
 
     const foreignObjectRendering = opts.foreignObjectRendering ?? false;
 
@@ -91,7 +163,7 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
         iframeContainer: opts.iframeContainer,
         inlineImages: foreignObjectRendering,
         copyStyles: foreignObjectRendering,
-        cspNonce
+        cspNonce: opts.cspNonce ?? config.cspNonce
     };
 
     context.logger.debug(
@@ -100,13 +172,15 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
         } scrolled to ${-windowBounds.left},${-windowBounds.top}`
     );
 
+    perfMonitor.start('clone');
     const documentCloner = new DocumentCloner(context, element, cloneOptions);
     const clonedElement = documentCloner.clonedReferenceElement;
     if (!clonedElement) {
-        return Promise.reject(`Unable to find element in cloned iframe`);
+        throw new Error('Unable to find element in cloned iframe');
     }
 
     const container = await documentCloner.toIFrame(ownerDocument, windowBounds);
+    perfMonitor.end('clone');
 
     const { width, height, left, top } =
         isBodyElement(clonedElement) || isHTMLElement(clonedElement)
@@ -127,38 +201,62 @@ const renderElement = async (element: HTMLElement, opts: Partial<Options>): Prom
 
     let canvas;
 
-    if (foreignObjectRendering) {
-        context.logger.debug(`Document cloned, using foreign object rendering`);
-        const renderer = new ForeignObjectRenderer(context, renderOptions);
-        canvas = await renderer.render(clonedElement);
-    } else {
-        context.logger.debug(
-            `Document cloned, element located at ${left},${top} with size ${width}x${height} using computed rendering`
-        );
+    let root: ElementContainer | undefined;
 
-        context.logger.debug(`Starting DOM parsing`);
-        const root = parseTree(context, clonedElement);
+    try {
+        if (foreignObjectRendering) {
+            context.logger.debug(`Document cloned, using foreign object rendering`);
+            perfMonitor.start('render-foreignobject');
+            const renderer = new ForeignObjectRenderer(context, renderOptions);
+            canvas = await renderer.render(clonedElement);
+            perfMonitor.end('render-foreignobject');
+        } else {
+            context.logger.debug(
+                `Document cloned, element located at ${left},${top} with size ${width}x${height} using computed rendering`
+            );
 
-        if (backgroundColor === root.styles.backgroundColor) {
-            root.styles.backgroundColor = COLORS.TRANSPARENT;
+            context.logger.debug(`Starting DOM parsing`);
+            perfMonitor.start('parse');
+            root = parseTree(context, clonedElement);
+            perfMonitor.end('parse');
+
+            if (backgroundColor === root.styles.backgroundColor) {
+                root.styles.backgroundColor = COLORS.TRANSPARENT;
+            }
+
+            context.logger.debug(
+                `Starting renderer for element at ${renderOptions.x},${renderOptions.y} with size ${renderOptions.width}x${renderOptions.height}`
+            );
+
+            perfMonitor.start('render');
+            const renderer = new CanvasRenderer(context, renderOptions);
+            canvas = await renderer.render(root);
+            perfMonitor.end('render');
         }
 
-        context.logger.debug(
-            `Starting renderer for element at ${renderOptions.x},${renderOptions.y} with size ${renderOptions.width}x${renderOptions.height}`
-        );
+        perfMonitor.start('cleanup');
+        if (opts.removeContainer ?? true) {
+            if (!DocumentCloner.destroy(container)) {
+                context.logger.error(`Cannot detach cloned iframe as it is not in the DOM anymore`);
+            }
+        }
+        perfMonitor.end('cleanup');
 
-        const renderer = new CanvasRenderer(context, renderOptions);
-        canvas = await renderer.render(root);
-    }
+        perfMonitor.end('total');
+        context.logger.debug(`Finished rendering`);
 
-    if (opts.removeContainer ?? true) {
-        if (!DocumentCloner.destroy(container)) {
-            context.logger.error(`Cannot detach cloned iframe as it is not in the DOM anymore`);
+        // Log performance summary if monitoring is enabled
+        if (performanceMonitoring) {
+            perfMonitor.logSummary();
+        }
+
+        return canvas;
+    } finally {
+        // Restore DOM modifications (animations, transforms) in cloned document
+        if (root) {
+            root.restoreTree();
         }
     }
-
-    context.logger.debug(`Finished rendering`);
-    return canvas;
 };
 
 const parseBackgroundColor = (context: Context, element: HTMLElement, backgroundColorOverride?: string | null) => {

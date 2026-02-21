@@ -13,10 +13,17 @@ jest.mock('../../../core/features');
 const backgroundImageParse = (context: Context, value: string) =>
     backgroundImage.parse(context, Parser.parseValues(value));
 
+import { Html2CanvasConfig } from '../../../config';
+
 describe('property-descriptors', () => {
     let context: Context;
     beforeEach(() => {
-        context = new Context({} as any, {} as any);
+        const mockWindow = {
+            location: { href: 'http://example.com' },
+            document: { createElement: () => ({ href: '' }) }
+        } as any;
+        const config = new Html2CanvasConfig({ window: mockWindow });
+        context = new Context({} as any, {} as any, config);
     });
     describe('background-image', () => {
         it('none', () => {

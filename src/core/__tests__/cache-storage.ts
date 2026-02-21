@@ -3,11 +3,12 @@ import { FEATURES } from '../features';
 import { CacheStorage } from '../cache-storage';
 import { Context } from '../context';
 import { Bounds } from '../../css/layout/bounds';
+import { Html2CanvasConfig } from '../../config';
 
 const proxy = 'http://example.com/proxy';
 
 const createMockContext = (origin: string, opts = {}) => {
-    const context = {
+    const mockWindow = {
         location: {
             href: origin
         },
@@ -35,7 +36,10 @@ const createMockContext = (origin: string, opts = {}) => {
         }
     };
 
-    CacheStorage.setContext(context as Window);
+    // For backward compatibility, also initialize static CacheStorage
+    CacheStorage.setContext(mockWindow as Window);
+
+    const config = new Html2CanvasConfig({ window: mockWindow as Window });
 
     return new Context(
         {
@@ -46,7 +50,8 @@ const createMockContext = (origin: string, opts = {}) => {
             proxy,
             ...opts
         },
-        new Bounds(0, 0, 0, 0)
+        new Bounds(0, 0, 0, 0),
+        config
     );
 };
 
