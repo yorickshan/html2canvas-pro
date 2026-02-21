@@ -105,11 +105,41 @@ export {
 
 export { IMAGE_RENDERING } from './css/property-descriptors/image-rendering';
 
+/**
+ * Coerce number-like option values for backward compatibility (e.g. string "2" from form/query).
+ * Mutates opts in place; callers should avoid reusing the same options object if they rely on original types.
+ */
+const coerceNumberOptions = (opts: Partial<Options>): void => {
+    const numKeys: (keyof Options)[] = [
+        'scale',
+        'width',
+        'height',
+        'imageTimeout',
+        'x',
+        'y',
+        'windowWidth',
+        'windowHeight',
+        'scrollX',
+        'scrollY'
+    ];
+    numKeys.forEach((key) => {
+        const v = opts[key];
+        if (v !== undefined && v !== null && typeof v !== 'number') {
+            const n = Number(v);
+            if (!Number.isNaN(n)) {
+                (opts as Record<string, unknown>)[key] = n;
+            }
+        }
+    });
+};
+
 const renderElement = async (
     element: HTMLElement,
     opts: Partial<Options>,
     config: Html2CanvasConfig
 ): Promise<HTMLCanvasElement> => {
+    coerceNumberOptions(opts);
+
     // Input validation (unless explicitly skipped)
     if (!opts.skipValidation) {
         const validator = opts.validator || createDefaultValidator();
@@ -156,11 +186,21 @@ const renderElement = async (
         ...resourceOptions
     };
 
+    // Fallbacks for minimal window (e.g. element-like mocks) so we don't get NaN
+    const DEFAULT_WINDOW_WIDTH = 800;
+    const DEFAULT_WINDOW_HEIGHT = 600;
+    const DEFAULT_SCROLL = 0;
+    const win = defaultView as Window & {
+        innerWidth?: number;
+        innerHeight?: number;
+        pageXOffset?: number;
+        pageYOffset?: number;
+    };
     const windowOptions = {
-        windowWidth: opts.windowWidth ?? defaultView.innerWidth,
-        windowHeight: opts.windowHeight ?? defaultView.innerHeight,
-        scrollX: opts.scrollX ?? defaultView.pageXOffset,
-        scrollY: opts.scrollY ?? defaultView.pageYOffset
+        windowWidth: opts.windowWidth ?? win.innerWidth ?? DEFAULT_WINDOW_WIDTH,
+        windowHeight: opts.windowHeight ?? win.innerHeight ?? DEFAULT_WINDOW_HEIGHT,
+        scrollX: opts.scrollX ?? win.pageXOffset ?? DEFAULT_SCROLL,
+        scrollY: opts.scrollY ?? win.pageYOffset ?? DEFAULT_SCROLL
     };
 
     const windowBounds = new Bounds(

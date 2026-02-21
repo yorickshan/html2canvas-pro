@@ -461,19 +461,28 @@ export class Validator {
             };
         }
 
-        // Check if it's an HTMLElement
-        if (typeof HTMLElement !== 'undefined' && !(element instanceof HTMLElement)) {
-            return {
-                valid: false,
-                error: 'Element must be an HTMLElement'
-            };
+        // Accept real HTMLElement, or any element-like object with the minimal shape
+        // required by the implementation (ownerDocument + defaultView) for backward
+        // compatibility and test environments.
+        if (typeof HTMLElement !== 'undefined' && element instanceof HTMLElement) {
+            // Real DOM element
+            if (!element.ownerDocument) {
+                return { valid: false, error: 'Element must be attached to a document' };
+            }
+            return { valid: true };
         }
 
-        // Check if element is attached to document
+        // Duck-typing: accept object with ownerDocument and defaultView (minimal contract)
         if (!element.ownerDocument) {
             return {
                 valid: false,
-                error: 'Element must be attached to a document'
+                error: 'Element must be attached to a document (ownerDocument required)'
+            };
+        }
+        if (!element.ownerDocument.defaultView) {
+            return {
+                valid: false,
+                error: 'Document must be attached to a window (ownerDocument.defaultView required)'
             };
         }
 

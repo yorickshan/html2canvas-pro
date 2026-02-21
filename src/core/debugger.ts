@@ -8,6 +8,9 @@ export const enum DebuggerType {
 }
 
 const getElementDebugType = (element: Element): DebuggerType => {
+    if (typeof element.getAttribute !== 'function') {
+        return DebuggerType.NONE;
+    }
     const attribute = element.getAttribute(elementDebuggerAttribute);
     switch (attribute) {
         case 'all':
