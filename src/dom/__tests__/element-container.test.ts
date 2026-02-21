@@ -33,13 +33,14 @@ describe('ElementContainer', () => {
                 }
             },
             location: { href: 'http://localhost/' },
-            getComputedStyle: () => ({
-                animationDuration: '1s',
-                transform: 'rotate(45deg)',
-                rotate: '45deg',
-                display: 'block',
-                position: 'static'
-            })
+            getComputedStyle: () =>
+                ({
+                    animationDuration: '1s',
+                    transform: 'rotate(45deg)',
+                    rotate: '45deg',
+                    display: 'block',
+                    position: 'static'
+                }) as CSSStyleDeclaration
         } as unknown as Window;
 
         const config = new Html2CanvasConfig({ window: mockWindow });
@@ -54,7 +55,6 @@ describe('ElementContainer', () => {
             config
         );
 
-        // Create a mock HTMLElement
         mockElement = {
             nodeType: 1,
             tagName: 'DIV',
@@ -63,6 +63,7 @@ describe('ElementContainer', () => {
                 transform: 'rotate(45deg)',
                 rotate: '45deg'
             },
+            getAttribute: () => null,
             getBoundingClientRect: () => ({
                 left: 0,
                 top: 0,

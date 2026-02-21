@@ -104,7 +104,7 @@ describe('DOMNormalizer', () => {
     it('should normalize all properties when all are set', () => {
         const styles = new CSSParsedDeclaration(context, {
             animationDuration: '2s',
-            transform: 'scale(2)',
+            transform: 'rotate(90deg)',
             rotate: '90deg'
         } as any);
 

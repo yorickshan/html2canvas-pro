@@ -238,3 +238,13 @@ html2canvas(document.getElementById('capture'), {
     // Do something with the image...
 });
 ```
+
+## Backward Compatibility
+
+html2canvas-pro keeps existing usage working where possible:
+
+- **Element input**: Besides real `HTMLElement` instances, any object with `ownerDocument` and `ownerDocument.defaultView` is accepted (e.g. element-like mocks or cross-realm references). Validation still requires the element to be attached to a document and window.
+- **Numeric options**: Options that expect numbers (`scale`, `width`, `height`, `imageTimeout`, `x`, `y`, `windowWidth`, `windowHeight`, `scrollX`, `scrollY`) accept string numbers and are coerced before validation. For example `scale: "2"` or `width: "800"` from forms or query params will work.
+- **Minimal window**: If the element’s `defaultView` does not provide `innerWidth`, `innerHeight`, `pageXOffset`, or `pageYOffset`, sensible defaults (e.g. 800×600, scroll 0) are used so rendering does not produce NaN.
+- **Deprecated but supported**: `html2canvas.setCspNonce(nonce)` and the global `setDefaultConfig` / `getDefaultConfig` are deprecated; use the `cspNonce` option and per-call config instead. The old APIs still work for now.
+- **DOM normalization**: The default remains `normalizeDom: true` (disable animations / reset transforms during capture). Set `normalizeDom: false` only if you need to preserve the original DOM state.

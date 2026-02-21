@@ -39,7 +39,7 @@ export class ElementContainer {
             debugger;
         }
 
-        this.styles = new CSSParsedDeclaration(context, window.getComputedStyle(element, null));
+        this.styles = new CSSParsedDeclaration(context, context.config.window.getComputedStyle(element, null));
 
         // Side effects moved to DOMNormalizer (can be disabled via options)
         const shouldNormalize = options.normalizeDom !== false; // Default: true

@@ -12,7 +12,7 @@ jest.mock('../dom/node-parser', () => {
         isBodyElement: () => false,
         isHTMLElement: () => false,
         parseTree: jest.fn().mockImplementation(() => {
-            return { styles: {} };
+            return { styles: {}, restoreTree: jest.fn() };
         })
     };
 });
@@ -24,11 +24,17 @@ describe('html2canvas', () => {
     const element = {
         ownerDocument: {
             defaultView: {
+                document: {
+                    createElement: () => ({ href: '' })
+                },
+                location: { href: 'http://localhost/' },
                 pageXOffset: 12,
-                pageYOffset: 34
+                pageYOffset: 34,
+                innerWidth: 800,
+                innerHeight: 600
             }
         }
-    } as HTMLElement;
+    } as unknown as HTMLElement;
 
     it('should render with an element', async () => {
         DocumentCloner.destroy = jest.fn().mockReturnValue(true);

@@ -3,7 +3,10 @@ import { testList, ignoredTests } from '../build/reftests.js';
 import { default as platform } from 'platform';
 // @ts-ignore
 import Promise from 'es6-promise';
+import { createDefaultValidator } from '../src/index';
 import { ScreenshotRequest } from './types';
+
+const reftestValidator = createDefaultValidator({ allowLocalhostProxy: true });
 
 // @ts-ignore
 window.Promise = Promise;
@@ -105,6 +108,7 @@ testList
                         removeContainer: true,
                         backgroundColor: '#ffffff',
                         proxy: 'http://localhost:8081/proxy',
+                        validator: reftestValidator,
                         // @ts-ignore
                         ...(contentWindow.h2cOptions || {})
                     });

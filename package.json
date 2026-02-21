@@ -14,7 +14,7 @@
       "default": "./dist/html2canvas-pro.esm.js"
     }
   },
-  "version": "1.6.7",
+  "version": "2.0.0",
   "author": {
     "name": "yorickshan",
     "email": "yorickshan@gmail.com",
@@ -58,6 +58,7 @@
     "appium-ios-simulator": "^8.0.9",
     "base64-arraybuffer": "1.0.2",
     "body-parser": "^2.2.1",
+    "change-case": "^5.4.4",
     "chai": "6.2.2",
     "conventional-changelog-cli": "^5.0.0",
     "cors": "^2.8.5",

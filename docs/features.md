@@ -226,6 +226,5 @@ await smartCapture(photoGallery, 'photo');
 
 **References:**
 - [Issue #119](https://github.com/yorickshan/html2canvas-pro/issues/119)
-- [Interactive Demo](../demo/image-smoothing-demo.html)
 - [MDN: imageSmoothingEnabled](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/imageSmoothingEnabled)
 - [MDN: image-rendering](https://developer.mozilla.org/en-US/docs/Web/CSS/image-rendering)

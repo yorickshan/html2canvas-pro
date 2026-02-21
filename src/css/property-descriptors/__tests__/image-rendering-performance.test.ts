@@ -6,17 +6,22 @@ import { describe, it, expect, beforeEach } from '@jest/globals';
  */
 describe('image-rendering performance', () => {
     let canvas: HTMLCanvasElement;
-    let ctx: CanvasRenderingContext2D;
+    let ctx: CanvasRenderingContext2D | null = null;
     let testImage: HTMLCanvasElement;
 
     beforeEach(() => {
-        // Create test canvas
+        ctx = null;
+        // Create test canvas (JSDOM throws on getContext('2d'), so catch and skip)
         canvas = document.createElement('canvas');
         canvas.width = 800;
         canvas.height = 600;
-        const context = canvas.getContext('2d');
+        let context: CanvasRenderingContext2D | null = null;
+        try {
+            context = canvas.getContext('2d');
+        } catch {
+            return;
+        }
         if (!context) {
-            // Skip performance tests in JSDOM environment
             return;
         }
         ctx = context;
@@ -25,7 +30,12 @@ describe('image-rendering performance', () => {
         testImage = document.createElement('canvas');
         testImage.width = 100;
         testImage.height = 100;
-        const testCtx = testImage.getContext('2d');
+        let testCtx: CanvasRenderingContext2D | null = null;
+        try {
+            testCtx = testImage.getContext('2d');
+        } catch {
+            // JSDOM: no canvas
+        }
         if (testCtx) {
             // Draw some test pattern
             testCtx.fillStyle = 'red';
@@ -121,11 +131,15 @@ describe('image-rendering performance', () => {
         let largeTestImage: HTMLCanvasElement;
 
         beforeEach(() => {
-            // Create a larger test image
             largeTestImage = document.createElement('canvas');
             largeTestImage.width = 500;
             largeTestImage.height = 500;
-            const testCtx = largeTestImage.getContext('2d');
+            let testCtx: CanvasRenderingContext2D | null = null;
+            try {
+                testCtx = largeTestImage.getContext('2d');
+            } catch {
+                // JSDOM: no canvas
+            }
             if (testCtx) {
                 // Draw a gradient pattern
                 const gradient = testCtx.createLinearGradient(0, 0, 500, 500);

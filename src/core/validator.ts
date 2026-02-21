@@ -30,6 +30,12 @@ export interface ValidatorConfig {
     allowedProxyDomains?: string[];
 
     /**
+     * Allow localhost/127.0.0.1 as proxy URL. Only set for development or test (e.g. Karma reftests).
+     * @default false
+     */
+    allowLocalhostProxy?: boolean;
+
+    /**
      * Maximum allowed image timeout in milliseconds
      */
     maxImageTimeout?: number;
@@ -120,32 +126,34 @@ export class Validator {
                 }
             }
 
-            // Check for localhost/private IPs to prevent SSRF
+            // Check for localhost/private IPs to prevent SSRF (skip when allowLocalhostProxy for dev/test)
             if (context === 'proxy') {
-                const hostname = parsedUrl.hostname.toLowerCase();
+                if (!this.config.allowLocalhostProxy) {
+                    const hostname = parsedUrl.hostname.toLowerCase();
 
-                // Check for localhost
-                if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
-                    return {
-                        valid: false,
-                        error: 'Localhost is not allowed for proxy URLs'
-                    };
-                }
+                    // Check for localhost
+                    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+                        return {
+                            valid: false,
+                            error: 'Localhost is not allowed for proxy URLs'
+                        };
+                    }
 
-                // Check for private IP ranges (simplified check)
-                if (this.isPrivateIP(hostname)) {
-                    return {
-                        valid: false,
-                        error: 'Private IP addresses are not allowed for proxy URLs'
-                    };
-                }
+                    // For private IP ranges (simplified check)
+                    if (this.isPrivateIP(hostname)) {
+                        return {
+                            valid: false,
+                            error: 'Private IP addresses are not allowed for proxy URLs'
+                        };
+                    }
 
-                // Check for link-local addresses
-                if (hostname.startsWith('169.254.') || hostname.startsWith('fe80:')) {
-                    return {
-                        valid: false,
-                        error: 'Link-local addresses are not allowed for proxy URLs'
-                    };
+                    // For link-local addresses
+                    if (hostname.startsWith('169.254.') || hostname.startsWith('fe80:')) {
+                        return {
+                            valid: false,
+                            error: 'Link-local addresses are not allowed for proxy URLs'
+                        };
+                    }
                 }
 
                 // For proxy URLs, mark that runtime validation is recommended
@@ -461,19 +469,28 @@ export class Validator {
             };
         }
 
-        // Check if it's an HTMLElement
-        if (typeof HTMLElement !== 'undefined' && !(element instanceof HTMLElement)) {
-            return {
-                valid: false,
-                error: 'Element must be an HTMLElement'
-            };
+        // Accept real HTMLElement, or any element-like object with the minimal shape
+        // required by the implementation (ownerDocument + defaultView) for backward
+        // compatibility and test environments.
+        if (typeof HTMLElement !== 'undefined' && element instanceof HTMLElement) {
+            // Real DOM element
+            if (!element.ownerDocument) {
+                return { valid: false, error: 'Element must be attached to a document' };
+            }
+            return { valid: true };
         }
 
-        // Check if element is attached to document
+        // Duck-typing: accept object with ownerDocument and defaultView (minimal contract)
         if (!element.ownerDocument) {
             return {
                 valid: false,
-                error: 'Element must be attached to a document'
+                error: 'Element must be attached to a document (ownerDocument required)'
+            };
+        }
+        if (!element.ownerDocument.defaultView) {
+            return {
+                valid: false,
+                error: 'Document must be attached to a window (ownerDocument.defaultView required)'
             };
         }
 
@@ -489,9 +506,10 @@ export class Validator {
     validateOptions(options: any): ValidationResult {
         const errors: string[] = [];
 
-        // Validate proxy URL if provided
-        if (options.proxy !== undefined) {
-            const proxyResult = this.validateUrl(options.proxy, 'proxy');
+        // Validate proxy URL only when a non-empty string (allow null/undefined to mean "no proxy")
+        const proxyUrl = options.proxy;
+        if (proxyUrl !== undefined && proxyUrl !== null && typeof proxyUrl === 'string' && proxyUrl.length > 0) {
+            const proxyResult = this.validateUrl(proxyUrl, 'proxy');
             if (!proxyResult.valid) {
                 errors.push(`Proxy: ${proxyResult.error}`);
             }
@@ -555,10 +573,11 @@ export class Validator {
 /**
  * Create a default validator instance
  */
-export function createDefaultValidator(): Validator {
+export function createDefaultValidator(config: ValidatorConfig = {}): Validator {
     return new Validator({
         allowDataUrls: true,
-        maxImageTimeout: 300000 // 5 minutes
+        maxImageTimeout: 300000, // 5 minutes
+        ...config
     });
 }
 
