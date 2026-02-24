@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!--
+  Regression test for Issue #101 – position:fixed variant.
+
+  CSS Transforms Level 2 §2.3: an element with a non-none transform also establishes
+  a containing block for position:fixed descendants (same as for position:absolute).
+
+  By replacing `transform: scale(X)` with `transform: translate(0,0)` during
+  normalisation, we preserve that containing-block role for fixed elements too.
+
+  NOTE: position:fixed is captured relative to its containing block here (the
+  scaled parent), NOT the viewport, which is the correct browser behaviour.
+-->
+<html>
+    <head>
+        <title>transform: scale – containing block for position:fixed children</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+                background: #e8e8e8;
+                /* Give body a fixed size so fixed-position children don't escape */
+                width: 800px;
+                height: 600px;
+                overflow: hidden;
+            }
+
+            .test-label {
+                font-size: 12px;
+                color: #555;
+                margin-bottom: 4px;
+            }
+
+            /* Scaled parent acting as containing block for position:fixed child */
+            .scaled-parent {
+                background-color: #334;
+                transform: scale(0.5);
+                transform-origin: left top;
+                width: 400px;
+                height: 200px;
+                /* No position property – transform alone creates the containing block */
+            }
+
+            /*
+             * With the parent's transform active, this fixed element is contained
+             * by .scaled-parent. Its 25% width = 25% of 400px = 100px.
+             * (Without the fix, removing the transform makes it relative to viewport.)
+             */
+            .fixed-child {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 25%;
+                height: 50%;
+                background-color: #88aacc;
+                opacity: 0.85;
+            }
+
+            .fixed-child-right {
+                position: fixed;
+                right: 0;
+                bottom: 0;
+                width: 40%;
+                height: 30%;
+                background-color: #cc8844;
+                opacity: 0.85;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="test-label">
+            Test: scale(0.5) parent, position:fixed children (contained by parent via transform)
+        </div>
+        <div class="scaled-parent">
+            <div class="fixed-child"></div>
+            <div class="fixed-child-right"></div>
+        </div>
+    </body>
+</html>

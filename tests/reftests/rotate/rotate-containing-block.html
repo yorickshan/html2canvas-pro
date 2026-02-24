@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+  Regression test: CSS `rotate` property preserves containing-block for children.
+
+  The `rotate` individual property (CSS Transforms Level 2) behaves like `transform`
+  for stacking/containing-block purposes. When DOMNormalizer neutralises it by
+  setting `rotate: 0deg` (identity, not `none`), the containing-block role must
+  be preserved – either via the `rotate` value itself or via the companion
+  `transform: translate(0,0)` that is added as a cross-browser safety net.
+-->
+<html>
+    <head>
+        <title>CSS rotate property – containing block for positioned children</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+                background: #f0f0f0;
+            }
+
+            .test-label {
+                font-size: 12px;
+                color: #555;
+                margin-bottom: 4px;
+            }
+
+            .wrapper {
+                margin-bottom: 80px;
+            }
+
+            /* ── Test 1: rotate only, absolute child ── */
+            /* No position property – containing block via `rotate` + safety
+               `transform: translate(0,0)` added by DOMNormalizer only. */
+            .rotate-parent {
+                background-color: #334;
+                rotate: 15deg;
+                width: 300px;
+                height: 150px;
+            }
+
+            .rotate-parent .abs-child {
+                position: absolute;
+                left: 10%;          /* 30px of parent */
+                top: 10%;           /* 15px of parent */
+                width: 60%;         /* 180px of parent */
+                height: 70%;        /* 105px of parent */
+                background-color: #88aacc;
+            }
+
+            /* ── Test 2: rotate + transform together ── */
+            /* Also no position property */
+            .rotate-and-scale {
+                background-color: #343;
+                rotate: 10deg;
+                transform: scale(0.8);
+                transform-origin: left top;
+                width: 300px;
+                height: 150px;
+                margin-top: 60px;
+            }
+
+            .rotate-and-scale .abs-child {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 50%;         /* 150px of parent */
+                height: 100%;
+                background-color: #88cc88;
+            }
+
+            /* ── Test 3: rotate as only transform property ── */
+            .rotate-only {
+                background-color: #443;
+                rotate: -20deg;
+                width: 200px;
+                height: 100px;
+                /* No explicit position – transform creates containing block */
+            }
+
+            .rotate-only .fixed-child {
+                position: fixed;
+                left: 5%;
+                top: 5%;
+                width: 40%;
+                height: 40%;
+                background-color: #cc8844;
+                opacity: 0.9;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Test 1 -->
+        <div class="wrapper">
+            <div class="test-label">Test 1: rotate only – position:absolute child</div>
+            <div class="rotate-parent">
+                <div class="abs-child"></div>
+            </div>
+        </div>
+
+        <!-- Test 2 -->
+        <div class="wrapper" style="margin-top: 200px;">
+            <div class="test-label">Test 2: rotate + transform:scale – position:absolute child</div>
+            <div class="rotate-and-scale">
+                <div class="abs-child"></div>
+            </div>
+        </div>
+
+        <!-- Test 3 -->
+        <div class="wrapper" style="margin-top: 200px;">
+            <div class="test-label">Test 3: rotate only – position:fixed child (contained by parent)</div>
+            <div class="rotate-only">
+                <div class="fixed-child"></div>
+            </div>
+        </div>
+    </body>
+</html>

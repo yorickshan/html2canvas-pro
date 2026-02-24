@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<!--
+  Regression test for Issue #101:
+  https://github.com/yorickshan/html2canvas-pro/issues/101
+
+  When a parent element has `transform: scale()`, CSS Transforms Level 2 makes it
+  a containing block for position:absolute and position:fixed descendants.
+
+  The bug: DOMNormalizer previously set `transform: none` to neutralize the visual
+  transform before calling getBoundingClientRect(). That destroyed the containing-block
+  role, causing positioned children to resolve percentage dimensions and offsets against
+  a different (unintended) ancestor.
+
+  Fix: replace the active transform with `translate(0, 0)` (identity) so that:
+    1. getBoundingClientRect() returns layout-space (unscaled) coordinates.
+    2. The element still satisfies "transform != none" and keeps its containing-block role.
+-->
+<html>
+    <head>
+        <title>transform: scale – containing block for positioned children</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+                background: #f0f0f0;
+            }
+
+            /* ── Test 1: scale(0.5) parent + position:absolute child ── */
+            .test-label {
+                font-size: 12px;
+                color: #555;
+                margin-bottom: 4px;
+            }
+
+            .wrapper {
+                margin-bottom: 60px;
+            }
+
+            /*
+             * Issue #101 exact reproduction.
+             * IMPORTANT: no `position` property here – the containing block for
+             * the absolute children is established solely by `transform != none`.
+             * If this test passed with `position: relative`, it would not catch
+             * the regression (relative position alone makes an element a CB,
+             * regardless of transform).
+             */
+            .app-view {
+                background-color: #334;
+                transform: scale(0.5);
+                transform-origin: left top;
+                width: 400px;
+                height: 200px;
+            }
+
+            /* position:absolute child – should be 25% of .app-view = 100px */
+            .box-abs {
+                width: 25%;
+                height: 100%;
+                background-color: #88aacc;
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+
+            /* position:absolute child at right – 75% of .app-view = 300px */
+            .box-abs-right {
+                width: 75%;
+                height: 50%;
+                background-color: #cc8888;
+                position: absolute;
+                right: 0;
+                bottom: 0;
+            }
+
+            /* ── Test 2: scale(0.75) with transform-origin center ── */
+            /* Also no position: relative – containing block via transform only */
+            .scale-center {
+                background-color: #343;
+                transform: scale(0.75);
+                transform-origin: center center;
+                width: 300px;
+                height: 150px;
+                margin-top: 40px;
+            }
+
+            .scale-center .child-centered {
+                width: 50%;         /* 150px of parent */
+                height: 60%;        /* 90px of parent */
+                background-color: #88cc88;
+                position: absolute;
+                left: 25%;
+                top: 20%;
+            }
+
+            /* ── Test 3: scale(1.5) enlarge ── */
+            /* Also no position: relative – containing block via transform only */
+            .scale-up {
+                background-color: #443;
+                transform: scale(1.5);
+                transform-origin: left top;
+                width: 160px;
+                height: 80px;
+                margin-top: 80px;
+            }
+
+            .scale-up .child-full {
+                width: 100%;        /* 160px of parent */
+                height: 50%;        /* 40px of parent */
+                background-color: #cccc44;
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+
+            /* ── Test 4: nested scale transforms ── */
+            /* Neither outer nor inner has position: relative –
+               each is a CB for its children via transform only. */
+            .outer-scale {
+                background-color: #433;
+                transform: scale(0.6);
+                transform-origin: left top;
+                width: 300px;
+                height: 150px;
+                margin-top: 120px;
+            }
+
+            .inner-scale {
+                background-color: #944;
+                transform: scale(0.8);
+                transform-origin: left top;
+                width: 50%;         /* 150px of outer */
+                height: 100%;
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+
+            .inner-scale .deepchild {
+                width: 50%;         /* 75px of inner */
+                height: 50%;
+                background-color: #cc6666;
+                position: absolute;
+                right: 0;
+                bottom: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Test 1 -->
+        <div class="wrapper">
+            <div class="test-label">Test 1: scale(0.5) parent, position:absolute children</div>
+            <div class="app-view">
+                <div class="box-abs"></div>
+                <div class="box-abs-right"></div>
+            </div>
+        </div>
+
+        <!-- Test 2 -->
+        <div class="wrapper" style="margin-top: 140px;">
+            <div class="test-label">Test 2: scale(0.75), transform-origin center</div>
+            <div class="scale-center">
+                <div class="child-centered"></div>
+            </div>
+        </div>
+
+        <!-- Test 3 -->
+        <div class="wrapper" style="margin-top: 220px;">
+            <div class="test-label">Test 3: scale(1.5) enlarge</div>
+            <div class="scale-up">
+                <div class="child-full"></div>
+            </div>
+        </div>
+
+        <!-- Test 4 -->
+        <div class="wrapper" style="margin-top: 200px;">
+            <div class="test-label">Test 4: nested scale transforms</div>
+            <div class="outer-scale">
+                <div class="inner-scale">
+                    <div class="deepchild"></div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
