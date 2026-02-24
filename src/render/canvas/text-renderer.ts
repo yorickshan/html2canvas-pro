@@ -42,6 +42,24 @@ export interface TextRendererDependencies {
 const iOSBrokenFonts = ['-apple-system', 'system-ui'];
 
 /**
+ * Detect CJK (Chinese, Japanese, Korean) characters in a string.
+ * CJK characters use the ideographic baseline in browsers, which differs
+ * from the alphabetic baseline used for Latin script.
+ *
+ * Covers:
+ *   U+2E80–U+2FFF  CJK Radicals Supplement, Kangxi Radicals
+ *   U+3000–U+30FF  CJK Symbols & Punctuation (。、「」…), Hiragana, Katakana
+ *   U+3400–U+4DBF  CJK Extension A
+ *   U+4E00–U+9FFF  CJK Unified Ideographs (most common Chinese/Japanese/Korean)
+ *   U+AC00–U+D7AF  Hangul Syllables
+ *   U+F900–U+FAFF  CJK Compatibility Ideographs
+ *   U+FF01–U+FFEF  Halfwidth and Fullwidth Forms (Ａ Ｂ １ ２ ！ ？ etc.)
+ */
+const CJK_CHAR_REGEX = /[\u2E80-\u2FFF\u3000-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF\uFF01-\uFFEF]/;
+
+export const hasCJKCharacters = (text: string): boolean => CJK_CHAR_REGEX.test(text);
+
+/**
  * Detect iOS version from user agent
  * Returns null if not iOS or version cannot be determined
  */
@@ -114,21 +132,54 @@ export class TextRenderer {
     }
 
     /**
-     * Render text with letter spacing
-     * Public method used by list rendering
+     * Iterate grapheme clusters one-by-one, applying correct letter-spacing and
+     * per-script baseline for each character.
+     *
+     * Issue #73: When letter-spacing is non-zero, text must be rendered character by
+     * character. This helper centralises two fixes applied during that iteration:
+     *   1. Add `letterSpacing` to each character's advance width (was previously
+     *      omitted, causing characters to render without any spacing).
+     *   2. Switch to the ideographic baseline for CJK glyphs so their vertical
+     *      position matches how browsers lay them out in the DOM.
+     *
+     * The `renderFn` callback receives (letter, x, y) and performs the actual draw
+     * call (fillText or strokeText), allowing fill and stroke paths to share one
+     * implementation.
+     */
+    private iterateLettersWithLetterSpacing(
+        text: TextBounds,
+        letterSpacing: number,
+        baseline: number,
+        renderFn: (letter: string, x: number, y: number) => void
+    ): void {
+        const letters = segmentGraphemes(text.text);
+        const y = text.bounds.top + baseline;
+        let left = text.bounds.left;
+        for (const letter of letters) {
+            if (hasCJKCharacters(letter)) {
+                const savedBaseline = this.ctx.textBaseline;
+                this.ctx.textBaseline = 'ideographic';
+                renderFn(letter, left, y);
+                this.ctx.textBaseline = savedBaseline;
+            } else {
+                renderFn(letter, left, y);
+            }
+            left += this.ctx.measureText(letter).width + letterSpacing;
+        }
+    }
+
+    /**
+     * Render text with letter-spacing applied (fill pass).
+     * When letterSpacing is 0 the whole string is drawn in one call; otherwise each
+     * grapheme is drawn individually so spacing and CJK baseline are applied correctly.
      */
     renderTextWithLetterSpacing(text: TextBounds, letterSpacing: number, baseline: number): void {
         if (letterSpacing === 0) {
-            // Use alphabetic baseline for consistent text positioning across browsers
-            // Issue #129: text.bounds.top + text.bounds.height causes text to render too low
             this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + baseline);
         } else {
-            const letters = segmentGraphemes(text.text);
-            letters.reduce((left, letter) => {
-                this.ctx.fillText(letter, left, text.bounds.top + baseline);
-
-                return left + this.ctx.measureText(letter).width;
-            }, text.bounds.left);
+            this.iterateLettersWithLetterSpacing(text, letterSpacing, baseline, (letter, x, y) => {
+                this.ctx.fillText(letter, x, y);
+            });
         }
     }
 
@@ -152,7 +203,23 @@ export class TextRenderer {
                         this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
                         this.ctx.lineWidth = styles.webkitTextStrokeWidth;
                         this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
-                        this.renderTextWithLetterSpacing(textBound, styles.letterSpacing, styles.fontSize.number);
+                        if (styles.letterSpacing === 0) {
+                            this.ctx.strokeText(
+                                textBound.text,
+                                textBound.bounds.left,
+                                textBound.bounds.top + styles.fontSize.number
+                            );
+                        } else {
+                            this.iterateLettersWithLetterSpacing(
+                                textBound,
+                                styles.letterSpacing,
+                                styles.fontSize.number,
+                                (letter, x, y) => this.ctx.strokeText(letter, x, y)
+                            );
+                        }
+                        this.ctx.strokeStyle = '';
+                        this.ctx.lineWidth = 0;
+                        this.ctx.lineJoin = 'miter';
                     }
                     break;
             }
@@ -616,19 +683,17 @@ export class TextRenderer {
                         if (styles.webkitTextStrokeWidth && text.text.trim().length) {
                             this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
                             this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-
                             this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
-                            // Issue #110: Use baseline (fontSize) for consistent positioning with fill
-                            // Previously used text.bounds.height which caused stroke to render too low
                             const baseline = styles.fontSize.number;
                             if (styles.letterSpacing === 0) {
                                 this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + baseline);
                             } else {
-                                const letters = segmentGraphemes(text.text);
-                                letters.reduce((left, letter) => {
-                                    this.ctx.strokeText(letter, left, text.bounds.top + baseline);
-                                    return left + this.ctx.measureText(letter).width;
-                                }, text.bounds.left);
+                                this.iterateLettersWithLetterSpacing(
+                                    text,
+                                    styles.letterSpacing,
+                                    baseline,
+                                    (letter, x, y) => this.ctx.strokeText(letter, x, y)
+                                );
                             }
                         }
                         this.ctx.strokeStyle = '';
