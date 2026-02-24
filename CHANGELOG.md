@@ -1,4 +1,28 @@
 
+### [2.0.1](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.7...v2.0.1) (2026-02-24)
+
+
+### Features
+
+* add image smoothing control support ([b4d7018](https://github.com/yorickshan/html2canvas-pro/commit/b4d701863a48d66be2a656b0c7d906824a6dbc20))
+* add support for clip-path CSS property with various shape functions ([828865f](https://github.com/yorickshan/html2canvas-pro/commit/828865ff38c2723f9548a12f68aaa80c8e7b2b31))
+
+
+### Refactor
+
+* major architecture refactoring - apply SOLID principles and improve code quality ([368875e](https://github.com/yorickshan/html2canvas-pro/commit/368875e41c31de07d93746d2df8ff3044bafe4f5))
+
+
+### Chore
+
+* **release:** 2.0.0 ([1c485a8](https://github.com/yorickshan/html2canvas-pro/commit/1c485a885dcca00fca1cf41641c4daf4cd96dfc9))
+
+
+### Fixes
+
+* **dom-normalizer:** replace transforms with identity values ([7b1bccf](https://github.com/yorickshan/html2canvas-pro/commit/7b1bccfaf51237ec329da63b3020e1e4658e3fb5))
+* **text-renderer:** fix letter-spacing and CJK baseline offset ([#73](https://github.com/yorickshan/html2canvas-pro/issues/73)) ([3d9d31f](https://github.com/yorickshan/html2canvas-pro/commit/3d9d31fa4a55d71edd9a129975cccb3683591e9f))
+
 ## [2.0.0](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.7...v2.0.0) (2026-02-21)
 
 
