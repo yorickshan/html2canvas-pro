@@ -4,10 +4,11 @@
  * Handles rendering effects including:
  * - Opacity effects
  * - Transform effects (matrix transformations)
- * - Clip effects (clipping paths)
+ * - Clip effects (overflow / border-radius clipping via Path[])
+ * - Clip-path effects (CSS clip-path shapes: inset, circle, ellipse, polygon, path)
  */
 
-import { IElementEffect, isOpacityEffect, isTransformEffect, isClipEffect } from '../effects';
+import { IElementEffect, isOpacityEffect, isTransformEffect, isClipEffect, isClipPathEffect } from '../effects';
 import { Path } from '../path';
 
 /**
@@ -64,13 +65,11 @@ export class EffectsRenderer {
     applyEffect(effect: IElementEffect): void {
         this.ctx.save();
 
-        // Apply opacity effect
         if (isOpacityEffect(effect)) {
+            // Opacity: multiply into the current global alpha for nested transparency.
             this.ctx.globalAlpha = effect.opacity;
-        }
-
-        // Apply transform effect
-        if (isTransformEffect(effect)) {
+        } else if (isTransformEffect(effect)) {
+            // Transform: translate to origin, apply matrix, translate back.
             this.ctx.translate(effect.offsetX, effect.offsetY);
             this.ctx.transform(
                 effect.matrix[0],
@@ -81,12 +80,13 @@ export class EffectsRenderer {
                 effect.matrix[5]
             );
             this.ctx.translate(-effect.offsetX, -effect.offsetY);
-        }
-
-        // Apply clip effect
-        if (isClipEffect(effect)) {
+        } else if (isClipEffect(effect)) {
+            // Clip (overflow / border-radius): build path via callback then clip.
             this.pathCallback.path(effect.path);
             this.ctx.clip();
+        } else if (isClipPathEffect(effect)) {
+            // Clip-path: delegate shape drawing (beginPath … clip()) to the effect.
+            effect.applyClip(this.ctx);
         }
 
         this.activeEffects.push(effect);

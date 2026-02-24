@@ -202,7 +202,8 @@ export class TextRenderer {
                     if (styles.webkitTextStrokeWidth && textBound.text.trim().length) {
                         this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
                         this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                        this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
+                        this.ctx.lineJoin =
+                            typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
                         if (styles.letterSpacing === 0) {
                             this.ctx.strokeText(
                                 textBound.text,
@@ -357,27 +358,48 @@ export class TextRenderer {
 
     // Helper method to truncate text and add ellipsis if needed
     private truncateTextWithEllipsis(text: string, maxWidth: number, letterSpacing: number): string {
-        const ellipsis = '...';
+        // Use the Unicode ellipsis character (U+2026) whose width the browser measures
+        // as a single glyph, matching native text-overflow behaviour more closely.
+        const ellipsis = '\u2026';
         const ellipsisWidth = this.ctx.measureText(ellipsis).width;
+        // Segment into grapheme clusters so multi-byte characters (emoji, composed
+        // sequences) are never split mid-character.
+        const graphemes = segmentGraphemes(text);
 
         if (letterSpacing === 0) {
-            let truncated = text;
-            while (this.ctx.measureText(truncated).width + ellipsisWidth > maxWidth && truncated.length > 0) {
-                truncated = truncated.slice(0, -1);
+            // Measure the whole candidate string for accuracy: the browser applies
+            // kerning and ligatures when rendering multiple glyphs together, so
+            // measuring them as one string is more precise than summing individual widths.
+            // Binary search reduces measurements from O(n) to O(log n).
+            const fits = (n: number) =>
+                this.ctx.measureText(graphemes.slice(0, n).join('')).width + ellipsisWidth <= maxWidth;
+            let lo = 0;
+            let hi = graphemes.length;
+            while (lo < hi) {
+                const mid = (lo + hi + 1) >> 1;
+                if (fits(mid)) {
+                    lo = mid;
+                } else {
+                    hi = mid - 1;
+                }
             }
-            return truncated + ellipsis;
+            return graphemes.slice(0, lo).join('') + ellipsis;
         } else {
-            const letters = segmentGraphemes(text);
             let width = ellipsisWidth;
-            let result: string[] = [];
+            const result: string[] = [];
 
-            for (const letter of letters) {
-                const letterWidth = this.ctx.measureText(letter).width + letterSpacing;
-                if (width + letterWidth > maxWidth) {
+            for (const letter of graphemes) {
+                const glyphWidth = this.ctx.measureText(letter).width;
+                // Check against glyph width only (no trailing spacing): letter-spacing
+                // is applied *between* characters, not after the final glyph. Using
+                // `glyphWidth + letterSpacing` would incorrectly discard letters that
+                // fit as the last character before the ellipsis.
+                if (width + glyphWidth > maxWidth) {
                     break;
                 }
                 result.push(letter);
-                width += letterWidth;
+                // Accumulate glyph + inter-character spacing for the *next* iteration.
+                width += glyphWidth + letterSpacing;
             }
 
             return result.join('') + ellipsis;
@@ -471,6 +493,9 @@ export class TextRenderer {
                         styles.letterSpacing
                     );
 
+                    // Build TextBounds once; reused for fill and stroke without re-allocating.
+                    const truncatedBounds = new TextBounds(truncatedText, firstBound.bounds);
+
                     paintOrder.forEach((paintOrderLayer) => {
                         switch (paintOrderLayer) {
                             case PAINT_ORDER_LAYER.FILL:
@@ -482,18 +507,20 @@ export class TextRenderer {
                                         firstBound.bounds.top + styles.fontSize.number
                                     );
                                 } else {
-                                    const letters = segmentGraphemes(truncatedText);
-                                    letters.reduce((left, letter) => {
-                                        this.ctx.fillText(letter, left, firstBound.bounds.top + styles.fontSize.number);
-                                        return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                                    }, firstBound.bounds.left);
+                                    this.iterateLettersWithLetterSpacing(
+                                        truncatedBounds,
+                                        styles.letterSpacing,
+                                        styles.fontSize.number,
+                                        (letter, x, y) => this.ctx.fillText(letter, x, y)
+                                    );
                                 }
                                 break;
                             case PAINT_ORDER_LAYER.STROKE:
                                 if (styles.webkitTextStrokeWidth && truncatedText.trim().length) {
                                     this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
                                     this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                                    this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
+                                    this.ctx.lineJoin =
+                                        typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
                                     if (styles.letterSpacing === 0) {
                                         this.ctx.strokeText(
                                             truncatedText,
@@ -501,16 +528,16 @@ export class TextRenderer {
                                             firstBound.bounds.top + styles.fontSize.number
                                         );
                                     } else {
-                                        const letters = segmentGraphemes(truncatedText);
-                                        letters.reduce((left, letter) => {
-                                            this.ctx.strokeText(
-                                                letter,
-                                                left,
-                                                firstBound.bounds.top + styles.fontSize.number
-                                            );
-                                            return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                                        }, firstBound.bounds.left);
+                                        this.iterateLettersWithLetterSpacing(
+                                            truncatedBounds,
+                                            styles.letterSpacing,
+                                            styles.fontSize.number,
+                                            (letter, x, y) => this.ctx.strokeText(letter, x, y)
+                                        );
                                     }
+                                    this.ctx.strokeStyle = '';
+                                    this.ctx.lineWidth = 0;
+                                    this.ctx.lineJoin = 'miter';
                                 }
                                 break;
                         }
@@ -562,9 +589,13 @@ export class TextRenderer {
         // If ellipsis is needed, render the truncated text once
         if (needsEllipsis) {
             const firstBound = text.textBounds[0];
+            // Build TextBounds once; reused across paint layers and every shadow pass
+            // to avoid repeated allocation inside forEach callbacks.
+            const truncatedBounds = new TextBounds(truncatedText, firstBound.bounds);
+
             paintOrder.forEach((paintOrderLayer) => {
                 switch (paintOrderLayer) {
-                    case PAINT_ORDER_LAYER.FILL:
+                    case PAINT_ORDER_LAYER.FILL: {
                         this.ctx.fillStyle = asString(styles.color);
 
                         if (styles.letterSpacing === 0) {
@@ -574,11 +605,12 @@ export class TextRenderer {
                                 firstBound.bounds.top + styles.fontSize.number
                             );
                         } else {
-                            const letters = segmentGraphemes(truncatedText);
-                            letters.reduce((left, letter) => {
-                                this.ctx.fillText(letter, left, firstBound.bounds.top + styles.fontSize.number);
-                                return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                            }, firstBound.bounds.left);
+                            this.iterateLettersWithLetterSpacing(
+                                truncatedBounds,
+                                styles.letterSpacing,
+                                styles.fontSize.number,
+                                (letter, x, y) => this.ctx.fillText(letter, x, y)
+                            );
                         }
 
                         const textShadows: TextShadow = styles.textShadow;
@@ -599,15 +631,12 @@ export class TextRenderer {
                                             firstBound.bounds.top + styles.fontSize.number
                                         );
                                     } else {
-                                        const letters = segmentGraphemes(truncatedText);
-                                        letters.reduce((left, letter) => {
-                                            this.ctx.fillText(
-                                                letter,
-                                                left,
-                                                firstBound.bounds.top + styles.fontSize.number
-                                            );
-                                            return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                                        }, firstBound.bounds.left);
+                                        this.iterateLettersWithLetterSpacing(
+                                            truncatedBounds,
+                                            styles.letterSpacing,
+                                            styles.fontSize.number,
+                                            (letter, x, y) => this.ctx.fillText(letter, x, y)
+                                        );
                                     }
                                 });
 
@@ -617,11 +646,13 @@ export class TextRenderer {
                             this.ctx.shadowBlur = 0;
                         }
                         break;
+                    }
                     case PAINT_ORDER_LAYER.STROKE:
                         if (styles.webkitTextStrokeWidth && truncatedText.trim().length) {
                             this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
                             this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                            this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
+                            this.ctx.lineJoin =
+                                typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
 
                             if (styles.letterSpacing === 0) {
                                 this.ctx.strokeText(
@@ -630,12 +661,16 @@ export class TextRenderer {
                                     firstBound.bounds.top + styles.fontSize.number
                                 );
                             } else {
-                                const letters = segmentGraphemes(truncatedText);
-                                letters.reduce((left, letter) => {
-                                    this.ctx.strokeText(letter, left, firstBound.bounds.top + styles.fontSize.number);
-                                    return left + this.ctx.measureText(letter).width + styles.letterSpacing;
-                                }, firstBound.bounds.left);
+                                this.iterateLettersWithLetterSpacing(
+                                    truncatedBounds,
+                                    styles.letterSpacing,
+                                    styles.fontSize.number,
+                                    (letter, x, y) => this.ctx.strokeText(letter, x, y)
+                                );
                             }
+                            this.ctx.strokeStyle = '';
+                            this.ctx.lineWidth = 0;
+                            this.ctx.lineJoin = 'miter';
                         }
                         break;
                 }
@@ -647,7 +682,7 @@ export class TextRenderer {
         text.textBounds.forEach((text) => {
             paintOrder.forEach((paintOrderLayer) => {
                 switch (paintOrderLayer) {
-                    case PAINT_ORDER_LAYER.FILL:
+                    case PAINT_ORDER_LAYER.FILL: {
                         this.ctx.fillStyle = asString(styles.color);
                         this.renderTextWithLetterSpacing(text, styles.letterSpacing, styles.fontSize.number);
                         const textShadows: TextShadow = styles.textShadow;
@@ -679,11 +714,13 @@ export class TextRenderer {
                             this.renderTextDecoration(text.bounds, styles);
                         }
                         break;
-                    case PAINT_ORDER_LAYER.STROKE:
+                    }
+                    case PAINT_ORDER_LAYER.STROKE: {
                         if (styles.webkitTextStrokeWidth && text.text.trim().length) {
                             this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
                             this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                            this.ctx.lineJoin = !!(window as any).chrome ? 'miter' : 'round';
+                            this.ctx.lineJoin =
+                                typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
                             const baseline = styles.fontSize.number;
                             if (styles.letterSpacing === 0) {
                                 this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + baseline);
@@ -695,11 +732,12 @@ export class TextRenderer {
                                     (letter, x, y) => this.ctx.strokeText(letter, x, y)
                                 );
                             }
+                            this.ctx.strokeStyle = '';
+                            this.ctx.lineWidth = 0;
+                            this.ctx.lineJoin = 'miter';
                         }
-                        this.ctx.strokeStyle = '';
-                        this.ctx.lineWidth = 0;
-                        this.ctx.lineJoin = 'miter';
                         break;
+                    }
                 }
             });
         });

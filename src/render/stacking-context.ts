@@ -1,7 +1,15 @@
 import { ElementContainer, FLAGS } from '../dom/element-container';
 import { contains } from '../core/bitwise';
 import { BoundCurves, calculateBorderBoxPath, calculatePaddingBoxPath } from './bound-curves';
-import { ClipEffect, EffectTarget, IElementEffect, isClipEffect, OpacityEffect, TransformEffect } from './effects';
+import {
+    ClipEffect,
+    ClipPathEffect,
+    EffectTarget,
+    IElementEffect,
+    isClipEffect,
+    OpacityEffect,
+    TransformEffect
+} from './effects';
 import { Matrix } from '../css/property-descriptors/transform';
 import { OVERFLOW } from '../css/property-descriptors/overflow';
 import { equalPath } from './path';
@@ -11,6 +19,8 @@ import { LIElementContainer } from '../dom/elements/li-element-container';
 import { createCounterText } from '../css/types/functions/counter';
 import { POSITION } from '../css/property-descriptors/position';
 import { getAbsoluteValue } from '../css/types/length-percentage';
+import { Bounds } from '../css/layout/bounds';
+import { CLIP_PATH_TYPE, ClipPathValue, ShapeRadius } from '../css/property-descriptors/clip-path';
 
 export class StackingContext {
     element: ElementPaint;
@@ -80,6 +90,13 @@ export class ElementPaint {
                 this.effects.push(new ClipEffect(paddingBox, EffectTarget.CONTENT));
             }
         }
+
+        if (this.container.styles.clipPath.type !== CLIP_PATH_TYPE.NONE) {
+            const clipPathEffect = buildClipPathEffect(this.container.styles.clipPath, this.container.bounds);
+            if (clipPathEffect) {
+                this.effects.push(clipPathEffect);
+            }
+        }
     }
 
     getEffects(target: EffectTarget): IElementEffect[] {
@@ -110,6 +127,138 @@ export class ElementPaint {
         return effects.filter((effect) => contains(effect.target, target));
     }
 }
+
+/**
+ * Resolve a `closest-side` or `farthest-side` shape-radius keyword to pixels
+ * for a single axis. Used by both `circle()` (per-axis) and `ellipse()`.
+ *
+ * @param r       - The ShapeRadius (keyword or length-percentage).
+ * @param center  - Absolute center coordinate on this axis (cx or cy).
+ * @param start   - Absolute start of the reference box on this axis.
+ * @param end     - Absolute end of the reference box on this axis.
+ * @param dimRef  - Reference dimension for resolving a length-percentage value.
+ */
+const resolveAxisRadius = (r: ShapeRadius, center: number, start: number, end: number, dimRef: number): number => {
+    if (r === 'closest-side') return Math.min(center - start, end - center);
+    if (r === 'farthest-side') return Math.max(center - start, end - center);
+    return getAbsoluteValue(r, dimRef);
+};
+
+/**
+ * Convert a parsed ClipPathValue + element bounds into a ClipPathEffect whose
+ * `applyClip` callback draws the clip shape directly onto the canvas context.
+ *
+ * All coordinates are computed in page-absolute space at construction time so
+ * the callback itself is allocation-free and executes synchronously.
+ */
+const buildClipPathEffect = (clipPath: ClipPathValue, bounds: Bounds): ClipPathEffect | null => {
+    const { left: bLeft, top: bTop, width: bWidth, height: bHeight } = bounds;
+
+    switch (clipPath.type) {
+        case CLIP_PATH_TYPE.INSET: {
+            const iLeft = getAbsoluteValue(clipPath.left, bWidth);
+            const iTop = getAbsoluteValue(clipPath.top, bHeight);
+            const x = bLeft + iLeft;
+            const y = bTop + iTop;
+            // Clamp to zero: per CSS spec, overlapping insets produce an empty shape.
+            const w = Math.max(0, bWidth - iLeft - getAbsoluteValue(clipPath.right, bWidth));
+            const h = Math.max(0, bHeight - iTop - getAbsoluteValue(clipPath.bottom, bHeight));
+            return new ClipPathEffect((ctx) => {
+                ctx.beginPath();
+                ctx.rect(x, y, w, h);
+                ctx.clip();
+            });
+        }
+
+        case CLIP_PATH_TYPE.CIRCLE: {
+            const cx = bLeft + getAbsoluteValue(clipPath.cx, bWidth);
+            const cy = bTop + getAbsoluteValue(clipPath.cy, bHeight);
+            let r: number;
+            if (clipPath.radius === 'closest-side') {
+                r = Math.min(cx - bLeft, cy - bTop, bLeft + bWidth - cx, bTop + bHeight - cy);
+            } else if (clipPath.radius === 'farthest-side') {
+                r = Math.max(cx - bLeft, cy - bTop, bLeft + bWidth - cx, bTop + bHeight - cy);
+            } else {
+                // Per CSS spec, percentage is relative to sqrt(w² + h²) / sqrt(2).
+                r = getAbsoluteValue(clipPath.radius, Math.sqrt(bWidth * bWidth + bHeight * bHeight) / Math.SQRT2);
+            }
+            return new ClipPathEffect((ctx) => {
+                ctx.beginPath();
+                ctx.arc(cx, cy, Math.max(0, r), 0, Math.PI * 2);
+                ctx.clip();
+            });
+        }
+
+        case CLIP_PATH_TYPE.ELLIPSE: {
+            const cx = bLeft + getAbsoluteValue(clipPath.cx, bWidth);
+            const cy = bTop + getAbsoluteValue(clipPath.cy, bHeight);
+            const rx = resolveAxisRadius(clipPath.rx, cx, bLeft, bLeft + bWidth, bWidth);
+            const ry = resolveAxisRadius(clipPath.ry, cy, bTop, bTop + bHeight, bHeight);
+            return new ClipPathEffect((ctx) => {
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, Math.max(0, rx), Math.max(0, ry), 0, 0, Math.PI * 2);
+                ctx.clip();
+            });
+        }
+
+        case CLIP_PATH_TYPE.POLYGON: {
+            // Pre-compute all vertices in page-absolute coordinates.
+            const absPoints = clipPath.points.map(
+                ([px, py]) =>
+                    [bLeft + getAbsoluteValue(px, bWidth), bTop + getAbsoluteValue(py, bHeight)] as [number, number]
+            );
+            return new ClipPathEffect((ctx) => {
+                ctx.beginPath();
+                if (absPoints.length > 0) {
+                    ctx.moveTo(absPoints[0][0], absPoints[0][1]);
+                    for (let i = 1; i < absPoints.length; i++) {
+                        ctx.lineTo(absPoints[i][0], absPoints[i][1]);
+                    }
+                    ctx.closePath();
+                }
+                // Calling clip() with an empty path (zero points) is intentional:
+                // it clips the entire region to nothing, which is the correct
+                // behaviour for a degenerate polygon() per the CSS spec.
+                ctx.clip();
+            });
+        }
+
+        case CLIP_PATH_TYPE.PATH: {
+            // path() coordinates are in the element's local space (0,0 = element top-left).
+            // We temporarily translate the canvas origin to the element's position, clip
+            // with the Path2D, then restore only the transform matrix (not the clipping
+            // region) via setTransform so the clip persists for the enclosing
+            // ctx.save() / ctx.restore() pair managed by EffectsRenderer.
+            //
+            // When the element also has a CSS transform, that transform was already applied
+            // by a preceding TransformEffect, so the path coordinates end up correctly in
+            // the element's transformed local space — matching browser behaviour.
+            const { d } = clipPath;
+            return new ClipPathEffect((ctx) => {
+                try {
+                    const savedTransform = ctx.getTransform();
+                    ctx.translate(bLeft, bTop);
+                    ctx.clip(new Path2D(d));
+                    ctx.setTransform(savedTransform);
+                } catch (_e) {
+                    // Path2D or getTransform/setTransform not supported in this environment.
+                }
+            });
+        }
+
+        case CLIP_PATH_TYPE.NONE:
+            return null;
+
+        default: {
+            // Exhaustiveness guard: if a new CLIP_PATH_TYPE is added in the future
+            // without a corresponding case above, TypeScript will raise a compile-time
+            // error here rather than silently falling through.
+            const _exhaustive: never = clipPath;
+            void _exhaustive;
+            return null;
+        }
+    }
+};
 
 const parseStackTree = (
     parent: ElementPaint,

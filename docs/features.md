@@ -19,6 +19,12 @@ Below is a list of all the supported CSS properties and values.
    - border-width
  - bottom
  - box-sizing
+ - clip-path
+   - `inset()`
+   - `circle()`
+   - `ellipse()`
+   - `polygon()`
+   - `path()`
  - content
  - color
  - display
@@ -228,3 +234,61 @@ await smartCapture(photoGallery, 'photo');
 - [Issue #119](https://github.com/yorickshan/html2canvas-pro/issues/119)
 - [MDN: imageSmoothingEnabled](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/imageSmoothingEnabled)
 - [MDN: image-rendering](https://developer.mozilla.org/en-US/docs/Web/CSS/image-rendering)
+
+---
+
+### clip-path Support
+
+Clip elements to arbitrary shapes using the `clip-path` CSS property. The clip is applied to the element and all its descendants, matching browser behaviour.
+
+**Supported shape functions:**
+
+| Function | Description |
+|---|---|
+| `inset(top [right [bottom [left]]] [round ...])` | Rectangular inset (1–4 values, same shorthand as `margin`). The optional `round` clause is parsed but ignored. |
+| `circle([radius] [at cx cy])` | Circle. Radius accepts `<length>`, `<percentage>`, `closest-side`, or `farthest-side`. Center defaults to `50% 50%`. |
+| `ellipse([rx ry] [at cx cy])` | Ellipse with independent horizontal/vertical radii. Same radius keywords as `circle()`. |
+| `polygon([fill-rule,] x y, x y, ...)` | Arbitrary polygon. An optional leading `nonzero`/`evenodd` fill-rule is accepted and skipped. |
+| `path('svg-path-data')` | SVG path string. Coordinates are in the element's local space (origin = element top-left). Requires `Path2D` browser support (all modern browsers). |
+
+**Usage examples:**
+
+```html
+<!-- Circular avatar -->
+<img src="avatar.jpg" style="clip-path: circle(50%);" />
+
+<!-- Diamond shape -->
+<div style="clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);">
+  content
+</div>
+
+<!-- Inset frame -->
+<div style="clip-path: inset(10%);">
+  content
+</div>
+
+<!-- Ellipse crop -->
+<div style="clip-path: ellipse(60% 40% at 50% 50%);">
+  content
+</div>
+
+<!-- SVG path (triangle, local coordinates) -->
+<div style="width: 200px; height: 200px; clip-path: path('M 100 0 L 200 200 L 0 200 Z');">
+  content
+</div>
+```
+
+**Limitations:**
+
+- `url(#svgClipPath)` references to external SVG `<clipPath>` elements are not yet supported.
+- The `round` border-radius clause inside `inset()` is currently ignored (rounded inset clips render as sharp rectangles).
+- `path()` coordinates require `Path2D` and `CanvasRenderingContext2D.getTransform()` (available in all evergreen browsers; IE is not supported).
+
+**Browser support requirements:**
+- `circle()`, `ellipse()`, `polygon()`, `inset()` — all modern browsers (Chrome 24+, Firefox 54+, Safari 10.1+).
+- `path()` — `Path2D` support required (Chrome 36+, Firefox 31+, Safari 10.1+).
+
+**References:**
+- [Issue #107](https://github.com/yorickshan/html2canvas-pro/issues/107)
+- [MDN: clip-path](https://developer.mozilla.org/en-US/docs/Web/CSS/clip-path)
+- [CSS Masking Module Level 1](https://www.w3.org/TR/css-masking-1/#the-clip-path)
