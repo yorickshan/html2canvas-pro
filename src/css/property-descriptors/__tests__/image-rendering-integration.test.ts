@@ -8,7 +8,7 @@ import { IMAGE_RENDERING } from '../image-rendering';
 describe('image-rendering integration', () => {
     let container: HTMLDivElement;
     let canvas: HTMLCanvasElement;
-    let ctx: CanvasRenderingContext2D;
+    let ctx: CanvasRenderingContext2D | null = null;
 
     beforeEach(() => {
         // Create test DOM elements
@@ -19,12 +19,12 @@ describe('image-rendering integration', () => {
         canvas = document.createElement('canvas');
         canvas.width = 100;
         canvas.height = 100;
-        const context = canvas.getContext('2d');
-        if (!context) {
-            // Skip tests that require canvas in JSDOM environment
-            return;
+        try {
+            ctx = canvas.getContext('2d');
+        } catch {
+            // JSDOM does not implement getContext('2d') unless canvas npm package is installed
+            ctx = null;
         }
-        ctx = context;
     });
 
     afterEach(() => {

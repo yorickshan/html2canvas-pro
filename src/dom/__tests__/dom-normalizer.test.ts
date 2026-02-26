@@ -77,7 +77,7 @@ describe('DOMNormalizer', () => {
         strictEqual(mockElement.style.animationDuration, '0s');
     });
 
-    it('should reset transform property', () => {
+    it('should replace transform with identity translate (preserves containing block, Issue #101)', () => {
         const styles = new CSSParsedDeclaration(context, {
             animationDuration: '0s',
             transform: 'rotate(45deg)',
@@ -86,10 +86,10 @@ describe('DOMNormalizer', () => {
 
         DOMNormalizer.normalizeElement(mockElement, styles);
 
-        strictEqual(mockElement.style.transform, 'none');
+        strictEqual(mockElement.style.transform, 'translate(0, 0)');
     });
 
-    it('should reset rotate property', () => {
+    it('should replace rotate with 0deg (preserves containing block, Issue #101)', () => {
         const styles = new CSSParsedDeclaration(context, {
             animationDuration: '0s',
             transform: null,
@@ -98,7 +98,7 @@ describe('DOMNormalizer', () => {
 
         DOMNormalizer.normalizeElement(mockElement, styles);
 
-        strictEqual(mockElement.style.rotate, 'none');
+        strictEqual(mockElement.style.rotate, '0deg');
     });
 
     it('should normalize all properties when all are set', () => {
@@ -111,8 +111,8 @@ describe('DOMNormalizer', () => {
         DOMNormalizer.normalizeElement(mockElement, styles);
 
         strictEqual(mockElement.style.animationDuration, '0s');
-        strictEqual(mockElement.style.transform, 'none');
-        strictEqual(mockElement.style.rotate, 'none');
+        strictEqual(mockElement.style.transform, 'translate(0, 0)');
+        strictEqual(mockElement.style.rotate, '0deg');
     });
 
     it('should not modify element if it is not an HTMLElement', () => {

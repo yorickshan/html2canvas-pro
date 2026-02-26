@@ -48,6 +48,15 @@ export type CloneConfigurations = CloneOptions & {
 const IGNORE_ATTRIBUTE = 'data-html2canvas-ignore';
 
 /**
+ * Trusted Types factory (getPolicy / createPolicy) for document.write in strict CSP environments.
+ * Used in toIFrame() when writing initial HTML to the cloned document.
+ */
+type TrustedTypesFactory = {
+    getPolicy?: (name: string) => unknown;
+    createPolicy: (name: string, config: object) => unknown;
+};
+
+/**
  * Find the parent ShadowRoot of an element, if any
  * @param element - The element to check
  * @returns The parent ShadowRoot or null
@@ -170,35 +179,49 @@ export class DocumentCloner {
          * */
         const baseUri = documentClone.baseURI;
         documentClone.open();
+        const rawHTML = serializeDoctype(document.doctype) + '<html></html>';
         try {
-            // fixing "This document requires 'TrustedHTML' assignment. The action has been blocked." error
-            // @ts-ignore
-            const policy = trustedTypes.createPolicy('my-policy', {
-                createHTML: (string: string) => string
-            });
-            const rawHTML = serializeDoctype(document.doctype) + '<html></html>';
-            const trustedHTML = policy.createHTML(rawHTML);
-            documentClone.write(trustedHTML);
-        } catch (e) {
-            // if browser does not support trustedTypes
-            documentClone.write(serializeDoctype(document.doctype) + '<html></html>');
+            // Fixing "This document requires 'TrustedHTML' assignment. The action has been blocked." error.
+            // Reuse existing policy when present (e.g. second html2canvas call) to avoid createPolicy duplicate-name throw.
+            const ownerWindow = this.referenceElement.ownerDocument?.defaultView;
+            const trustedTypesFactory =
+                ownerWindow && (ownerWindow as Window & { trustedTypes?: TrustedTypesFactory }).trustedTypes;
+            let policy = trustedTypesFactory?.getPolicy?.('html2canvas-pro');
+            if (!policy && trustedTypesFactory) {
+                policy = trustedTypesFactory.createPolicy('html2canvas-pro', {
+                    createHTML: (string: string) => string
+                });
+            }
+            if (policy) {
+                documentClone.write((policy as { createHTML: (s: string) => string }).createHTML(rawHTML) as string);
+            } else {
+                documentClone.write(rawHTML);
+            }
+        } catch (_e) {
+            documentClone.write(rawHTML);
         }
         // Chrome scrolls the parent document for some reason after the write to the cloned window???
         restoreOwnerScroll(this.referenceElement.ownerDocument, scrollX, scrollY);
         /**
-         * Note: adoptNode() should be called AFTER documentClone.open() and close()
+         * IMPORTANT: documentClone.close() MUST be called BEFORE adoptNode().
          *
-         * In Chrome, calling adoptNode() before or during open/write may cause
-         * styles with uppercase characters in class names (e.g. ".MyClass") to not apply correctly.
+         * In Chrome, calling adoptNode() while the document is still "open"
+         * (between document.open() and document.close()) causes CSS rules with
+         * uppercase characters in class names (e.g. ".MyClass") to not match
+         * correctly. Chrome's CSS engine only enters a fully-resolved matching
+         * mode once the document is closed.
          *
-         * Fix:
-         *   - Make sure adoptNode() is called after documentClone.open() and close()
-         *   - This allows Chrome to properly match and apply all CSS rules including mixed-case class selectors.
-         * */
+         * Correct order: open() → write() → close() → adoptNode() → replaceChild()
+         *
+         * Timing: close() queues the iframe 'load' event; because JS is single-threaded,
+         * the synchronous adoptNode() and replaceChild() below complete before that
+         * event is dispatched. iframeLoader's setInterval will therefore see the body
+         * already populated on its first tick.
+         */
+        documentClone.close();
         const adoptedNode = documentClone.adoptNode(this.documentElement);
         addBase(adoptedNode, baseUri);
         documentClone.replaceChild(adoptedNode, documentClone.documentElement);
-        documentClone.close();
 
         return iframeLoad;
     }
@@ -830,22 +853,19 @@ const serializeDoctype = (doctype?: DocumentType | null): string => {
         if (doctype.name) {
             str += doctype.name;
         }
-
         if (doctype.internalSubset) {
-            str += doctype.internalSubset;
+            str += ' ' + doctype.internalSubset.replace(/"/g, '&quot;').replace(/>/g, '&gt;');
         }
-
         if (doctype.publicId) {
-            str += `"${doctype.publicId}"`;
+            str += ' PUBLIC "' + doctype.publicId.replace(/"/g, '&quot;') + '"';
+            if (doctype.systemId) {
+                str += ' "' + doctype.systemId.replace(/"/g, '&quot;') + '"';
+            }
+        } else if (doctype.systemId) {
+            str += ' SYSTEM "' + doctype.systemId.replace(/"/g, '&quot;') + '"';
         }
-
-        if (doctype.systemId) {
-            str += `"${doctype.systemId}"`;
-        }
-
         str += '>';
     }
-
     return str;
 };
 
