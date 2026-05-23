@@ -174,10 +174,11 @@ export class DocumentCloner {
             return iframe;
         });
         /**
-         * The baseURI of the document will be lost after documentClone.open().
-         * We save it before open() to preserve the original base URI for resource resolution.
-         * */
-        const baseUri = documentClone.baseURI;
+         * The base URI used for resolving relative URLs (e.g. background-image) in the clone.
+         * Must come from the source document: the iframe document is about:blank, so
+         * documentClone.baseURI would break getComputedStyle() for relative background URLs.
+         */
+        const baseUri = ownerDocument.baseURI;
         documentClone.open();
         const rawHTML = serializeDoctype(document.doctype) + '<html></html>';
         try {
