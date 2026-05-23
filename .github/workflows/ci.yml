@@ -135,6 +135,8 @@ jobs:
               with:
                   name: build
                   path: build
+            - name: Ensure karma prerequisites
+              run: npm run prekarma
             - name: xcode selection
               if: ${{ matrix.config.xcode != '' }}
               run: sudo xcode-select -s "${{ matrix.config.xcode }}"
