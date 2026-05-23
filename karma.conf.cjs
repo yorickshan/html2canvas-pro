@@ -288,7 +288,12 @@ module.exports = function(config) {
 
         captureTimeout: 300000,
 
-        browserDisconnectTimeout: 60000,
+        // Safari on CI (especially newer macOS runners) can be slow to establish
+        // socket.io heartbeats; generous timeouts avoid false ping-timeout failures.
+        pingTimeout: 120000,
+        browserSocketTimeout: 120000,
+        browserDisconnectTimeout: 120000,
+        browserDisconnectTolerance: 3,
 
         browserNoActivityTimeout: 1200000
     })

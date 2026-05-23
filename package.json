@@ -14,7 +14,7 @@
       "default": "./dist/html2canvas-pro.esm.js"
     }
   },
-  "version": "2.0.1",
+  "version": "2.0.3",
   "author": {
     "name": "yorickshan",
     "email": "yorickshan@gmail.com",
@@ -58,8 +58,8 @@
     "appium-ios-simulator": "^8.0.9",
     "base64-arraybuffer": "1.0.2",
     "body-parser": "^2.2.1",
-    "change-case": "^5.4.4",
     "chai": "6.2.2",
+    "change-case": "^5.4.4",
     "conventional-changelog-cli": "^5.0.0",
     "cors": "^2.8.5",
     "cz-conventional-changelog": "^3.3.0",
@@ -100,7 +100,7 @@
     "standard-version": "^9.5.0",
     "ts-jest": "^29.1.5",
     "ts-node": "^10.9.2",
-    "tslib": "^2.3.0",
+    "tsx": "^4.22.3",
     "typescript": "^5.5.4",
     "uglify-js": "^3.13.10",
     "vitepress": "^1.3.0",
@@ -119,7 +119,8 @@
     "test": "npm run lint && npm run unittest && npm run karma",
     "unittest": "jest",
     "reftests-diff": "mkdirp tmp/snapshots && jest --roots=tests --testMatch=**/reftest-diff.ts",
-    "karma": "npx tsx tests/karma",
+    "prekarma": "node scripts/ensure-karma-prereqs.mjs",
+    "karma": "tsx tests/karma",
     "watch": "rollup -c rollup.config.ts -w",
     "watch:unittest": "mocha --require tsx/register --watch-extensions ts -w src/**/__tests__/*.ts",
     "start": "npx tsx tests/server --port=8080 --cors=8081",

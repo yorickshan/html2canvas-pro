@@ -1,4 +1,18 @@
 
+### [2.0.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.0.2...v2.0.3) (2026-05-23)
+
+
+### Fixes
+
+* **document-cloner:** use source document baseURI for background-image resolution ([dc40f7c](https://github.com/yorickshan/html2canvas-pro/commit/dc40f7c9734afe141a8ff53876135aab0be4188d)), closes [#210](https://github.com/yorickshan/html2canvas-pro/issues/210)
+
+### [2.0.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.0.1...v2.0.2) (2026-02-26)
+
+
+### Fixes
+
+* **document-cloner:** ensure correct order for adoptNode() ([58bbe5d](https://github.com/yorickshan/html2canvas-pro/commit/58bbe5dcd80cfc22769863c3a5d6e7b24cf1d142))
+
 ### [2.0.1](https://github.com/yorickshan/html2canvas-pro/compare/v1.6.7...v2.0.1) (2026-02-24)
 
 
