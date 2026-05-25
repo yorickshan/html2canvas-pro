@@ -9,6 +9,11 @@ export class TextContainer {
 
     constructor(context: Context, node: Text, styles: CSSParsedDeclaration) {
         this.text = transform(node.data, styles.textTransform);
+        // Range offsets below are based on transformed text; keep the node in sync
+        // when casing changes string length, for example "ß".toUpperCase() === "SS".
+        if (this.text.length !== node.data.length) {
+            node.data = this.text;
+        }
         this.textBounds = parseTextBounds(context, this.text, styles, node);
     }
 }
