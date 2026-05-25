@@ -54,6 +54,7 @@ import { transformOrigin } from './property-descriptors/transform-origin';
 import { rotate } from './property-descriptors/rotate';
 import { visibility, VISIBILITY } from './property-descriptors/visibility';
 import { wordBreak } from './property-descriptors/word-break';
+import { writingMode } from './property-descriptors/writing-mode';
 import { zIndex } from './property-descriptors/z-index';
 import { CSSValue, isIdentToken, Parser } from './syntax/parser';
 import { Tokenizer } from './syntax/tokenizer';
@@ -164,6 +165,7 @@ export class CSSParsedDeclaration {
     webkitTextStrokeWidth: ReturnType<typeof webkitTextStrokeWidth.parse>;
     webkitLineClamp: ReturnType<typeof webkitLineClamp.parse>;
     wordBreak: ReturnType<typeof wordBreak.parse>;
+    writingMode: ReturnType<typeof writingMode.parse>;
     zIndex: ReturnType<typeof zIndex.parse>;
     objectFit: ReturnType<typeof objectFit.parse>;
     imageRendering: ReturnType<typeof imageRendering.parse>;
@@ -250,6 +252,7 @@ export class CSSParsedDeclaration {
         this.webkitTextStrokeWidth = parse(context, webkitTextStrokeWidth, declaration.webkitTextStrokeWidth);
         this.webkitLineClamp = parse(context, webkitLineClamp, declaration.webkitLineClamp);
         this.wordBreak = parse(context, wordBreak, declaration.wordBreak);
+        this.writingMode = parse(context, writingMode, declaration.writingMode);
         this.zIndex = parse(context, zIndex, declaration.zIndex);
         this.objectFit = parse(context, objectFit, declaration.objectFit);
         this.imageRendering = parse(context, imageRendering, declaration.imageRendering);

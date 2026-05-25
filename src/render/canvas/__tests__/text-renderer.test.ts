@@ -4,6 +4,7 @@ import { Context } from '../../../core/context';
 import { Bounds } from '../../../css/layout/bounds';
 import { TextBounds } from '../../../css/layout/text';
 import { Html2CanvasConfig } from '../../../config';
+import { WRITING_MODE } from '../../../css/property-descriptors/writing-mode';
 
 const createMockContext = (): Context => {
     const mockWindow = {
@@ -362,5 +363,109 @@ describe('renderTextWithLetterSpacing', () => {
         // Should not throw
         renderer.renderTextWithLetterSpacing(text, 5, 20);
         renderer.renderTextWithLetterSpacing(text, 0, 20);
+    });
+
+    it('should render CJK glyphs upright in vertical writing mode', () => {
+        const fillCalls: Array<{ text: string; x: number; y: number }> = [];
+        const baselineAtRender: Record<string, string> = {};
+        let currentBaseline: CanvasTextBaseline = 'alphabetic';
+
+        const ctx = {
+            fillStyle: '',
+            font: '',
+            get textBaseline(): CanvasTextBaseline {
+                return currentBaseline;
+            },
+            set textBaseline(value: CanvasTextBaseline) {
+                currentBaseline = value;
+            },
+            fillText(text: string, x: number, y: number) {
+                baselineAtRender[text] = currentBaseline;
+                fillCalls.push({ text, x, y });
+            },
+            measureText(_text: string) {
+                return { width: 20 };
+            },
+            save() {},
+            restore() {},
+            translate(_x: number, _y: number) {},
+            rotate(_angle: number) {}
+        } as unknown as CanvasRenderingContext2D;
+
+        const deps: TextRendererDependencies = {
+            ctx,
+            context: createMockContext(),
+            options: { scale: 1 }
+        };
+
+        const renderer = new TextRenderer(deps);
+        const bounds = new Bounds(100, 50, 24, 80);
+        const text = new TextBounds('縦書', bounds);
+
+        renderer.renderTextWithLetterSpacing(text, 4, 18, WRITING_MODE.VERTICAL_RL);
+
+        deepStrictEqual(fillCalls, [
+            { text: '縦', x: 100, y: 68 },
+            { text: '書', x: 100, y: 92 }
+        ]);
+        strictEqual(baselineAtRender['縦'], 'ideographic');
+        strictEqual(baselineAtRender['書'], 'ideographic');
+        strictEqual(currentBaseline, 'alphabetic');
+    });
+
+    it('should rotate Latin glyphs in vertical writing mode', () => {
+        const operations: string[] = [];
+        const fillCalls: Array<{ text: string; x: number; y: number }> = [];
+
+        const ctx = {
+            fillStyle: '',
+            font: '',
+            textBaseline: 'alphabetic' as CanvasTextBaseline,
+            fillText(text: string, x: number, y: number) {
+                fillCalls.push({ text, x, y });
+            },
+            measureText(_text: string) {
+                return { width: 12 };
+            },
+            save() {
+                operations.push('save');
+            },
+            restore() {
+                operations.push('restore');
+            },
+            translate(x: number, y: number) {
+                operations.push(`translate:${x},${y}`);
+            },
+            rotate(angle: number) {
+                operations.push(`rotate:${angle}`);
+            }
+        } as unknown as CanvasRenderingContext2D;
+
+        const deps: TextRendererDependencies = {
+            ctx,
+            context: createMockContext(),
+            options: { scale: 1 }
+        };
+
+        const renderer = new TextRenderer(deps);
+        const bounds = new Bounds(40, 10, 24, 60);
+        const text = new TextBounds('AB', bounds);
+
+        renderer.renderTextWithLetterSpacing(text, 2, 16, WRITING_MODE.VERTICAL_RL);
+
+        deepStrictEqual(fillCalls, [
+            { text: 'A', x: 0, y: 0 },
+            { text: 'B', x: 0, y: 0 }
+        ]);
+        deepStrictEqual(operations, [
+            'save',
+            'translate:56,10',
+            `rotate:${Math.PI / 2}`,
+            'restore',
+            'save',
+            'translate:56,24',
+            `rotate:${Math.PI / 2}`,
+            'restore'
+        ]);
     });
 });

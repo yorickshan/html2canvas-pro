@@ -426,7 +426,8 @@ export class CanvasRenderer extends Renderer {
             this.textRenderer.renderTextWithLetterSpacing(
                 new TextBounds(container.value, textBounds),
                 styles.letterSpacing,
-                baseline
+                baseline,
+                styles.writingMode
             );
             this.ctx.restore();
             this.ctx.textBaseline = 'alphabetic';
@@ -464,7 +465,8 @@ export class CanvasRenderer extends Renderer {
                 this.textRenderer.renderTextWithLetterSpacing(
                     new TextBounds(paint.listValue, bounds),
                     styles.letterSpacing,
-                    computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 2
+                    computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 2,
+                    styles.writingMode
                 );
                 this.ctx.textBaseline = 'bottom';
                 this.ctx.textAlign = 'left';

@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Writing mode text test</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                font-size: 24px;
+            }
+
+            .sample {
+                display: inline-block;
+                margin: 20px;
+                padding: 12px;
+                border: 1px solid #222;
+                line-height: 1.2;
+            }
+
+            .vertical-rl {
+                writing-mode: vertical-rl;
+                height: 180px;
+            }
+
+            .vertical-lr {
+                writing-mode: vertical-lr;
+                height: 180px;
+            }
+
+            .sideways-rl {
+                writing-mode: sideways-rl;
+                height: 180px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="sample vertical-rl">縦書きAB</div>
+        <div class="sample vertical-lr">縦書きCD</div>
+        <div class="sample sideways-rl">SIDE</div>
+    </body>
+</html>

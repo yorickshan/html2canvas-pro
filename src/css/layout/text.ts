@@ -5,6 +5,7 @@ import { splitGraphemes } from 'text-segmentation';
 import { Bounds, parseBounds } from './bounds';
 import { FEATURES } from '../../core/features';
 import { Context } from '../../core/context';
+import { isVerticalWritingMode } from '../property-descriptors/writing-mode';
 
 export class TextBounds {
     readonly text: string;
@@ -114,6 +115,10 @@ const segmentWords = (value: string, styles: CSSParsedDeclaration): string[] => 
 };
 
 const breakText = (value: string, styles: CSSParsedDeclaration): string[] => {
+    if (isVerticalWritingMode(styles.writingMode)) {
+        return segmentGraphemes(value);
+    }
+
     return styles.letterSpacing !== 0 ? segmentGraphemes(value) : segmentWords(value, styles);
 };
 

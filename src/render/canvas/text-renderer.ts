@@ -26,6 +26,11 @@ import { TEXT_OVERFLOW } from '../../css/property-descriptors/text-overflow';
 import { OVERFLOW } from '../../css/property-descriptors/overflow';
 import { isDimensionToken } from '../../css/syntax/parser';
 import { TextShadow } from '../../css/property-descriptors/text-shadow';
+import {
+    isSidewaysWritingMode,
+    isVerticalWritingMode,
+    WRITING_MODE
+} from '../../css/property-descriptors/writing-mode';
 
 /**
  * Dependencies required for TextRenderer
@@ -150,8 +155,14 @@ export class TextRenderer {
         text: TextBounds,
         letterSpacing: number,
         baseline: number,
+        writingMode: WRITING_MODE,
         renderFn: (letter: string, x: number, y: number) => void
     ): void {
+        if (isVerticalWritingMode(writingMode)) {
+            this.iterateVerticalGlyphs(text, letterSpacing, baseline, writingMode, renderFn);
+            return;
+        }
+
         const letters = segmentGraphemes(text.text);
         const y = text.bounds.top + baseline;
         let left = text.bounds.left;
@@ -168,16 +179,50 @@ export class TextRenderer {
         }
     }
 
+    private iterateVerticalGlyphs(
+        text: TextBounds,
+        letterSpacing: number,
+        baseline: number,
+        writingMode: WRITING_MODE,
+        renderFn: (letter: string, x: number, y: number) => void
+    ): void {
+        const letters = segmentGraphemes(text.text);
+        let top = text.bounds.top;
+
+        for (const letter of letters) {
+            if (isSidewaysWritingMode(writingMode) || (!hasCJKCharacters(letter) && letter.trim().length > 0)) {
+                this.ctx.save();
+                this.ctx.translate(text.bounds.left + baseline, top);
+                this.ctx.rotate(writingMode === WRITING_MODE.SIDEWAYS_LR ? -Math.PI / 2 : Math.PI / 2);
+                renderFn(letter, 0, 0);
+                this.ctx.restore();
+            } else {
+                const savedBaseline = this.ctx.textBaseline;
+                if (hasCJKCharacters(letter)) {
+                    this.ctx.textBaseline = 'ideographic';
+                }
+                renderFn(letter, text.bounds.left, top + baseline);
+                this.ctx.textBaseline = savedBaseline;
+            }
+            top += this.ctx.measureText(letter).width + letterSpacing;
+        }
+    }
+
     /**
      * Render text with letter-spacing applied (fill pass).
      * When letterSpacing is 0 the whole string is drawn in one call; otherwise each
      * grapheme is drawn individually so spacing and CJK baseline are applied correctly.
      */
-    renderTextWithLetterSpacing(text: TextBounds, letterSpacing: number, baseline: number): void {
-        if (letterSpacing === 0) {
+    renderTextWithLetterSpacing(
+        text: TextBounds,
+        letterSpacing: number,
+        baseline: number,
+        writingMode: WRITING_MODE = WRITING_MODE.HORIZONTAL_TB
+    ): void {
+        if (letterSpacing === 0 && !isVerticalWritingMode(writingMode)) {
             this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + baseline);
         } else {
-            this.iterateLettersWithLetterSpacing(text, letterSpacing, baseline, (letter, x, y) => {
+            this.iterateLettersWithLetterSpacing(text, letterSpacing, baseline, writingMode, (letter, x, y) => {
                 this.ctx.fillText(letter, x, y);
             });
         }
@@ -196,7 +241,12 @@ export class TextRenderer {
             switch (paintOrderLayer) {
                 case PAINT_ORDER_LAYER.FILL:
                     this.ctx.fillStyle = asString(styles.color);
-                    this.renderTextWithLetterSpacing(textBound, styles.letterSpacing, styles.fontSize.number);
+                    this.renderTextWithLetterSpacing(
+                        textBound,
+                        styles.letterSpacing,
+                        styles.fontSize.number,
+                        styles.writingMode
+                    );
                     break;
                 case PAINT_ORDER_LAYER.STROKE:
                     if (styles.webkitTextStrokeWidth && textBound.text.trim().length) {
@@ -204,7 +254,7 @@ export class TextRenderer {
                         this.ctx.lineWidth = styles.webkitTextStrokeWidth;
                         this.ctx.lineJoin =
                             typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
-                        if (styles.letterSpacing === 0) {
+                        if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
                             this.ctx.strokeText(
                                 textBound.text,
                                 textBound.bounds.left,
@@ -215,6 +265,7 @@ export class TextRenderer {
                                 textBound,
                                 styles.letterSpacing,
                                 styles.fontSize.number,
+                                styles.writingMode,
                                 (letter, x, y) => this.ctx.strokeText(letter, x, y)
                             );
                         }
@@ -500,7 +551,7 @@ export class TextRenderer {
                         switch (paintOrderLayer) {
                             case PAINT_ORDER_LAYER.FILL:
                                 this.ctx.fillStyle = asString(styles.color);
-                                if (styles.letterSpacing === 0) {
+                                if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
                                     this.ctx.fillText(
                                         truncatedText,
                                         firstBound.bounds.left,
@@ -511,6 +562,7 @@ export class TextRenderer {
                                         truncatedBounds,
                                         styles.letterSpacing,
                                         styles.fontSize.number,
+                                        styles.writingMode,
                                         (letter, x, y) => this.ctx.fillText(letter, x, y)
                                     );
                                 }
@@ -521,7 +573,7 @@ export class TextRenderer {
                                     this.ctx.lineWidth = styles.webkitTextStrokeWidth;
                                     this.ctx.lineJoin =
                                         typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
-                                    if (styles.letterSpacing === 0) {
+                                    if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
                                         this.ctx.strokeText(
                                             truncatedText,
                                             firstBound.bounds.left,
@@ -532,6 +584,7 @@ export class TextRenderer {
                                             truncatedBounds,
                                             styles.letterSpacing,
                                             styles.fontSize.number,
+                                            styles.writingMode,
                                             (letter, x, y) => this.ctx.strokeText(letter, x, y)
                                         );
                                     }
@@ -598,7 +651,7 @@ export class TextRenderer {
                     case PAINT_ORDER_LAYER.FILL: {
                         this.ctx.fillStyle = asString(styles.color);
 
-                        if (styles.letterSpacing === 0) {
+                        if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
                             this.ctx.fillText(
                                 truncatedText,
                                 firstBound.bounds.left,
@@ -609,6 +662,7 @@ export class TextRenderer {
                                 truncatedBounds,
                                 styles.letterSpacing,
                                 styles.fontSize.number,
+                                styles.writingMode,
                                 (letter, x, y) => this.ctx.fillText(letter, x, y)
                             );
                         }
@@ -624,7 +678,7 @@ export class TextRenderer {
                                     this.ctx.shadowOffsetY = textShadow.offsetY.number * this.options.scale;
                                     this.ctx.shadowBlur = textShadow.blur.number;
 
-                                    if (styles.letterSpacing === 0) {
+                                    if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
                                         this.ctx.fillText(
                                             truncatedText,
                                             firstBound.bounds.left,
@@ -635,6 +689,7 @@ export class TextRenderer {
                                             truncatedBounds,
                                             styles.letterSpacing,
                                             styles.fontSize.number,
+                                            styles.writingMode,
                                             (letter, x, y) => this.ctx.fillText(letter, x, y)
                                         );
                                     }
@@ -654,7 +709,7 @@ export class TextRenderer {
                             this.ctx.lineJoin =
                                 typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
 
-                            if (styles.letterSpacing === 0) {
+                            if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
                                 this.ctx.strokeText(
                                     truncatedText,
                                     firstBound.bounds.left,
@@ -665,6 +720,7 @@ export class TextRenderer {
                                     truncatedBounds,
                                     styles.letterSpacing,
                                     styles.fontSize.number,
+                                    styles.writingMode,
                                     (letter, x, y) => this.ctx.strokeText(letter, x, y)
                                 );
                             }
@@ -684,7 +740,12 @@ export class TextRenderer {
                 switch (paintOrderLayer) {
                     case PAINT_ORDER_LAYER.FILL: {
                         this.ctx.fillStyle = asString(styles.color);
-                        this.renderTextWithLetterSpacing(text, styles.letterSpacing, styles.fontSize.number);
+                        this.renderTextWithLetterSpacing(
+                            text,
+                            styles.letterSpacing,
+                            styles.fontSize.number,
+                            styles.writingMode
+                        );
                         const textShadows: TextShadow = styles.textShadow;
 
                         if (textShadows.length && text.text.trim().length) {
@@ -700,7 +761,8 @@ export class TextRenderer {
                                     this.renderTextWithLetterSpacing(
                                         text,
                                         styles.letterSpacing,
-                                        styles.fontSize.number
+                                        styles.fontSize.number,
+                                        styles.writingMode
                                     );
                                 });
 
@@ -722,13 +784,14 @@ export class TextRenderer {
                             this.ctx.lineJoin =
                                 typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
                             const baseline = styles.fontSize.number;
-                            if (styles.letterSpacing === 0) {
+                            if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
                                 this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + baseline);
                             } else {
                                 this.iterateLettersWithLetterSpacing(
                                     text,
                                     styles.letterSpacing,
                                     baseline,
+                                    styles.writingMode,
                                     (letter, x, y) => this.ctx.strokeText(letter, x, y)
                                 );
                             }
