@@ -1,4 +1,16 @@
 
+### [2.0.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.0.3...v2.0.4) (2026-05-26)
+
+
+### Features
+
+* **writing-mode:** implement writing mode support in text rendering and parsing ([a2d8a1c](https://github.com/yorickshan/html2canvas-pro/commit/a2d8a1c3382ec7d45f07a534a634ef5e10291af1))
+
+
+### Fixes
+
+* **text:** keep range offsets aligned after transform ([494b328](https://github.com/yorickshan/html2canvas-pro/commit/494b328bee5e864683f433a817865473e5293f87))
+
 ### [2.0.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.0.1...v2.0.3) (2026-05-23)
 
 
