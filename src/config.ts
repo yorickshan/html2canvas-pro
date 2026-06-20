@@ -37,13 +37,13 @@ export class Html2CanvasConfig {
     readonly cache?: Cache;
 
     constructor(options: ConfigOptions = {}) {
-        // Try to get window from options first, then fall back to global window
-        this.window = options.window || (typeof window !== 'undefined' ? window : (null as any));
+        const resolvedWindow = options.window || (typeof window !== 'undefined' ? window : undefined);
 
-        if (!this.window) {
+        if (!resolvedWindow) {
             throw new Error('Window object is required but not available');
         }
 
+        this.window = resolvedWindow;
         this.cspNonce = options.cspNonce;
         this.cache = options.cache;
     }

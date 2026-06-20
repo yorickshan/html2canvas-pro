@@ -383,16 +383,7 @@ export class DocumentCloner {
     }
 
     appendChildNode(clone: HTMLElement | SVGElement, child: Node, copyStyles: boolean): void {
-        if (
-            !isElementNode(child) ||
-            (!isScriptElement(child) &&
-                !child.hasAttribute(IGNORE_ATTRIBUTE) &&
-                (typeof this.options.ignoreElements !== 'function' || !this.options.ignoreElements(child)))
-        ) {
-            if (!this.options.copyStyles || !isElementNode(child) || !isStyleElement(child)) {
-                clone.appendChild(this.cloneNode(child, copyStyles));
-            }
-        }
+        this.safeAppendClonedChild(clone, child, copyStyles);
     }
 
     /**

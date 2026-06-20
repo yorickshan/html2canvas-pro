@@ -120,6 +120,11 @@ const fixIOSSystemFonts = (fontFamilies: string[]): string[] => {
     return fontFamilies;
 };
 
+const getTextStrokeLineJoin = (): CanvasLineJoin => {
+    const currentWindow = typeof window !== 'undefined' ? (window as Window & { chrome?: unknown }) : undefined;
+    return currentWindow?.chrome ? 'miter' : 'round';
+};
+
 /**
  * Text Renderer
  *
@@ -219,12 +224,79 @@ export class TextRenderer {
         baseline: number,
         writingMode: WRITING_MODE = WRITING_MODE.HORIZONTAL_TB
     ): void {
-        if (letterSpacing === 0 && !isVerticalWritingMode(writingMode)) {
+        this.renderFillText(text, letterSpacing, baseline, writingMode);
+    }
+
+    private canRenderWholeText(letterSpacing: number, writingMode: WRITING_MODE): boolean {
+        return letterSpacing === 0 && !isVerticalWritingMode(writingMode);
+    }
+
+    private renderFillText(text: TextBounds, letterSpacing: number, baseline: number, writingMode: WRITING_MODE): void {
+        if (this.canRenderWholeText(letterSpacing, writingMode)) {
             this.ctx.fillText(text.text, text.bounds.left, text.bounds.top + baseline);
         } else {
             this.iterateLettersWithLetterSpacing(text, letterSpacing, baseline, writingMode, (letter, x, y) => {
                 this.ctx.fillText(letter, x, y);
             });
+        }
+    }
+
+    private renderStrokeText(
+        text: TextBounds,
+        letterSpacing: number,
+        baseline: number,
+        writingMode: WRITING_MODE
+    ): void {
+        if (this.canRenderWholeText(letterSpacing, writingMode)) {
+            this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + baseline);
+        } else {
+            this.iterateLettersWithLetterSpacing(text, letterSpacing, baseline, writingMode, (letter, x, y) => {
+                this.ctx.strokeText(letter, x, y);
+            });
+        }
+    }
+
+    private renderTextStrokeWithStyle(text: TextBounds, styles: CSSParsedDeclaration): void {
+        if (!styles.webkitTextStrokeWidth || !text.text.trim().length) {
+            return;
+        }
+
+        this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
+        this.ctx.lineWidth = styles.webkitTextStrokeWidth;
+        this.ctx.lineJoin = getTextStrokeLineJoin();
+        this.renderStrokeText(text, styles.letterSpacing, styles.fontSize.number, styles.writingMode);
+        this.ctx.strokeStyle = '';
+        this.ctx.lineWidth = 0;
+        this.ctx.lineJoin = 'miter';
+    }
+
+    private renderTextFillWithShadows(text: TextBounds, styles: CSSParsedDeclaration): void {
+        this.ctx.fillStyle = asString(styles.color);
+        this.renderTextWithLetterSpacing(text, styles.letterSpacing, styles.fontSize.number, styles.writingMode);
+
+        const textShadows: TextShadow = styles.textShadow;
+        if (textShadows.length && text.text.trim().length) {
+            textShadows
+                .slice(0)
+                .reverse()
+                .forEach((textShadow) => {
+                    this.ctx.shadowColor = asString(textShadow.color);
+                    this.ctx.shadowOffsetX = textShadow.offsetX.number * this.options.scale;
+                    this.ctx.shadowOffsetY = textShadow.offsetY.number * this.options.scale;
+                    this.ctx.shadowBlur = textShadow.blur.number;
+
+                    this.renderTextWithLetterSpacing(
+                        text,
+                        styles.letterSpacing,
+                        styles.fontSize.number,
+                        styles.writingMode
+                    );
+                });
+
+            this.ctx.shadowColor = '';
+            this.ctx.shadowOffsetX = 0;
+            this.ctx.shadowOffsetY = 0;
+            this.ctx.shadowBlur = 0;
         }
     }
 
@@ -249,30 +321,7 @@ export class TextRenderer {
                     );
                     break;
                 case PAINT_ORDER_LAYER.STROKE:
-                    if (styles.webkitTextStrokeWidth && textBound.text.trim().length) {
-                        this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
-                        this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                        this.ctx.lineJoin =
-                            typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
-                        if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
-                            this.ctx.strokeText(
-                                textBound.text,
-                                textBound.bounds.left,
-                                textBound.bounds.top + styles.fontSize.number
-                            );
-                        } else {
-                            this.iterateLettersWithLetterSpacing(
-                                textBound,
-                                styles.letterSpacing,
-                                styles.fontSize.number,
-                                styles.writingMode,
-                                (letter, x, y) => this.ctx.strokeText(letter, x, y)
-                            );
-                        }
-                        this.ctx.strokeStyle = '';
-                        this.ctx.lineWidth = 0;
-                        this.ctx.lineJoin = 'miter';
-                    }
+                    this.renderTextStrokeWithStyle(textBound, styles);
                     break;
             }
         });
@@ -551,47 +600,15 @@ export class TextRenderer {
                         switch (paintOrderLayer) {
                             case PAINT_ORDER_LAYER.FILL:
                                 this.ctx.fillStyle = asString(styles.color);
-                                if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
-                                    this.ctx.fillText(
-                                        truncatedText,
-                                        firstBound.bounds.left,
-                                        firstBound.bounds.top + styles.fontSize.number
-                                    );
-                                } else {
-                                    this.iterateLettersWithLetterSpacing(
-                                        truncatedBounds,
-                                        styles.letterSpacing,
-                                        styles.fontSize.number,
-                                        styles.writingMode,
-                                        (letter, x, y) => this.ctx.fillText(letter, x, y)
-                                    );
-                                }
+                                this.renderTextWithLetterSpacing(
+                                    truncatedBounds,
+                                    styles.letterSpacing,
+                                    styles.fontSize.number,
+                                    styles.writingMode
+                                );
                                 break;
                             case PAINT_ORDER_LAYER.STROKE:
-                                if (styles.webkitTextStrokeWidth && truncatedText.trim().length) {
-                                    this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
-                                    this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                                    this.ctx.lineJoin =
-                                        typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
-                                    if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
-                                        this.ctx.strokeText(
-                                            truncatedText,
-                                            firstBound.bounds.left,
-                                            firstBound.bounds.top + styles.fontSize.number
-                                        );
-                                    } else {
-                                        this.iterateLettersWithLetterSpacing(
-                                            truncatedBounds,
-                                            styles.letterSpacing,
-                                            styles.fontSize.number,
-                                            styles.writingMode,
-                                            (letter, x, y) => this.ctx.strokeText(letter, x, y)
-                                        );
-                                    }
-                                    this.ctx.strokeStyle = '';
-                                    this.ctx.lineWidth = 0;
-                                    this.ctx.lineJoin = 'miter';
-                                }
+                                this.renderTextStrokeWithStyle(truncatedBounds, styles);
                                 break;
                         }
                     });
@@ -649,85 +666,11 @@ export class TextRenderer {
             paintOrder.forEach((paintOrderLayer) => {
                 switch (paintOrderLayer) {
                     case PAINT_ORDER_LAYER.FILL: {
-                        this.ctx.fillStyle = asString(styles.color);
-
-                        if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
-                            this.ctx.fillText(
-                                truncatedText,
-                                firstBound.bounds.left,
-                                firstBound.bounds.top + styles.fontSize.number
-                            );
-                        } else {
-                            this.iterateLettersWithLetterSpacing(
-                                truncatedBounds,
-                                styles.letterSpacing,
-                                styles.fontSize.number,
-                                styles.writingMode,
-                                (letter, x, y) => this.ctx.fillText(letter, x, y)
-                            );
-                        }
-
-                        const textShadows: TextShadow = styles.textShadow;
-                        if (textShadows.length && truncatedText.trim().length) {
-                            textShadows
-                                .slice(0)
-                                .reverse()
-                                .forEach((textShadow) => {
-                                    this.ctx.shadowColor = asString(textShadow.color);
-                                    this.ctx.shadowOffsetX = textShadow.offsetX.number * this.options.scale;
-                                    this.ctx.shadowOffsetY = textShadow.offsetY.number * this.options.scale;
-                                    this.ctx.shadowBlur = textShadow.blur.number;
-
-                                    if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
-                                        this.ctx.fillText(
-                                            truncatedText,
-                                            firstBound.bounds.left,
-                                            firstBound.bounds.top + styles.fontSize.number
-                                        );
-                                    } else {
-                                        this.iterateLettersWithLetterSpacing(
-                                            truncatedBounds,
-                                            styles.letterSpacing,
-                                            styles.fontSize.number,
-                                            styles.writingMode,
-                                            (letter, x, y) => this.ctx.fillText(letter, x, y)
-                                        );
-                                    }
-                                });
-
-                            this.ctx.shadowColor = '';
-                            this.ctx.shadowOffsetX = 0;
-                            this.ctx.shadowOffsetY = 0;
-                            this.ctx.shadowBlur = 0;
-                        }
+                        this.renderTextFillWithShadows(truncatedBounds, styles);
                         break;
                     }
                     case PAINT_ORDER_LAYER.STROKE:
-                        if (styles.webkitTextStrokeWidth && truncatedText.trim().length) {
-                            this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
-                            this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                            this.ctx.lineJoin =
-                                typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
-
-                            if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
-                                this.ctx.strokeText(
-                                    truncatedText,
-                                    firstBound.bounds.left,
-                                    firstBound.bounds.top + styles.fontSize.number
-                                );
-                            } else {
-                                this.iterateLettersWithLetterSpacing(
-                                    truncatedBounds,
-                                    styles.letterSpacing,
-                                    styles.fontSize.number,
-                                    styles.writingMode,
-                                    (letter, x, y) => this.ctx.strokeText(letter, x, y)
-                                );
-                            }
-                            this.ctx.strokeStyle = '';
-                            this.ctx.lineWidth = 0;
-                            this.ctx.lineJoin = 'miter';
-                        }
+                        this.renderTextStrokeWithStyle(truncatedBounds, styles);
                         break;
                 }
             });
@@ -739,38 +682,7 @@ export class TextRenderer {
             paintOrder.forEach((paintOrderLayer) => {
                 switch (paintOrderLayer) {
                     case PAINT_ORDER_LAYER.FILL: {
-                        this.ctx.fillStyle = asString(styles.color);
-                        this.renderTextWithLetterSpacing(
-                            text,
-                            styles.letterSpacing,
-                            styles.fontSize.number,
-                            styles.writingMode
-                        );
-                        const textShadows: TextShadow = styles.textShadow;
-
-                        if (textShadows.length && text.text.trim().length) {
-                            textShadows
-                                .slice(0)
-                                .reverse()
-                                .forEach((textShadow) => {
-                                    this.ctx.shadowColor = asString(textShadow.color);
-                                    this.ctx.shadowOffsetX = textShadow.offsetX.number * this.options.scale;
-                                    this.ctx.shadowOffsetY = textShadow.offsetY.number * this.options.scale;
-                                    this.ctx.shadowBlur = textShadow.blur.number;
-
-                                    this.renderTextWithLetterSpacing(
-                                        text,
-                                        styles.letterSpacing,
-                                        styles.fontSize.number,
-                                        styles.writingMode
-                                    );
-                                });
-
-                            this.ctx.shadowColor = '';
-                            this.ctx.shadowOffsetX = 0;
-                            this.ctx.shadowOffsetY = 0;
-                            this.ctx.shadowBlur = 0;
-                        }
+                        this.renderTextFillWithShadows(text, styles);
 
                         if (styles.textDecorationLine.length) {
                             this.renderTextDecoration(text.bounds, styles);
@@ -778,27 +690,7 @@ export class TextRenderer {
                         break;
                     }
                     case PAINT_ORDER_LAYER.STROKE: {
-                        if (styles.webkitTextStrokeWidth && text.text.trim().length) {
-                            this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
-                            this.ctx.lineWidth = styles.webkitTextStrokeWidth;
-                            this.ctx.lineJoin =
-                                typeof window !== 'undefined' && !!(window as any).chrome ? 'miter' : 'round';
-                            const baseline = styles.fontSize.number;
-                            if (styles.letterSpacing === 0 && !isVerticalWritingMode(styles.writingMode)) {
-                                this.ctx.strokeText(text.text, text.bounds.left, text.bounds.top + baseline);
-                            } else {
-                                this.iterateLettersWithLetterSpacing(
-                                    text,
-                                    styles.letterSpacing,
-                                    baseline,
-                                    styles.writingMode,
-                                    (letter, x, y) => this.ctx.strokeText(letter, x, y)
-                                );
-                            }
-                            this.ctx.strokeStyle = '';
-                            this.ctx.lineWidth = 0;
-                            this.ctx.lineJoin = 'miter';
-                        }
+                        this.renderTextStrokeWithStyle(text, styles);
                         break;
                     }
                 }

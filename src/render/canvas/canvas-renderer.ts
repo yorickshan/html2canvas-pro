@@ -6,7 +6,6 @@ import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
 import { Path, transformPath } from '../path';
 import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
 import { BoundCurves, calculateBorderBoxPath, calculateContentBoxPath, calculatePaddingBoxPath } from '../bound-curves';
-import { isBezierCurve } from '../bezier-curve';
 import { Vector } from '../vector';
 import { CSSImageType, CSSURLImage } from '../../css/types/image';
 import { getBackgroundValueForIndex } from '../background';
@@ -42,7 +41,8 @@ import { BackgroundRenderer } from './background-renderer';
 import { BorderRenderer } from './border-renderer';
 import { EffectsRenderer } from './effects-renderer';
 import { TextRenderer } from './text-renderer';
-import { OBJECT_FIT } from '../../css/property-descriptors/object-fit';
+import { createCanvasPath, formatCanvasPath } from './canvas-path';
+import { calculateObjectFitRendering } from '../object-fit';
 
 export type RenderConfigurations = RenderOptions & {
     backgroundColor: Color | null;
@@ -177,76 +177,12 @@ export class CanvasRenderer extends Renderer {
             this.path(path);
             this.ctx.save();
             this.ctx.clip();
-            let sx = 0,
-                sy = 0,
-                sw: number = intrinsicWidth,
-                sh: number = intrinsicHeight,
-                dx: number = box.left,
-                dy: number = box.top,
-                dw: number = box.width,
-                dh: number = box.height;
-            const { objectFit } = container.styles;
-            const boxRatio = dw / dh;
-            const imgRatio = sw / sh;
-            if (objectFit === OBJECT_FIT.CONTAIN) {
-                if (imgRatio > boxRatio) {
-                    dh = dw / imgRatio;
-                    dy += (box.height - dh) / 2;
-                } else {
-                    dw = dh * imgRatio;
-                    dx += (box.width - dw) / 2;
-                }
-            } else if (objectFit === OBJECT_FIT.COVER) {
-                if (imgRatio > boxRatio) {
-                    sw = sh * boxRatio;
-                    sx += (intrinsicWidth - sw) / 2;
-                } else {
-                    sh = sw / boxRatio;
-                    sy += (intrinsicHeight - sh) / 2;
-                }
-            } else if (objectFit === OBJECT_FIT.NONE) {
-                if (sw > dw) {
-                    sx += (sw - dw) / 2;
-                    sw = dw;
-                } else {
-                    dx += (dw - sw) / 2;
-                    dw = sw;
-                }
-                if (sh > dh) {
-                    sy += (sh - dh) / 2;
-                    sh = dh;
-                } else {
-                    dy += (dh - sh) / 2;
-                    dh = sh;
-                }
-            } else if (objectFit === OBJECT_FIT.SCALE_DOWN) {
-                const containW = imgRatio > boxRatio ? dw : dh * imgRatio;
-                const noneW = sw > dw ? sw : dw;
-                if (containW < noneW) {
-                    if (imgRatio > boxRatio) {
-                        dh = dw / imgRatio;
-                        dy += (box.height - dh) / 2;
-                    } else {
-                        dw = dh * imgRatio;
-                        dx += (box.width - dw) / 2;
-                    }
-                } else {
-                    if (sw > dw) {
-                        sx += (sw - dw) / 2;
-                        sw = dw;
-                    } else {
-                        dx += (dw - sw) / 2;
-                        dw = sw;
-                    }
-                    if (sh > dh) {
-                        sy += (sh - dh) / 2;
-                        sh = dh;
-                    } else {
-                        dy += (dh - sh) / 2;
-                        dh = sh;
-                    }
-                }
-            }
+            const { sx, sy, sw, sh, dx, dy, dw, dh } = calculateObjectFitRendering(
+                intrinsicWidth,
+                intrinsicHeight,
+                box,
+                container.styles.objectFit
+            );
             this.ctx.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
             this.ctx.restore();
         }
@@ -540,31 +476,11 @@ export class CanvasRenderer extends Renderer {
     }
 
     path(paths: Path[]): void {
-        this.ctx.beginPath();
-        this.formatPath(paths);
-        this.ctx.closePath();
+        createCanvasPath(this.ctx, paths);
     }
 
     formatPath(paths: Path[]): void {
-        paths.forEach((point, index) => {
-            const start: Vector = isBezierCurve(point) ? point.start : point;
-            if (index === 0) {
-                this.ctx.moveTo(start.x, start.y);
-            } else {
-                this.ctx.lineTo(start.x, start.y);
-            }
-
-            if (isBezierCurve(point)) {
-                this.ctx.bezierCurveTo(
-                    point.startControl.x,
-                    point.startControl.y,
-                    point.endControl.x,
-                    point.endControl.y,
-                    point.end.x,
-                    point.end.y
-                );
-            }
-        });
+        formatCanvasPath(this.ctx, paths);
     }
 
     async renderNodeBackgroundAndBorders(paint: ElementPaint): Promise<void> {

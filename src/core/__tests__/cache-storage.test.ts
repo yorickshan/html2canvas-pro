@@ -1,4 +1,4 @@
-import { strictEqual, ok } from 'assert';
+import { strictEqual, ok, deepStrictEqual } from 'assert';
 import { Cache, ResourceOptions } from '../cache-storage';
 import { Context } from '../context';
 import { Bounds } from '../../css/layout/bounds';
@@ -163,6 +163,16 @@ describe('Cache LRU', () => {
 
         cache.clear();
         strictEqual(cache.size(), 0);
+    });
+
+    it('should return cache keys', async () => {
+        const blob1 = 'blob:http://localhost/image1';
+        const blob2 = 'blob:http://localhost/image2';
+
+        cache.addImage(blob1);
+        cache.addImage(blob2);
+
+        deepStrictEqual(await cache.keys(), [blob1, blob2]);
     });
 
     it('should throw error for invalid max size', () => {

@@ -12,14 +12,20 @@
 import { Context } from '../../core/context';
 import { ElementContainer } from '../../dom/element-container';
 import { Path } from '../path';
-import { CSSImageType, CSSURLImage, isLinearGradient, isRadialGradient } from '../../css/types/image';
+import {
+    CSSImageType,
+    CSSLinearGradientImage,
+    CSSRadialGradientImage,
+    CSSURLImage,
+    isLinearGradient,
+    isRadialGradient
+} from '../../css/types/image';
 import { calculateBackgroundRendering } from '../background';
 import { calculateGradientDirection, calculateRadius, processColorStops } from '../../css/types/functions/gradient';
 import { FIFTY_PERCENT, getAbsoluteValue } from '../../css/types/length-percentage';
 import { asString } from '../../css/types/color-utilities';
-import { isBezierCurve } from '../bezier-curve';
-import { Vector } from '../vector';
 import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering';
+import { createCanvasPath } from './canvas-path';
 
 /**
  * Dependencies required for BackgroundRenderer
@@ -108,7 +114,11 @@ export class BackgroundRenderer {
     /**
      * Render a linear gradient background
      */
-    private renderLinearGradient(container: ElementContainer, backgroundImage: any, index: number): void {
+    private renderLinearGradient(
+        container: ElementContainer,
+        backgroundImage: CSSLinearGradientImage,
+        index: number
+    ): void {
         const [path, x, y, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
         const [lineLength, x0, x1, y0, y1] = calculateGradientDirection(backgroundImage.angle, width, height);
 
@@ -134,7 +144,11 @@ export class BackgroundRenderer {
     /**
      * Render a radial gradient background
      */
-    private renderRadialGradient(container: ElementContainer, backgroundImage: any, index: number): void {
+    private renderRadialGradient(
+        container: ElementContainer,
+        backgroundImage: CSSRadialGradientImage,
+        index: number
+    ): void {
         const [path, left, top, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
         const position = backgroundImage.position.length === 0 ? [FIFTY_PERCENT] : backgroundImage.position;
         const x = getAbsoluteValue(position[0], width);
@@ -252,35 +266,6 @@ export class BackgroundRenderer {
      * @param paths - Array of path points
      */
     private path(paths: Path[]): void {
-        this.ctx.beginPath();
-        this.formatPath(paths);
-        this.ctx.closePath();
-    }
-
-    /**
-     * Format path points into canvas path
-     *
-     * @param paths - Array of path points
-     */
-    private formatPath(paths: Path[]): void {
-        paths.forEach((point, index) => {
-            const start: Vector = isBezierCurve(point) ? point.start : point;
-            if (index === 0) {
-                this.ctx.moveTo(start.x, start.y);
-            } else {
-                this.ctx.lineTo(start.x, start.y);
-            }
-
-            if (isBezierCurve(point)) {
-                this.ctx.bezierCurveTo(
-                    point.startControl.x,
-                    point.startControl.y,
-                    point.endControl.x,
-                    point.endControl.y,
-                    point.end.x,
-                    point.end.y
-                );
-            }
-        });
+        createCanvasPath(this.ctx, paths);
     }
 }

@@ -112,16 +112,12 @@ export class Cache {
     }
 
     private async _addImageInternal(src: string): Promise<void> {
-        // Create image load promise with timeout protection
         const timeoutMs = this._options.imageTimeout ?? 15000;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => {
-                reject(new Error(`Image load timeout after ${timeoutMs}ms: ${src}`));
-            }, timeoutMs);
-        });
-
-        // Race between image load and timeout
-        const imageWithTimeout = Promise.race([this.loadImage(src), timeoutPromise]);
+        const imageWithTimeout = this.withTimeout(
+            this.loadImage(src),
+            timeoutMs,
+            `Timed out (${timeoutMs}ms) loading image`
+        );
 
         // Handle errors to prevent unhandled rejections
         imageWithTimeout.catch((error) => {
@@ -132,6 +128,23 @@ export class Cache {
 
         // Store the promise with timeout in cache
         this.set(src, imageWithTimeout);
+    }
+
+    private withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+        if (timeoutMs <= 0) {
+            return promise;
+        }
+
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+        });
+
+        return Promise.race([promise, timeout]).finally(() => {
+            if (timeoutId !== undefined) {
+                clearTimeout(timeoutId);
+            }
+        });
     }
 
     match(src: string): Promise<any> | undefined {
@@ -256,12 +269,6 @@ export class Cache {
                 // Inline XML images may fail to parse, throwing an Error later on
                 setTimeout(() => resolve(img), 500);
             }
-            if (this._options.imageTimeout > 0) {
-                setTimeout(
-                    () => reject(`Timed out (${this._options.imageTimeout}ms) loading image`),
-                    this._options.imageTimeout
-                );
-            }
         });
     }
 
@@ -270,7 +277,7 @@ export class Cache {
     }
 
     keys(): Promise<string[]> {
-        return Promise.resolve(Object.keys(this._cache));
+        return Promise.resolve(Array.from(this._cache.keys()));
     }
 
     private proxy(src: string): Promise<string> {

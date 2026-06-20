@@ -79,7 +79,7 @@ export class ElementPaint {
             this.effects.push(new TransformEffect(offsetX, offsetY, matrix));
         }
 
-        if (this.container.styles.overflowX !== OVERFLOW.VISIBLE) {
+        if (hasOverflowClip(this.container.styles)) {
             const borderBox = calculateBorderBoxPath(this.curves);
             const paddingBox = calculatePaddingBoxPath(this.curves);
 
@@ -107,7 +107,7 @@ export class ElementPaint {
             const croplessEffects = parent.effects.filter((effect) => !isClipEffect(effect));
             if (inFlow || parent.container.styles.position !== POSITION.STATIC || !parent.parent) {
                 inFlow = [POSITION.ABSOLUTE, POSITION.FIXED].indexOf(parent.container.styles.position) === -1;
-                if (parent.container.styles.overflowX !== OVERFLOW.VISIBLE) {
+                if (hasOverflowClip(parent.container.styles)) {
                     const borderBox = calculateBorderBoxPath(parent.curves);
                     const paddingBox = calculatePaddingBoxPath(parent.curves);
                     if (!equalPath(borderBox, paddingBox)) {
@@ -127,6 +127,9 @@ export class ElementPaint {
         return effects.filter((effect) => contains(effect.target, target));
     }
 }
+
+const hasOverflowClip = (styles: ElementContainer['styles']): boolean =>
+    styles.overflowX !== OVERFLOW.VISIBLE || styles.overflowY !== OVERFLOW.VISIBLE;
 
 /**
  * Resolve a `closest-side` or `farthest-side` shape-radius keyword to pixels
