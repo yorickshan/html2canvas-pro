@@ -263,7 +263,7 @@ describe('cache-storage', () => {
 
         const response = await cache.match('http://example.com/test.jpg');
 
-        deepStrictEqual(response.src, 'http://example.com/test.jpg');
+        deepStrictEqual((response as HTMLImageElement).src, 'http://example.com/test.jpg');
     });
 
     it('image should respect imageTimeout', async () => {

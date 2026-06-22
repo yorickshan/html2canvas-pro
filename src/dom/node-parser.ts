@@ -12,37 +12,50 @@ import { TextareaElementContainer } from './elements/textarea-element-container'
 import { IFrameElementContainer } from './replaced-elements/iframe-element-container';
 import { Context } from '../core/context';
 import {
-    isElementNode,
-    isTextNode,
-    isSVGElementNode,
-    isHTMLElementNode,
-    isLIElement,
-    isOLElement,
-    isCustomElement
-} from './node-type-guards';
-
-// Re-export all type guards from node-type-guards for backward compatibility
-export {
-    isElementNode,
-    isTextNode,
-    isSVGElementNode,
-    isHTMLElementNode,
-    isLIElement,
-    isOLElement,
-    isCustomElement,
-    isInputElement,
-    isHTMLElement,
-    isSVGElement,
     isBodyElement,
     isCanvasElement,
-    isVideoElement,
-    isImageElement,
+    isCustomElement,
+    isElementNode,
+    isHTMLElement,
+    isHTMLElementNode,
     isIFrameElement,
-    isStyleElement,
+    isImageElement,
+    isInputElement,
+    isLIElement,
+    isOLElement,
     isScriptElement,
-    isTextareaElement,
     isSelectElement,
-    isSlotElement
+    isSlotElement,
+    isStyleElement,
+    isSVGElement,
+    isSVGElementNode,
+    isTextareaElement,
+    isTextNode,
+    isVideoElement
+} from './node-type-guards';
+
+// Re-export all type guards for backward compatibility
+export {
+    isBodyElement,
+    isCanvasElement,
+    isCustomElement,
+    isElementNode,
+    isHTMLElement,
+    isHTMLElementNode,
+    isIFrameElement,
+    isImageElement,
+    isInputElement,
+    isLIElement,
+    isOLElement,
+    isScriptElement,
+    isSelectElement,
+    isSlotElement,
+    isStyleElement,
+    isSVGElement,
+    isSVGElementNode,
+    isTextareaElement,
+    isTextNode,
+    isVideoElement
 };
 import { contains } from '../core/bitwise';
 import { DISPLAY } from '../css/property-descriptors/display';

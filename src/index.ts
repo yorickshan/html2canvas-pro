@@ -2,8 +2,9 @@ import { Html2CanvasConfig, ConfigOptions, setDefaultConfig } from './config';
 import { createDefaultValidator, Validator, ValidationResult } from './core/validator';
 import { PerformanceMonitor } from './core/performance-monitor';
 import { renderElement } from './core/render-element';
+import type { Options } from './options';
 
-export type { Options } from './options';
+export type { Options };
 
 /**
  * Renders an HTML element to a `<canvas>` element.

@@ -119,9 +119,11 @@ describe('ElementContainer', () => {
         strictEqual(container.elements.length, 0);
     });
 
-    it('should initialize flags to 0', () => {
+    it('should initialize stacking context flags to false', () => {
         const container = new ElementContainer(context, mockElement);
 
-        strictEqual(container.flags, 0);
+        strictEqual(container.createsStackingContext, false);
+        strictEqual(container.createsRealStackingContext, false);
+        strictEqual(container.isListOwner, false);
     });
 });

@@ -227,7 +227,7 @@ export class CanvasRenderer {
                 }
                 // IMAGE_RENDERING.AUTO: keep current global setting
 
-                this.renderReplacedElement(container, curves, image);
+                this.renderReplacedElement(container, curves, image!);
 
                 // Restore previous smoothing state
                 this.ctx.imageSmoothingEnabled = prevSmoothing;
@@ -243,7 +243,7 @@ export class CanvasRenderer {
         if (container instanceof SVGElementContainer) {
             try {
                 const image = await this.context.cache.match(container.svg);
-                this.renderReplacedElement(container, curves, image);
+                this.renderReplacedElement(container, curves, image!);
             } catch (e) {
                 this.context.logger.error(`Error loading svg ${container.svg.substring(0, 255)}`);
             }
@@ -381,7 +381,7 @@ export class CanvasRenderer {
                     const url = (img as CSSURLImage).url;
                     try {
                         image = await this.context.cache.match(url);
-                        this.ctx.drawImage(image, container.bounds.left - (image.width + 10), container.bounds.top);
+                        this.ctx.drawImage(image!, container.bounds.left - (image!.width + 10), container.bounds.top);
                     } catch (e) {
                         this.context.logger.error(`Error loading list-style-image ${url}`);
                     }

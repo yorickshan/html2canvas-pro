@@ -239,4 +239,3 @@ export class PerformanceMonitor {
         return Array.from(this.activeMetrics.keys());
     }
 }
-

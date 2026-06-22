@@ -269,7 +269,7 @@ export class CSSParsedDeclaration {
             (this as Record<string, unknown>)[key] = parse(
                 context,
                 descriptor,
-                (declaration as Record<string, string | undefined>)[cssProp]
+                (declaration as unknown as Record<string, string | undefined>)[cssProp]
             );
         }
 

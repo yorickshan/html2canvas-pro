@@ -104,7 +104,7 @@ export class BackgroundRenderer {
                 imageWidth / imageHeight
             ]);
             const pattern = this.ctx.createPattern(
-                this.resizeImage(image, width, height, container.styles.imageRendering),
+                this.resizeImage(image as HTMLImageElement, width, height, container.styles.imageRendering),
                 'repeat'
             ) as CanvasPattern;
             this.renderRepeat(path, pattern, x, y);
