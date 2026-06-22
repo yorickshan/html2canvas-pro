@@ -190,4 +190,4 @@ jobs:
             - name: NPM Publish (OIDC)
               run: |
                   cd npm/package
-                  pnpm publish --access public
+                  pnpm publish --access public --no-git-checks
