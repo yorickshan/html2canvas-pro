@@ -21,6 +21,7 @@
     }
   },
   "version": "2.0.4",
+  "packageManager": "pnpm@10.9.0",
   "author": {
     "name": "yorickshan",
     "email": "yorickshan@gmail.com",
