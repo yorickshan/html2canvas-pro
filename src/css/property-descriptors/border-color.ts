@@ -1,4 +1,4 @@
-import { IPropertyTypeValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyTypeValueDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 const borderColorForSide = (side: string): IPropertyTypeValueDescriptor => ({
     name: `border-${side}-color`,
     initialValue: 'transparent',

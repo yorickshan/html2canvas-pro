@@ -1,4 +1,4 @@
-import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { CSSValue, isStringToken } from '../syntax/parser';
 import { TokenType } from '../syntax/tokenizer';
 import { Context } from '../../core/context';

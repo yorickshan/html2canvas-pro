@@ -3,7 +3,7 @@ import { TokenType } from '../syntax/tokenizer';
 import { Color } from './color';
 import { linearGradient } from './functions/linear-gradient';
 import { prefixLinearGradient } from './functions/-prefix-linear-gradient';
-import { ITypeDescriptor } from '../ITypeDescriptor';
+import { ITypeDescriptor } from '../type-descriptor';
 import { LengthPercentage } from './length-percentage';
 import { webkitGradient } from './functions/-webkit-gradient';
 import { radialGradient } from './functions/radial-gradient';

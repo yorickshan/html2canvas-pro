@@ -53,7 +53,7 @@ export interface ResourceOptions {
 }
 
 interface CacheEntry {
-    value: Promise<any>;
+    value: Promise<HTMLImageElement | HTMLCanvasElement | undefined>;
     lastAccessed: number;
 }
 
@@ -147,7 +147,7 @@ export class Cache {
         });
     }
 
-    match(src: string): Promise<any> | undefined {
+    match(src: string): Promise<HTMLImageElement | HTMLCanvasElement> | undefined {
         const entry = this._cache.get(src);
         if (entry) {
             // Update last accessed time on access
@@ -160,7 +160,7 @@ export class Cache {
     /**
      * Set a value in cache with LRU eviction
      */
-    private set(key: string, value: Promise<any>): void {
+    private set(key: string, value: Promise<HTMLImageElement | HTMLCanvasElement | undefined>): void {
         // If key already exists, update it without eviction
         if (this._cache.has(key)) {
             const entry = this._cache.get(key)!;

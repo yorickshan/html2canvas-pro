@@ -6,6 +6,7 @@
         "noUnusedParameters": true,
         "strictNullChecks": true,
         "strictPropertyInitialization": true,
+        "noUncheckedIndexedAccess": true,
         "types": ["node", "jest"],
         "target": "es2020",
         "module": "esnext",

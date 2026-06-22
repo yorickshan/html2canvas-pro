@@ -1,6 +1,6 @@
 import { TokenType } from '../syntax/tokenizer';
 import { ICSSImage, image } from '../types/image';
-import { IPropertyValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyValueDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { CSSValue } from '../syntax/parser';
 import { Context } from '../../core/context';
 

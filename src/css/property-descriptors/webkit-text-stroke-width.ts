@@ -1,5 +1,5 @@
 import { CSSValue, isDimensionToken } from '../syntax/parser';
-import { IPropertyValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyValueDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { Context } from '../../core/context';
 export const webkitTextStrokeWidth: IPropertyValueDescriptor<number> = {
     name: `-webkit-text-stroke-width`,

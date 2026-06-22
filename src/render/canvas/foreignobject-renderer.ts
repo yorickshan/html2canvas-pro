@@ -1,19 +1,19 @@
 import { RenderConfigurations } from './canvas-renderer';
-import { createForeignObjectSVG } from '../../core/features';
+import { createForeignObjectSVG, loadSerializedSVG } from '../../core/features';
 import { asString } from '../../css/types/color-utilities';
-import { Renderer } from '../renderer';
 import { Context } from '../../core/context';
 
-export class ForeignObjectRenderer extends Renderer {
+export class ForeignObjectRenderer {
     canvas: HTMLCanvasElement;
     ctx: CanvasRenderingContext2D;
     options: RenderConfigurations;
+    private readonly context: Context;
 
     constructor(context: Context, options: RenderConfigurations) {
-        super(context, options);
+        this.context = context;
+        this.options = options;
         this.canvas = options.canvas ? options.canvas : document.createElement('canvas');
         this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
-        this.options = options;
         this.canvas.width = Math.floor(options.width * options.scale);
         this.canvas.height = Math.floor(options.height * options.scale);
         this.canvas.style.width = `${options.width}px`;
@@ -47,14 +47,3 @@ export class ForeignObjectRenderer extends Renderer {
         return this.canvas;
     }
 }
-
-export const loadSerializedSVG = (svg: Node): Promise<HTMLImageElement> =>
-    new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            resolve(img);
-        };
-        img.onerror = reject;
-
-        img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
-    });

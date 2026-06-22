@@ -1,4 +1,4 @@
-import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { Context } from '../../core/context';
 import { CSSValue, isDimensionToken } from '../syntax/parser';
 import { time } from '../types/time';

@@ -1,4 +1,4 @@
-import { CSSPropertyDescriptor, PropertyDescriptorParsingType } from './IPropertyDescriptor';
+import { CSSPropertyDescriptor, PropertyDescriptorParsingType } from './property-descriptor';
 import { backgroundClip } from './property-descriptors/background-clip';
 import { backgroundColor } from './property-descriptors/background-color';
 import { backgroundImage } from './property-descriptors/background-image';

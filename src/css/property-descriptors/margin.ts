@@ -1,4 +1,4 @@
-import { IPropertyTokenValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyTokenValueDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 
 const marginForSide = (side: string): IPropertyTokenValueDescriptor => ({
     name: `margin-${side}`,

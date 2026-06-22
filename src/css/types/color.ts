@@ -1,6 +1,6 @@
 import { CSSValue, isIdentToken, isNumberToken, nonFunctionArgSeparator, Parser } from '../syntax/parser';
 import { HashToken, TokenType } from '../syntax/tokenizer';
-import { ITypeDescriptor } from '../ITypeDescriptor';
+import { ITypeDescriptor } from '../type-descriptor';
 import { Context } from '../../core/context';
 import { srgbFromXYZ, srgbLinearFromXYZ } from './color-spaces/srgb';
 import {

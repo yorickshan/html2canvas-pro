@@ -240,28 +240,3 @@ export class PerformanceMonitor {
     }
 }
 
-/**
- * Create a no-op performance monitor for production
- * Has minimal overhead when disabled
- */
-export class NoOpPerformanceMonitor extends PerformanceMonitor {
-    constructor() {
-        super(null, false);
-    }
-
-    start(): void {
-        // No-op
-    }
-
-    end(): undefined {
-        return undefined;
-    }
-
-    measure<T>(_name: string, fn: () => T): T {
-        return fn();
-    }
-
-    async measureAsync<T>(_name: string, fn: () => Promise<T>): Promise<T> {
-        return await fn();
-    }
-}

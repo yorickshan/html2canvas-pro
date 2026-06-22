@@ -5,7 +5,13 @@
   "main": "dist/html2canvas-pro.js",
   "module": "dist/html2canvas-pro.esm.js",
   "typings": "dist/types/index.d.ts",
-  "browser": "dist/html2canvas-pro.js",
+  "browser": "dist/html2canvas-pro.esm.js",
+  "sideEffects": false,
+  "files": [
+    "dist/",
+    "src/",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",

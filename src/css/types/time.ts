@@ -1,6 +1,6 @@
 import { CSSValue } from '../syntax/parser';
 import { TokenType } from '../syntax/tokenizer';
-import { ITypeDescriptor } from '../ITypeDescriptor';
+import { ITypeDescriptor } from '../type-descriptor';
 import { Context } from '../../core/context';
 
 export const time: ITypeDescriptor<number> = {

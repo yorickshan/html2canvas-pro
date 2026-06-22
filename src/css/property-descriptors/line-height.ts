@@ -1,4 +1,4 @@
-import { IPropertyTokenValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyTokenValueDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { CSSValue, isIdentToken } from '../syntax/parser';
 import { TokenType } from '../syntax/tokenizer';
 import { getAbsoluteValue, isLengthPercentage } from '../types/length-percentage';

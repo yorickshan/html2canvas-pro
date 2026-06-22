@@ -1,4 +1,4 @@
-import { IPropertyTypeValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyTypeValueDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 
 export const textDecorationColor: IPropertyTypeValueDescriptor = {
     name: `text-decoration-color`,

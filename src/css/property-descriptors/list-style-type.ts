@@ -1,5 +1,5 @@
 import { Context } from '../../core/context';
-import { IPropertyIdentValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyIdentValueDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 export const enum LIST_STYLE_TYPE {
     NONE = -1,
     DISC = 0,

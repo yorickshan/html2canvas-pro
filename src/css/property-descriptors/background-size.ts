@@ -1,4 +1,4 @@
-import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { CSSValue, isIdentToken, parseFunctionArgs } from '../syntax/parser';
 import { isLengthPercentage, LengthPercentage } from '../types/length-percentage';
 import { StringValueToken } from '../syntax/tokenizer';

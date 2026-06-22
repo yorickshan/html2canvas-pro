@@ -1,4 +1,4 @@
-import { IPropertyIdentValueDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyIdentValueDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { Context } from '../../core/context';
 export const enum OVERFLOW_WRAP {
     NORMAL = 'normal',

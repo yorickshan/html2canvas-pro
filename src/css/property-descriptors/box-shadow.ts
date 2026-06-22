@@ -1,4 +1,4 @@
-import { PropertyDescriptorParsingType, IPropertyListDescriptor } from '../IPropertyDescriptor';
+import { PropertyDescriptorParsingType, IPropertyListDescriptor } from '../property-descriptor';
 import { CSSValue, isIdentWithValue, parseFunctionArgs } from '../syntax/parser';
 import { ZERO_LENGTH } from '../types/length-percentage';
 import { color, Color } from '../types/color';

@@ -94,7 +94,6 @@ html2canvas.setCspNonce = setCspNonce;
 export default html2canvas;
 export {
     html2canvas,
-    setCspNonce,
     Html2CanvasConfig,
     ConfigOptions,
     Validator,

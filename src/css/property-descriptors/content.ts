@@ -1,5 +1,5 @@
 import { TokenType } from '../syntax/tokenizer';
-import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { CSSValue } from '../syntax/parser';
 import { Context } from '../../core/context';
 

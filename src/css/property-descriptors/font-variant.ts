@@ -1,4 +1,4 @@
-import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../IPropertyDescriptor';
+import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { CSSValue, isIdentToken } from '../syntax/parser';
 import { Context } from '../../core/context';
 export const fontVariant: IPropertyListDescriptor<string[]> = {

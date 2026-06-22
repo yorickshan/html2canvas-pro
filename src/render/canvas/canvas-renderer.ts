@@ -35,7 +35,6 @@ import { TEXT_ALIGN } from '../../css/property-descriptors/text-align';
 import { TextareaElementContainer } from '../../dom/elements/textarea-element-container';
 import { SelectElementContainer } from '../../dom/elements/select-element-container';
 import { IFrameElementContainer } from '../../dom/replaced-elements/iframe-element-container';
-import { Renderer } from '../renderer';
 import { Context } from '../../core/context';
 import { BackgroundRenderer } from './background-renderer';
 import { BorderRenderer } from './border-renderer';
@@ -74,9 +73,11 @@ export interface RenderOptions {
 
 const MASK_OFFSET = 10000;
 
-export class CanvasRenderer extends Renderer {
+export class CanvasRenderer {
     canvas: HTMLCanvasElement;
     ctx: CanvasRenderingContext2D;
+    private readonly context: Context;
+    private readonly options: RenderConfigurations;
     private readonly fontMetrics: FontMetrics;
     private readonly backgroundRenderer: BackgroundRenderer;
     private readonly borderRenderer: BorderRenderer;
@@ -84,7 +85,8 @@ export class CanvasRenderer extends Renderer {
     private readonly textRenderer: TextRenderer;
 
     constructor(context: Context, options: RenderConfigurations) {
-        super(context, options);
+        this.context = context;
+        this.options = options;
         this.canvas = options.canvas ? options.canvas : document.createElement('canvas');
         this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
         if (!options.canvas) {
