@@ -6,4 +6,4 @@ it cannot be read anymore. If you wish to load images that reside outside of you
 
 ## Available proxies
 
- - [node.js](https://github.com/niklasvh/html2canvas-proxy-nodejs)
+ - [node.js](https://github.com/niklasvh/html2canvas-proxy-nodejs) (community maintained)

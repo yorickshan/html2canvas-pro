@@ -98,15 +98,29 @@ If you wish to exclude certain `Element`s from getting rendered, you can add a `
 </div>
 ```
 
-## Content-Security-Policy (CSP)
+## Advanced Options
+
+| Option Name | Default | Description | Example |
+| ----------- | :-----: | ----------- | ------- |
+| cspNonce | `null` | Content-Security-Policy nonce for inline styles | `"abc123"` |
+| skipValidation | `false` | Skip the built-in input validation (not recommended) | `true` |
+| enablePerformanceMonitoring | `false` | Enable performance metrics collection. Access via `PerformanceMonitor` | `true` |
+| signal | `null` | `AbortSignal` to cancel an in-progress render | `new AbortController().signal` |
+| validator | `default` | Custom `Validator` instance for input validation | `createStrictValidator(['proxy.example.com'])` |
 
 ### CSP Nonce
+
+Pass the CSP nonce via the `cspNonce` option:
 
 ```javascript
 import html2canvas from 'html2canvas-pro';
 
-html2canvas.setCspNonce(document.querySelector('meta[name="csp-nonce"]').nonce);
+html2canvas(element, {
+    cspNonce: document.querySelector('meta[name="csp-nonce"]').content
+});
 ```
+
+> **Deprecated:** `html2canvas.setCspNonce(nonce)` is deprecated since 2.0.0. Use the `cspNonce` option instead.
 
 ## Custom isSameOrigin Usage
 
@@ -244,7 +258,7 @@ html2canvas(document.getElementById('capture'), {
 html2canvas-pro keeps existing usage working where possible:
 
 - **Element input**: Besides real `HTMLElement` instances, any object with `ownerDocument` and `ownerDocument.defaultView` is accepted (e.g. element-like mocks or cross-realm references). Validation still requires the element to be attached to a document and window.
-- **Numeric options**: Options that expect numbers (`scale`, `width`, `height`, `imageTimeout`, `x`, `y`, `windowWidth`, `windowHeight`, `scrollX`, `scrollY`) accept string numbers and are coerced before validation. For example `scale: "2"` or `width: "800"` from forms or query params will work.
-- **Minimal window**: If the element’s `defaultView` does not provide `innerWidth`, `innerHeight`, `pageXOffset`, or `pageYOffset`, sensible defaults (e.g. 800×600, scroll 0) are used so rendering does not produce NaN.
-- **Deprecated but supported**: `html2canvas.setCspNonce(nonce)` and the global `setDefaultConfig` / `getDefaultConfig` are deprecated; use the `cspNonce` option and per-call config instead. The old APIs still work for now.
+- **Numeric options**: Options that expect numbers (`scale`, `width`, `height`, `imageTimeout`, `x`, `y`, `windowWidth`, `windowHeight`, `scrollX`, `scrollY`) accept string numbers and are coerced before validation.
+- **Minimal window**: If the element’s `defaultView` does not provide `innerWidth`, `innerHeight`, `pageXOffset`, or `pageYOffset`, sensible defaults (e.g. 800×600, scroll 0) are used.
+- **Deprecated but supported**: `html2canvas.setCspNonce(nonce)` and the global `setDefaultConfig` / `getDefaultConfig` are deprecated since 2.0.0. Use the `cspNonce` option and per-call config instead.
 - **DOM normalization**: The default remains `normalizeDom: true` (disable animations / reset transforms during capture). Set `normalizeDom: false` only if you need to preserve the original DOM state.

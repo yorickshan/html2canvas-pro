@@ -28,9 +28,11 @@ The script doesn't render plugin content such as Flash or Java applets.
 
 ## Browser compatibility
 
-The library should work fine on the following browsers (with `Promise` polyfill):
- - Firefox 3.5+
- - Google Chrome
- - Opera 12+
- - Edge
- - Safari 6+
+The library works on all modern evergreen browsers (Chrome, Firefox, Safari, Edge). Specifically tested on:
+
+- Google Chrome (latest)
+- Firefox 54+
+- Safari 10.1+
+- Edge (latest)
+
+**Node.js:** Requires Node.js >=16.0.0 for development and build tooling.

@@ -23,12 +23,13 @@ Next generation JavaScript screenshots tool.
 
 html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) that includes various fixes and new features. It offers several advantages over the original html2canvas, such as:
 - support color function ```color()``` (including relative colors)
-- support color function ```lab()```
-- support color function ```lch()```
-- support color function ```oklab()```
-- support color function ```oklch()```
+- support color function ```lab()``` / ```lch()``` / ```oklab()``` / ```oklch()```
 - Support object-fit of ```<img/>```
-- **Image smoothing control** - Support CSS `image-rendering` property and global `imageSmoothing` option for pixel art and retro graphics
+- Support CSS ```clip-path``` (inset, circle, ellipse, polygon, path)
+- Support CSS ```writing-mode``` (horizontal-tb, vertical-rl, vertical-lr)
+- **Image smoothing control** - Support CSS `image-rendering` property and `imageSmoothing`/`imageSmoothingQuality` options
+- **Security validation** - Built-in input validation (XSS/SSRF protection)
+- **Performance monitoring** - Built-in performance measurement API
 - Fixed some [issues](./CHANGELOG.md)
 
 If you found this helpful, don't forget to
@@ -38,7 +39,8 @@ leave a star 🌟.
 
 ```sh
 npm install html2canvas-pro
-pnpm / yarn add html2canvas-pro
+pnpm add html2canvas-pro
+yarn add html2canvas-pro
 ```
 
 ## Usage

@@ -6,7 +6,8 @@ You can install `html2canvas-pro` through npm or [download a built release](http
 
 ```sh
 npm install html2canvas-pro
-pnpm / yarn add html2canvas-pro
+pnpm add html2canvas-pro
+yarn add html2canvas-pro
 ```
 
 ## Usage

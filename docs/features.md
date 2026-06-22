@@ -77,9 +77,8 @@ Below is a list of all the supported CSS properties and values.
  - word-break
  - word-spacing
  - word-wrap
+ - writing-mode
  - z-index
- - [oklch](https://github.com/niklasvh/html2canvas/issues/3148)
- - [object-fit](https://github.com/niklasvh/html2canvas/issues/3072)
 
 ## Unsupported CSS properties
 These CSS properties are **NOT** currently supported
@@ -92,7 +91,6 @@ These CSS properties are **NOT** currently supported
  - [mix-blend-mode](https://github.com/niklasvh/html2canvas/issues/580)
  - object-position
  - [repeating-linear-gradient()](https://github.com/niklasvh/html2canvas/issues/1162)
- - [writing-mode](https://github.com/niklasvh/html2canvas/issues/1258)
  - [zoom](https://github.com/niklasvh/html2canvas/issues/732)
 
 ## Additional Features

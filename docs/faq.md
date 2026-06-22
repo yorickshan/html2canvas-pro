@@ -90,10 +90,6 @@ The window limitations vary by browser, operating system and system hardware.
 > Maximum height/width: 32,767 pixels
 > Maximum area: 472,907,776 pixels (e.g., 22,528 x 20,992)
 
-### Internet Explorer
-> Maximum height/width: 8,192 pixels
-> Maximum area: N/A
-
 ### iOS
 > The maximum size for a canvas element is 3 megapixels for devices with less than 256 MB RAM and 5 megapixels for devices with greater or equal than 256 MB RAM
 
