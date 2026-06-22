@@ -36,3 +36,35 @@ export const isOLElement = (node: Element): node is HTMLOListElement => node.tag
 
 export const isCustomElement = (element: Element): element is HTMLElement =>
     !isSVGElementNode(element) && element.tagName.indexOf('-') > 0;
+
+const VOID_OR_REPLACED_TAGS = new Set([
+    'IMG',
+    'VIDEO',
+    'AUDIO',
+    'CANVAS',
+    'IFRAME',
+    'INPUT',
+    'TEXTAREA',
+    'SELECT',
+    'BR',
+    'HR',
+    'META',
+    'LINK',
+    'BASE',
+    'COL',
+    'SOURCE',
+    'TRACK',
+    'WBR',
+    'AREA',
+    'PARAM',
+    'EMBED',
+    'OBJECT'
+]);
+
+/**
+ * Check if an element can have ::before / ::after pseudo-elements.
+ * Per the CSS spec, replaced elements and void elements cannot have pseudo-elements.
+ * SVG elements also do not support pseudo-elements.
+ */
+export const canHavePseudoElements = (element: Element): boolean =>
+    !isSVGElementNode(element) && !VOID_OR_REPLACED_TAGS.has(element.tagName);

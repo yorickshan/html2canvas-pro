@@ -44,6 +44,7 @@ export {
     isSelectElement,
     isSlotElement
 };
+import { contains } from '../core/bitwise';
 import { DISPLAY } from '../css/property-descriptors/display';
 
 const LIST_OWNERS = ['OL', 'UL', 'MENU'];

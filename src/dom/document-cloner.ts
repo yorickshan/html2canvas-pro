@@ -16,6 +16,7 @@ import {
     isTextNode,
     isVideoElement
 } from './node-parser';
+import { canHavePseudoElements } from './node-type-guards';
 import { isIdentToken, nonFunctionArgSeparator } from '../css/syntax/parser';
 import { TokenType } from '../css/syntax/tokenizer';
 import { CounterState, createCounterText } from '../css/types/functions/counter';
@@ -581,8 +582,10 @@ export class DocumentCloner {
             clone.style.transitionProperty = 'none';
 
             const style = window.getComputedStyle(node);
-            const styleBefore = window.getComputedStyle(node, ':before');
-            const styleAfter = window.getComputedStyle(node, ':after');
+
+            // Per CSS spec, replaced elements, void elements, and SVG elements
+            // cannot have ::before / ::after pseudo-elements — skip these queries.
+            const checkPseudoElements = canHavePseudoElements(node);
 
             if (this.referenceElement === node && isHTMLElementNode(clone)) {
                 this.clonedReferenceElement = clone;
@@ -592,7 +595,20 @@ export class DocumentCloner {
             }
 
             const counters = this.counters.parse(new CSSParsedCounterDeclaration(this.context, style));
-            const before = this.resolvePseudoContent(node, clone, styleBefore, PseudoElementType.BEFORE);
+
+            if (checkPseudoElements) {
+                const styleBefore = window.getComputedStyle(node, ':before');
+                const before = this.resolvePseudoContent(node, clone, styleBefore, PseudoElementType.BEFORE);
+                if (before) {
+                    clone.insertBefore(before, clone.firstChild);
+                }
+
+                const styleAfter = window.getComputedStyle(node, ':after');
+                const after = this.resolvePseudoContent(node, clone, styleAfter, PseudoElementType.AFTER);
+                if (after) {
+                    clone.appendChild(after);
+                }
+            }
 
             if (isCustomElement(node)) {
                 copyStyles = true;
@@ -600,15 +616,6 @@ export class DocumentCloner {
 
             if (!isVideoElement(node)) {
                 this.cloneChildNodes(node, clone, copyStyles);
-            }
-
-            if (before) {
-                clone.insertBefore(before, clone.firstChild);
-            }
-
-            const after = this.resolvePseudoContent(node, clone, styleAfter, PseudoElementType.AFTER);
-            if (after) {
-                clone.appendChild(after);
             }
 
             this.counters.pop(counters);
