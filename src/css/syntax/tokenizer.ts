@@ -309,9 +309,27 @@ const WHITESPACE_TOKEN: Token = { type: TokenType.WHITESPACE_TOKEN };
 export const EOF_TOKEN: Token = { type: TokenType.EOF_TOKEN };
 
 export class Tokenizer {
+    private static _pool: Tokenizer[] = [];
+    private static readonly MAX_POOL_SIZE = 40;
+
+    static get(): Tokenizer {
+        return Tokenizer._pool.pop() || new Tokenizer();
+    }
+
+    static release(tokenizer: Tokenizer): void {
+        if (Tokenizer._pool.length < Tokenizer.MAX_POOL_SIZE) {
+            tokenizer._reset();
+            Tokenizer._pool.push(tokenizer);
+        }
+    }
+
     private _value: number[];
 
     constructor() {
+        this._value = [];
+    }
+
+    private _reset(): void {
         this._value = [];
     }
 

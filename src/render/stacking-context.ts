@@ -237,11 +237,15 @@ const buildClipPathEffect = (clipPath: ClipPathValue, bounds: Bounds): ClipPathE
             // by a preceding TransformEffect, so the path coordinates end up correctly in
             // the element's transformed local space — matching browser behaviour.
             const { d } = clipPath;
+            let cachedPath: Path2D | null = null;
             return new ClipPathEffect((ctx) => {
                 try {
+                    if (!cachedPath) {
+                        cachedPath = new Path2D(d);
+                    }
                     const savedTransform = ctx.getTransform();
                     ctx.translate(bLeft, bTop);
-                    ctx.clip(new Path2D(d));
+                    ctx.clip(cachedPath);
                     ctx.setTransform(savedTransform);
                 } catch (_e) {
                     // Path2D or getTransform/setTransform not supported in this environment.

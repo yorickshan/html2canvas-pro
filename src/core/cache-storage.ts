@@ -54,7 +54,6 @@ export interface ResourceOptions {
 
 interface CacheEntry {
     value: Promise<HTMLImageElement | HTMLCanvasElement | undefined>;
-    lastAccessed: number;
 }
 
 export class Cache {
@@ -89,11 +88,10 @@ export class Cache {
         }
 
         if (this.has(src)) {
-            // Update last accessed time
-            const entry = this._cache.get(src);
-            if (entry) {
-                entry.lastAccessed = Date.now();
-            }
+            // Move to end for LRU ordering
+            const entry = this._cache.get(src)!;
+            this._cache.delete(src);
+            this._cache.set(src, entry);
             return Promise.resolve();
         }
 
@@ -147,57 +145,36 @@ export class Cache {
         });
     }
 
-    match(src: string): Promise<HTMLImageElement | HTMLCanvasElement> | undefined {
+    match(src: string): Promise<HTMLImageElement | HTMLCanvasElement | undefined> | undefined {
         const entry = this._cache.get(src);
         if (entry) {
-            // Update last accessed time on access
-            entry.lastAccessed = Date.now();
+            // Move to end for LRU ordering (O(1))
+            this._cache.delete(src);
+            this._cache.set(src, entry);
             return entry.value;
         }
         return undefined;
     }
 
     /**
-     * Set a value in cache with LRU eviction
+     * Set a value in cache with LRU eviction (O(1) via Map insertion order).
+     * Map preserves insertion order; delete+set on access moves items to the end.
+     * The first key in Map.keys() is always the least recently used.
      */
     private set(key: string, value: Promise<HTMLImageElement | HTMLCanvasElement | undefined>): void {
-        // If key already exists, update it without eviction
         if (this._cache.has(key)) {
-            const entry = this._cache.get(key)!;
-            entry.value = value;
-            entry.lastAccessed = Date.now();
-            return;
-        }
-
-        // For new keys, check if we need to evict
-        if (this._cache.size >= this.maxSize) {
-            this.evictLRU();
-        }
-
-        this._cache.set(key, {
-            value,
-            lastAccessed: Date.now()
-        });
-    }
-
-    /**
-     * Evict least recently used entry
-     */
-    private evictLRU(): void {
-        let oldestKey: string | null = null;
-        let oldestTime = Infinity;
-
-        for (const [key, entry] of this._cache.entries()) {
-            if (entry.lastAccessed < oldestTime) {
-                oldestTime = entry.lastAccessed;
-                oldestKey = key;
+            // Update existing entry: move to end of Map
+            this._cache.delete(key);
+        } else if (this._cache.size >= this.maxSize) {
+            // Evict LRU (first key = least recently used) — O(1)
+            const lruKey = this._cache.keys().next().value;
+            if (lruKey !== undefined) {
+                this._cache.delete(lruKey);
+                this.context.logger.debug(`Cache: Evicted LRU entry: ${lruKey}`);
             }
         }
 
-        if (oldestKey) {
-            this._cache.delete(oldestKey);
-            this.context.logger.debug(`Cache: Evicted LRU entry: ${oldestKey}`);
-        }
+        this._cache.set(key, { value });
     }
 
     /**
@@ -221,7 +198,7 @@ export class Cache {
         this._cache.clear();
     }
 
-    private async loadImage(key: string) {
+    private async loadImage(key: string): Promise<HTMLImageElement | undefined> {
         const originChecker = this.context.originChecker;
         const defaultIsSameOrigin = (src: string) => originChecker.isSameOrigin(src);
 

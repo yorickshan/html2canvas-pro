@@ -329,38 +329,77 @@ export class CSSParsedCounterDeclaration {
     }
 }
 
+const parseCache = new Map<CSSPropertyDescriptor<any>, Map<string, unknown>>();
+const PARSE_CACHE_MAX_PER_DESCRIPTOR = 200;
+
 const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?: string | null) => {
-    const tokenizer = new Tokenizer();
-    const value = style !== null && typeof style !== 'undefined' ? style.toString() : descriptor.initialValue;
-    tokenizer.write(value);
+    const rawValue = style !== null && typeof style !== 'undefined' ? style.toString() : descriptor.initialValue;
+
+    let valueCache = parseCache.get(descriptor);
+    if (valueCache) {
+        const cached = valueCache.get(rawValue);
+        if (cached !== undefined) {
+            return cached;
+        }
+    }
+
+    const tokenizer = Tokenizer.get();
+    tokenizer.write(rawValue);
     const parser = new Parser(tokenizer.read());
+    Tokenizer.release(tokenizer);
+
+    let result: any;
     switch (descriptor.type) {
-        case PropertyDescriptorParsingType.IDENT_VALUE:
+        case PropertyDescriptorParsingType.IDENT_VALUE: {
             const token = parser.parseComponentValue();
-            return descriptor.parse(context, isIdentToken(token) ? token.value : descriptor.initialValue);
+            result = descriptor.parse(context, isIdentToken(token) ? token.value : descriptor.initialValue);
+            break;
+        }
         case PropertyDescriptorParsingType.VALUE:
-            return descriptor.parse(context, parser.parseComponentValue());
+            result = descriptor.parse(context, parser.parseComponentValue());
+            break;
         case PropertyDescriptorParsingType.LIST:
-            return descriptor.parse(context, parser.parseComponentValues());
+            result = descriptor.parse(context, parser.parseComponentValues());
+            break;
         case PropertyDescriptorParsingType.TOKEN_VALUE:
-            return parser.parseComponentValue();
+            result = parser.parseComponentValue();
+            break;
         case PropertyDescriptorParsingType.TYPE_VALUE:
             switch (descriptor.format) {
                 case 'angle':
-                    return angle.parse(context, parser.parseComponentValue());
+                    result = angle.parse(context, parser.parseComponentValue());
+                    break;
                 case 'color':
-                    return colorType.parse(context, parser.parseComponentValue());
+                    result = colorType.parse(context, parser.parseComponentValue());
+                    break;
                 case 'image':
-                    return image.parse(context, parser.parseComponentValue());
-                case 'length':
+                    result = image.parse(context, parser.parseComponentValue());
+                    break;
+                case 'length': {
                     const length = parser.parseComponentValue();
-                    return isLength(length) ? length : ZERO_LENGTH;
-                case 'length-percentage':
+                    result = isLength(length) ? length : ZERO_LENGTH;
+                    break;
+                }
+                case 'length-percentage': {
                     const value = parser.parseComponentValue();
-                    return isLengthPercentage(value) ? value : ZERO_LENGTH;
+                    result = isLengthPercentage(value) ? value : ZERO_LENGTH;
+                    break;
+                }
                 case 'time':
-                    return time.parse(context, parser.parseComponentValue());
+                    result = time.parse(context, parser.parseComponentValue());
+                    break;
             }
             break;
     }
+
+    if (!valueCache) {
+        valueCache = new Map();
+        parseCache.set(descriptor, valueCache);
+    }
+    if (valueCache.size >= PARSE_CACHE_MAX_PER_DESCRIPTOR) {
+        valueCache.clear();
+    }
+    valueCache.set(rawValue, result);
+
+    return result;
 };

@@ -827,13 +827,20 @@ const ignoredStyleProperties = [
 ];
 
 export const copyCSSStyles = <T extends HTMLElement | SVGElement>(style: CSSStyleDeclaration, target: T): T => {
-    // Edge does not provide value for cssText
+    const parts: string[] = [];
     for (let i = style.length - 1; i >= 0; i--) {
         const property = style.item(i);
         // fix: Chrome_138 ignore custom properties
         if (ignoredStyleProperties.indexOf(property) === -1 && !property.startsWith('--')) {
-            target.style.setProperty(property, style.getPropertyValue(property));
+            const value = style.getPropertyValue(property);
+            if (value) {
+                const priority = style.getPropertyPriority(property);
+                parts.push(priority ? `${property}:${value} !${priority}` : `${property}:${value}`);
+            }
         }
+    }
+    if (parts.length > 0) {
+        target.style.cssText = parts.join(';') + ';';
     }
     return target;
 };
