@@ -3,7 +3,7 @@ Please search among the [Pull request](https://github.com/yorickshan/html2canvas
 
 Thanks for submitting a pull request! Please provide enough information so that others can review your pull request:
 
-Before opening a pull request, please make sure all the tests pass locally by running `npm test`.
+Before opening a pull request, please make sure all the tests pass locally by running `pnpm test`.
 
 **Summary**
 
@@ -29,7 +29,7 @@ Demonstrate how the issue/feature can be replicated. For most cases, simply addi
 
 **Code formatting**
 
-Please make sure that code adheres to the project code formatting. Running `npm run format` will automatically format your code correctly.
+Please make sure that code adheres to the project code formatting. Running `pnpm format` will automatically format your code correctly.
 
 **Closing issues**
 

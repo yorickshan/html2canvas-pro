@@ -3,7 +3,7 @@
 git pull -r
 
 if [ $# -ne 1 ]; then
-  echo "Usage: npm run release <version_name>."
+  echo "Usage: pnpm release <version_name>."
   exit 1
 fi
 
