@@ -114,7 +114,7 @@
     "yargs": "^18.0.0"
   },
   "scripts": {
-    "prebuild": "rimraf dist/ && rimraf build/ && mkdirp dist && mkdirp build",
+    "prebuild": "rimraf dist/ && rimraf build/ && mkdir -p dist && mkdir -p build",
     "build": "tsc --module commonjs -p tsconfig.build.json && rollup -c rollup.config.ts && pnpm build:create-reftest-list && rollup -c tests/rollup.config.ts && pnpm build:minify",
     "build:testrunner": "rollup -c tests/rollup.config.ts",
     "build:minify": "uglifyjs --compress --comments /^!/ -o dist/html2canvas-pro.min.js --mangle -- dist/html2canvas-pro.js",
@@ -127,7 +127,7 @@
     "unittest": "vitest run",
     "unittest:coverage": "vitest run --coverage",
     "bench:css-parse": "tsx scripts/benchmarks/css-parse.bench.ts",
-    "reftests-diff": "mkdirp tmp/snapshots && vitest run --config vitest.reftest.config.ts",
+    "reftests-diff": "mkdir -p tmp/snapshots && vitest run --config vitest.reftest.config.ts",
     "prekarma": "node scripts/ensure-karma-prereqs.mjs",
     "karma": "tsx tests/karma",
     "watch": "rollup -c rollup.config.ts -w",
