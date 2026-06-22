@@ -137,7 +137,7 @@ export class DocumentCloner {
             if (cloneWindow) {
                 cloneWindow.scrollTo(windowSize.left, windowSize.top);
                 if (
-                    /(iPad|iPhone|iPod)/g.test(navigator.userAgent) &&
+                    /AppleWebKit/g.test(navigator.userAgent) &&
                     (cloneWindow.scrollY !== windowSize.top || cloneWindow.scrollX !== windowSize.left)
                 ) {
                     this.context.logger.warn('Unable to restore scroll position for cloned document');
