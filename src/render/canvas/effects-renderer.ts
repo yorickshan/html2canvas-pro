@@ -8,7 +8,14 @@
  * - Clip-path effects (CSS clip-path shapes: inset, circle, ellipse, polygon, path)
  */
 
-import { IElementEffect, isOpacityEffect, isTransformEffect, isClipEffect, isClipPathEffect } from '../effects';
+import {
+    IElementEffect,
+    isBlendEffect,
+    isClipEffect,
+    isClipPathEffect,
+    isOpacityEffect,
+    isTransformEffect
+} from '../effects';
 import { Path } from '../path';
 
 /**
@@ -87,6 +94,8 @@ export class EffectsRenderer {
         } else if (isClipPathEffect(effect)) {
             // Clip-path: delegate shape drawing (beginPath … clip()) to the effect.
             effect.applyClip(this.ctx);
+        } else if (isBlendEffect(effect)) {
+            this.ctx.globalCompositeOperation = effect.compositeOperation;
         }
 
         this.activeEffects.push(effect);

@@ -46,6 +46,7 @@ Below is a list of all the supported CSS properties and values.
     - list-style-position
     - list-style-type
  - margin
+ - mix-blend-mode
  - max-height
  - max-width
  - min-height
@@ -88,7 +89,6 @@ These CSS properties are **NOT** currently supported
  - [box-shadow](https://github.com/niklasvh/html2canvas/pull/1086)
  - [filter](https://github.com/niklasvh/html2canvas/issues/493)
  - [font-variant-ligatures](https://github.com/niklasvh/html2canvas/pull/1085)
- - [mix-blend-mode](https://github.com/niklasvh/html2canvas/issues/580)
  - object-position
  - [repeating-linear-gradient()](https://github.com/niklasvh/html2canvas/issues/1162)
  - [zoom](https://github.com/niklasvh/html2canvas/issues/732)

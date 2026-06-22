@@ -5,7 +5,8 @@ export const enum EffectType {
     TRANSFORM = 0,
     CLIP = 1,
     OPACITY = 2,
-    CLIP_PATH = 3
+    CLIP_PATH = 3,
+    BLEND = 4
 }
 
 export const enum EffectTarget {
@@ -58,9 +59,17 @@ export class ClipPathEffect implements IElementEffect {
     constructor(readonly applyClip: (ctx: CanvasRenderingContext2D) => void) {}
 }
 
+export class BlendEffect implements IElementEffect {
+    readonly type: EffectType = EffectType.BLEND;
+    readonly target: number = EffectTarget.BACKGROUND_BORDERS | EffectTarget.CONTENT;
+
+    constructor(readonly compositeOperation: GlobalCompositeOperation) {}
+}
+
 export const isTransformEffect = (effect: IElementEffect): effect is TransformEffect =>
     effect.type === EffectType.TRANSFORM;
 export const isClipEffect = (effect: IElementEffect): effect is ClipEffect => effect.type === EffectType.CLIP;
 export const isOpacityEffect = (effect: IElementEffect): effect is OpacityEffect => effect.type === EffectType.OPACITY;
 export const isClipPathEffect = (effect: IElementEffect): effect is ClipPathEffect =>
     effect.type === EffectType.CLIP_PATH;
+export const isBlendEffect = (effect: IElementEffect): effect is BlendEffect => effect.type === EffectType.BLEND;

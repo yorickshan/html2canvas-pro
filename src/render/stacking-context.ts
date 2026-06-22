@@ -2,6 +2,7 @@ import { ElementContainer } from '../dom/element-container';
 import { contains } from '../core/bitwise';
 import { BoundCurves, calculateBorderBoxPath, calculatePaddingBoxPath } from './bound-curves';
 import {
+    BlendEffect,
     ClipEffect,
     ClipPathEffect,
     EffectTarget,
@@ -21,6 +22,7 @@ import { POSITION } from '../css/property-descriptors/position';
 import { getAbsoluteValue } from '../css/types/length-percentage';
 import { Bounds } from '../css/layout/bounds';
 import { CLIP_PATH_TYPE, ClipPathValue, ShapeRadius } from '../css/property-descriptors/clip-path';
+import { MIX_BLEND_MODE } from '../css/property-descriptors/mix-blend-mode';
 
 export class StackingContext {
     element: ElementPaint;
@@ -96,6 +98,10 @@ export class ElementPaint {
             if (clipPathEffect) {
                 this.effects.push(clipPathEffect);
             }
+        }
+
+        if (this.container.styles.mixBlendMode !== MIX_BLEND_MODE.NORMAL) {
+            this.effects.push(new BlendEffect(this.container.styles.mixBlendMode as GlobalCompositeOperation));
         }
     }
 

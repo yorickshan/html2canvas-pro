@@ -91,6 +91,7 @@ import { Context } from '../core/context';
 import { objectFit } from './property-descriptors/object-fit';
 import { textOverflow } from './property-descriptors/text-overflow';
 import { imageRendering } from './property-descriptors/image-rendering';
+import { mixBlendMode, MixBlendMode } from './property-descriptors/mix-blend-mode';
 
 export class CSSParsedDeclaration {
     animationDuration!: ReturnType<typeof duration.parse>;
@@ -169,6 +170,7 @@ export class CSSParsedDeclaration {
     zIndex!: ReturnType<typeof zIndex.parse>;
     objectFit!: ReturnType<typeof objectFit.parse>;
     imageRendering!: ReturnType<typeof imageRendering.parse>;
+    mixBlendMode!: MixBlendMode;
 
     private static readonly standardProps: [keyof CSSParsedDeclaration, CSSPropertyDescriptor<unknown>, string][] = [
         ['animationDuration', duration, 'animationDuration'],
@@ -241,7 +243,8 @@ export class CSSParsedDeclaration {
         ['writingMode', writingMode, 'writingMode'],
         ['zIndex', zIndex, 'zIndex'],
         ['objectFit', objectFit, 'objectFit'],
-        ['imageRendering', imageRendering, 'imageRendering']
+        ['imageRendering', imageRendering, 'imageRendering'],
+        ['mixBlendMode', mixBlendMode, 'mixBlendMode']
     ];
 
     constructor(context: Context, declaration: CSSStyleDeclaration) {
