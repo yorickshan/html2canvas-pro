@@ -5,7 +5,6 @@ import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 
 const resultsDir = resolve(__dirname, '../results');
-const customSnapshotsDir = resolve(__dirname, '../tmp/snapshots');
 const customDiffDir = resolve(__dirname, '../tmp/snapshot-diffs');
 
 async function compareImages(updated: Buffer, previous: Buffer, diffOutputPath: string): Promise<void> {
@@ -34,13 +33,16 @@ describe('Image diff', () => {
         root: resolve(__dirname, '../../')
     }).filter((path) => existsSync(resolve(resultsDir, basename(path))));
 
-    it.each(files.map((path) => basename(path)))('%s', async (filename) => {
-        const previous = resolve(resultsDir, filename);
-        const updated = resolve(__dirname, '../tmp/reftests/', filename);
-        const diffOutput = resolve(customDiffDir, `${filename}-diff.png`);
+    for (const file of files) {
+        const filename: string = basename(file);
+        it(filename, async () => {
+            const previous = resolve(resultsDir, filename);
+            const updated = resolve(__dirname, '../tmp/reftests/', filename);
+            const diffOutput = resolve(customDiffDir, `${filename}-diff.png`);
 
-        const [expected, actual] = await Promise.all([promises.readFile(previous), promises.readFile(updated)]);
+            const [expected, actual] = await Promise.all([promises.readFile(previous), promises.readFile(updated)]);
 
-        await compareImages(actual, expected, diffOutput);
-    });
+            await compareImages(actual, expected, diffOutput);
+        });
+    }
 });
