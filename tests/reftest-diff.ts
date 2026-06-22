@@ -1,13 +1,32 @@
 import { sync } from 'glob';
 import { resolve, basename } from 'path';
 import { existsSync, promises } from 'fs';
-import { toMatchImageSnapshot } from 'jest-image-snapshot';
+import { PNG } from 'pngjs';
+import pixelmatch from 'pixelmatch';
 
 const resultsDir = resolve(__dirname, '../results');
 const customSnapshotsDir = resolve(__dirname, '../tmp/snapshots');
 const customDiffDir = resolve(__dirname, '../tmp/snapshot-diffs');
 
-expect.extend({ toMatchImageSnapshot });
+async function compareImages(updated: Buffer, previous: Buffer, diffOutputPath: string): Promise<void> {
+    const img1 = PNG.sync.read(updated);
+    const img2 = PNG.sync.read(previous);
+
+    const { width, height } = img1;
+    const diff = new PNG({ width, height });
+
+    const mismatchedPixels = pixelmatch(img1.data, img2.data, diff.data, width, height, {
+        threshold: 0.1
+    });
+
+    if (mismatchedPixels > 0) {
+        await promises.mkdir(customDiffDir, { recursive: true });
+        await promises.writeFile(diffOutputPath, PNG.sync.write(diff));
+        throw new Error(
+            `Image mismatch: ${mismatchedPixels} pixels differ.\n  Expected: ${previous.length} bytes\n  Received: ${updated.length} bytes\n  Diff saved: ${diffOutputPath}`
+        );
+    }
+}
 
 describe('Image diff', () => {
     const files: string[] = sync('../tmp/reftests/**/*.png', {
@@ -17,16 +36,11 @@ describe('Image diff', () => {
 
     it.each(files.map((path) => basename(path)))('%s', async (filename) => {
         const previous = resolve(resultsDir, filename);
-        const previousSnap = resolve(customSnapshotsDir, `${filename}-snap.png`);
-        await promises.copyFile(previous, previousSnap);
         const updated = resolve(__dirname, '../tmp/reftests/', filename);
-        const buffer = await promises.readFile(updated);
+        const diffOutput = resolve(customDiffDir, `${filename}-diff.png`);
 
-        // @ts-ignore
-        expect(buffer).toMatchImageSnapshot({
-            customSnapshotsDir,
-            customSnapshotIdentifier: () => filename,
-            customDiffDir
-        });
+        const [expected, actual] = await Promise.all([promises.readFile(previous), promises.readFile(updated)]);
+
+        await compareImages(actual, expected, diffOutput);
     });
 });
