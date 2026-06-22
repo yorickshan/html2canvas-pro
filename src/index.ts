@@ -6,12 +6,32 @@ import { renderElement } from './core/render-element';
 export type { Options } from './options';
 
 /**
- * Main html2canvas function with improved configuration management
+ * Renders an HTML element to a `<canvas>` element.
  *
- * @param element - Element to render
- * @param options - Rendering options
- * @param config - Optional configuration (for advanced use cases)
- * @returns Promise resolving to rendered canvas
+ * The function clones the target element and its subtree into a hidden iframe,
+ * resolves all computed styles, and paints the result onto a canvas —
+ * producing a visual snapshot of the DOM as it appears in the browser.
+ *
+ * @example
+ * ```ts
+ * import html2canvas from 'html2canvas-pro';
+ *
+ * const canvas = await html2canvas(document.body, {
+ *   backgroundColor: '#ffffff',
+ *   scale: 2,
+ *   useCORS: true
+ * });
+ * document.body.appendChild(canvas);
+ * ```
+ *
+ * @param element - The root HTMLElement to render.
+ * @param options - Rendering options.
+ * @param config  - Advanced configuration. In most cases this is auto-created;
+ *                  only pass it if you need to share a cache across multiple calls.
+ * @returns A promise that resolves to the rendered HTMLCanvasElement.
+ *
+ * @throws {Error} If the element is not attached to a document.
+ * @throws {DOMException} If an {@link Options.signal|AbortSignal} was provided and the operation was aborted.
  */
 const html2canvas = (
     element: HTMLElement,
@@ -29,8 +49,10 @@ const html2canvas = (
 };
 
 /**
- * Set CSP nonce for inline styles
- * @deprecated Use options.cspNonce instead
+ * Set CSP nonce for inline styles.
+ *
+ * @deprecated Since 2.0.0. Pass `cspNonce` in options instead:
+ *             `html2canvas(element, { cspNonce: '...' })`
  */
 const setCspNonce = (nonce: string) => {
     console.warn(
@@ -38,7 +60,6 @@ const setCspNonce = (nonce: string) => {
             'Pass cspNonce in options instead: html2canvas(element, { cspNonce: "..." })'
     );
 
-    // For backward compatibility, set default config
     if (typeof window !== 'undefined') {
         setDefaultConfig(new Html2CanvasConfig({ window, cspNonce: nonce }));
     }

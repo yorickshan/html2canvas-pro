@@ -45,6 +45,7 @@ import { calculateObjectFitRendering } from '../object-fit';
 
 export type RenderConfigurations = RenderOptions & {
     backgroundColor: Color | null;
+    signal?: AbortSignal;
     /**
      * Enable/disable image smoothing (anti-aliasing).
      * When disabled, images are rendered with pixel-perfect sharpness (no interpolation).
@@ -416,14 +417,17 @@ export class CanvasRenderer {
         if (stack.element.container.debugRender) {
             debugger;
         }
+        const signal = this.options.signal;
         // https://www.w3.org/TR/css-position-3/#painting-order
         // 1. the background and borders of the element forming the stacking context.
         await this.renderNodeBackgroundAndBorders(stack.element);
         // 2. the child stacking contexts with negative stack levels (most negative first).
         for (const child of stack.negativeZIndex) {
+            if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
             await this.renderStack(child);
         }
         // 3. For all its in-flow, non-positioned, block-level descendants in tree order:
+        if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
         await this.renderNodeContent(stack.element);
 
         for (const child of stack.nonInlineLevel) {
@@ -434,10 +438,12 @@ export class CanvasRenderer {
         // which actually create a new stacking context should be considered part of the parent stacking context,
         // not this new one.
         for (const child of stack.nonPositionedFloats) {
+            if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
             await this.renderStack(child);
         }
         // 5. the in-flow, inline-level, non-positioned descendants, including inline tables and inline blocks.
         for (const child of stack.nonPositionedInlineLevel) {
+            if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
             await this.renderStack(child);
         }
         for (const child of stack.inlineLevel) {
@@ -454,11 +460,13 @@ export class CanvasRenderer {
         //
         //  All transform descendants with transform other than none
         for (const child of stack.zeroOrAutoZIndexOrTransformedOrOpacity) {
+            if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
             await this.renderStack(child);
         }
         // 7. Stacking contexts formed by positioned descendants with z-indices greater than or equal to 1 in z-index
         // order (smallest first) then tree order.
         for (const child of stack.positiveZIndex) {
+            if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
             await this.renderStack(child);
         }
     }

@@ -3,17 +3,36 @@ import { RenderOptions } from './render/canvas/canvas-renderer';
 import { ContextOptions } from './core/context';
 import { Validator } from './core/validator';
 
+/**
+ * Options passed to {@link html2canvas}.
+ *
+ * Combines clone, window, render, and context configuration into a single
+ * options object. All properties are optional.
+ */
 export type Options = CloneOptions &
     WindowOptions &
     RenderOptions &
     ContextOptions & {
+        /** Background color for the resulting canvas. Use `null` for transparent. */
         backgroundColor: string | null;
+        /** Use foreignObject rendering (SVG-based) instead of the default Canvas 2D pipeline. */
         foreignObjectRendering: boolean;
+        /** Whether to remove the cloned iframe after rendering. @default true */
         removeContainer?: boolean;
+        /** CSP nonce for inline style elements. */
         cspNonce?: string;
+        /** Custom input validator. */
         validator?: Validator;
+        /** Skip pre-render validation of element and options. */
         skipValidation?: boolean;
+        /** Enable performance monitoring and log a timing summary. */
         enablePerformanceMonitoring?: boolean;
+        /**
+         * An AbortSignal that can be used to cancel an in-progress render.
+         * When the signal is aborted, the returned promise rejects with an
+         * `AbortError` DOMException.
+         */
+        signal?: AbortSignal;
         /**
          * Enable/disable image smoothing (anti-aliasing) globally.
          * - `false`: Pixel-perfect rendering for pixel art, sprites, and retro graphics

@@ -27,6 +27,10 @@ export class ForeignObjectRenderer {
     }
 
     async render(element: HTMLElement): Promise<HTMLCanvasElement> {
+        if (this.options.signal?.aborted) {
+            throw new DOMException('The operation was aborted.', 'AbortError');
+        }
+
         const svg = createForeignObjectSVG(
             this.options.width * this.options.scale,
             this.options.height * this.options.scale,

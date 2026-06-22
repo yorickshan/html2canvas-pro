@@ -120,6 +120,12 @@ export const renderElement = async (
         height: windowOptions.windowHeight
     });
 
+    const signal = opts.signal;
+
+    if (signal?.aborted) {
+        throw new DOMException('The operation was aborted.', 'AbortError');
+    }
+
     const foreignObjectRendering = opts.foreignObjectRendering ?? false;
 
     const cloneOptions: CloneConfigurations = {
@@ -148,6 +154,13 @@ export const renderElement = async (
     const container = await documentCloner.toIFrame(ownerDocument, windowBounds);
     perfMonitor.end('clone');
 
+    if (signal?.aborted) {
+        if (opts.removeContainer ?? true) {
+            DocumentCloner.destroy(container);
+        }
+        throw new DOMException('The operation was aborted.', 'AbortError');
+    }
+
     const { width, height, left, top } =
         isBodyElement(clonedElement) || isHTMLElement(clonedElement)
             ? parseDocumentSize(clonedElement.ownerDocument)
@@ -158,6 +171,7 @@ export const renderElement = async (
     const renderOptions: RenderConfigurations = {
         canvas: opts.canvas,
         backgroundColor,
+        signal,
         scale: opts.scale ?? defaultView.devicePixelRatio ?? 1,
         x: (opts.x ?? 0) + left,
         y: (opts.y ?? 0) + top,
@@ -185,6 +199,9 @@ export const renderElement = async (
 
             context.logger.debug(`Starting DOM parsing`);
             perfMonitor.start('parse');
+            if (signal?.aborted) {
+                throw new DOMException('The operation was aborted.', 'AbortError');
+            }
             root = parseTree(context, clonedElement);
             perfMonitor.end('parse');
 
@@ -197,6 +214,9 @@ export const renderElement = async (
             );
 
             perfMonitor.start('render');
+            if (signal?.aborted) {
+                throw new DOMException('The operation was aborted.', 'AbortError');
+            }
             const renderer = new CanvasRenderer(context, renderOptions);
             canvas = await renderer.render(root);
             perfMonitor.end('render');
