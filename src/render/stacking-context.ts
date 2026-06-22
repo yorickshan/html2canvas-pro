@@ -1,4 +1,4 @@
-import { ElementContainer, FLAGS } from '../dom/element-container';
+import { ElementContainer } from '../dom/element-container';
 import { contains } from '../core/bitwise';
 import { BoundCurves, calculateBorderBoxPath, calculatePaddingBoxPath } from './bound-curves';
 import {
@@ -270,14 +270,14 @@ const parseStackTree = (
     listItems: ElementPaint[]
 ) => {
     parent.container.elements.forEach((child) => {
-        const treatAsRealStackingContext = contains(child.flags, FLAGS.CREATES_REAL_STACKING_CONTEXT);
-        const createsStackingContext = contains(child.flags, FLAGS.CREATES_STACKING_CONTEXT);
+        const treatAsRealStackingContext = child.createsRealStackingContext;
+        const createsStackingContext = child.createsStackingContext;
         const paintContainer = new ElementPaint(child, parent);
         if (contains(child.styles.display, DISPLAY.LIST_ITEM)) {
             listItems.push(paintContainer);
         }
 
-        const listOwnerItems = contains(child.flags, FLAGS.IS_LIST_OWNER) ? [] : listItems;
+        const listOwnerItems = child.isListOwner ? [] : listItems;
 
         if (treatAsRealStackingContext || createsStackingContext) {
             const parentStack =
@@ -341,7 +341,7 @@ const parseStackTree = (
             parseStackTree(paintContainer, stackingContext, realStackingContext, listOwnerItems);
         }
 
-        if (contains(child.flags, FLAGS.IS_LIST_OWNER)) {
+        if (child.isListOwner) {
             processListItems(child, listOwnerItems);
         }
     });

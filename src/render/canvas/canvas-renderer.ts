@@ -1,7 +1,7 @@
 import { ElementPaint, parseStackingContexts, StackingContext } from '../stacking-context';
 import { Color } from '../../css/types/color';
 import { asString, isTransparent } from '../../css/types/color-utilities';
-import { ElementContainer, FLAGS } from '../../dom/element-container';
+import { ElementContainer } from '../../dom/element-container';
 import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
 import { Path, transformPath } from '../path';
 import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
@@ -149,7 +149,7 @@ export class CanvasRenderer {
     }
 
     async renderNode(paint: ElementPaint): Promise<void> {
-        if (contains(paint.container.flags, FLAGS.DEBUG_RENDER)) {
+        if (paint.container.debugRender) {
             debugger;
         }
 
@@ -413,7 +413,7 @@ export class CanvasRenderer {
     }
 
     async renderStackContent(stack: StackingContext): Promise<void> {
-        if (contains(stack.element.container.flags, FLAGS.DEBUG_RENDER)) {
+        if (stack.element.container.debugRender) {
             debugger;
         }
         // https://www.w3.org/TR/css-position-3/#painting-order

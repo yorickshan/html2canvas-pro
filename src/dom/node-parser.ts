@@ -1,5 +1,5 @@
 import { CSSParsedDeclaration } from '../css';
-import { ElementContainer, FLAGS } from './element-container';
+import { ElementContainer } from './element-container';
 import { TextContainer } from './text-container';
 import { ImageElementContainer } from './replaced-elements/image-element-container';
 import { CanvasElementContainer } from './replaced-elements/canvas-element-container';
@@ -11,7 +11,6 @@ import { SelectElementContainer } from './elements/select-element-container';
 import { TextareaElementContainer } from './elements/textarea-element-container';
 import { IFrameElementContainer } from './replaced-elements/iframe-element-container';
 import { Context } from '../core/context';
-import { contains } from '../core/bitwise';
 import {
     isElementNode,
     isTextNode,
@@ -22,8 +21,29 @@ import {
     isCustomElement
 } from './node-type-guards';
 
-// Re-export type guards for backward compatibility
-export { isElementNode, isTextNode, isSVGElementNode, isHTMLElementNode, isLIElement, isOLElement, isCustomElement };
+// Re-export all type guards from node-type-guards for backward compatibility
+export {
+    isElementNode,
+    isTextNode,
+    isSVGElementNode,
+    isHTMLElementNode,
+    isLIElement,
+    isOLElement,
+    isCustomElement,
+    isInputElement,
+    isHTMLElement,
+    isSVGElement,
+    isBodyElement,
+    isCanvasElement,
+    isVideoElement,
+    isImageElement,
+    isIFrameElement,
+    isStyleElement,
+    isScriptElement,
+    isTextareaElement,
+    isSelectElement,
+    isSlotElement
+};
 import { DISPLAY } from '../css/property-descriptors/display';
 
 const LIST_OWNERS = ['OL', 'UL', 'MENU'];
@@ -42,13 +62,13 @@ const parseNodeTree = (context: Context, node: Node, parent: ElementContainer, r
                 const container = createContainer(context, childNode);
                 if (container.styles.isVisible()) {
                     if (createsRealStackingContext(childNode, container, root)) {
-                        container.flags |= FLAGS.CREATES_REAL_STACKING_CONTEXT;
+                        container.createsRealStackingContext = true;
                     } else if (createsStackingContext(container.styles)) {
-                        container.flags |= FLAGS.CREATES_STACKING_CONTEXT;
+                        container.createsStackingContext = true;
                     }
 
                     if (LIST_OWNERS.indexOf(childNode.tagName) !== -1) {
-                        container.flags |= FLAGS.IS_LIST_OWNER;
+                        container.isListOwner = true;
                     }
 
                     parent.elements.push(container);
@@ -109,7 +129,7 @@ const createContainer = (context: Context, element: Element): ElementContainer =
 
 export const parseTree = (context: Context, element: HTMLElement): ElementContainer => {
     const container = createContainer(context, element);
-    container.flags |= FLAGS.CREATES_REAL_STACKING_CONTEXT;
+    container.createsRealStackingContext = true;
     parseNodeTree(context, element, container, container);
     return container;
 };
@@ -140,19 +160,3 @@ const createsStackingContext = (styles: CSSParsedDeclaration): boolean => {
     );
 };
 
-// Type guards moved to node-type-guards.ts and re-exported above
-export const isInputElement = (node: Element): node is HTMLInputElement => node.tagName === 'INPUT';
-export const isHTMLElement = (node: Element): node is HTMLHtmlElement => node.tagName === 'HTML';
-export const isSVGElement = (node: Element): node is SVGSVGElement => node.tagName === 'svg';
-export const isBodyElement = (node: Element): node is HTMLBodyElement => node.tagName === 'BODY';
-export const isCanvasElement = (node: Element): node is HTMLCanvasElement => node.tagName === 'CANVAS';
-export const isVideoElement = (node: Element): node is HTMLVideoElement => node.tagName === 'VIDEO';
-export const isImageElement = (node: Element): node is HTMLImageElement => node.tagName === 'IMG';
-export const isIFrameElement = (node: Element): node is HTMLIFrameElement => node.tagName === 'IFRAME';
-export const isStyleElement = (node: Element): node is HTMLStyleElement => node.tagName === 'STYLE';
-export const isScriptElement = (node: Element): node is HTMLScriptElement => node.tagName === 'SCRIPT';
-export const isTextareaElement = (node: Element): node is HTMLTextAreaElement => node.tagName === 'TEXTAREA';
-export const isSelectElement = (node: Element): node is HTMLSelectElement => node.tagName === 'SELECT';
-export const isSlotElement = (node: Element): node is HTMLSlotElement => node.tagName === 'SLOT';
-// https://html.spec.whatwg.org/multipage/custom-elements.html#valid-custom-element-name
-// isCustomElement moved to node-type-guards.ts and re-exported above

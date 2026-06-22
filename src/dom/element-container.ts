@@ -6,18 +6,7 @@ import { Context } from '../core/context';
 import { DebuggerType, isDebugging } from '../core/debugger';
 import { DOMNormalizer, OriginalStyles } from './dom-normalizer';
 
-export const enum FLAGS {
-    CREATES_STACKING_CONTEXT = 1 << 1,
-    CREATES_REAL_STACKING_CONTEXT = 1 << 2,
-    IS_LIST_OWNER = 1 << 3,
-    DEBUG_RENDER = 1 << 4
-}
-
 export interface ElementContainerOptions {
-    /**
-     * Whether to normalize DOM (disable animations, reset transforms)
-     * Default: true for backward compatibility
-     */
     normalizeDom?: boolean;
 }
 
@@ -26,7 +15,12 @@ export class ElementContainer {
     readonly textNodes: TextContainer[] = [];
     readonly elements: ElementContainer[] = [];
     bounds: Bounds;
-    flags = 0;
+
+    createsStackingContext = false;
+    createsRealStackingContext = false;
+    isListOwner = false;
+    debugRender = false;
+
     private originalStyles?: OriginalStyles;
     private originalElement?: Element;
 
@@ -41,17 +35,16 @@ export class ElementContainer {
 
         this.styles = new CSSParsedDeclaration(context, context.config.window.getComputedStyle(element, null));
 
-        // Side effects moved to DOMNormalizer (can be disabled via options)
-        const shouldNormalize = options.normalizeDom !== false; // Default: true
+        const shouldNormalize = options.normalizeDom !== false;
         if (shouldNormalize && isHTMLElementNode(element)) {
             this.originalStyles = DOMNormalizer.normalizeElement(element, this.styles);
-            this.originalElement = element; // Save reference for restoration
+            this.originalElement = element;
         }
 
         this.bounds = parseBounds(this.context, element);
 
         if (isDebugging(element, DebuggerType.RENDER)) {
-            this.flags |= FLAGS.DEBUG_RENDER;
+            this.debugRender = true;
         }
     }
 

@@ -17,7 +17,7 @@
         "skipLibCheck": true,
         "declarationDir": "dist/types",
         "resolveJsonModule": true,
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true
     },

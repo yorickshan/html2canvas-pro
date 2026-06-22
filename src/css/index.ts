@@ -93,141 +93,169 @@ import { textOverflow } from './property-descriptors/text-overflow';
 import { imageRendering } from './property-descriptors/image-rendering';
 
 export class CSSParsedDeclaration {
-    animationDuration: ReturnType<typeof duration.parse>;
-    backgroundClip: ReturnType<typeof backgroundClip.parse>;
-    backgroundColor: Color;
-    backgroundImage: ReturnType<typeof backgroundImage.parse>;
-    backgroundOrigin: ReturnType<typeof backgroundOrigin.parse>;
-    backgroundPosition: ReturnType<typeof backgroundPosition.parse>;
-    backgroundRepeat: ReturnType<typeof backgroundRepeat.parse>;
-    backgroundSize: ReturnType<typeof backgroundSize.parse>;
-    borderTopColor: Color;
-    borderRightColor: Color;
-    borderBottomColor: Color;
-    borderLeftColor: Color;
-    borderTopLeftRadius: ReturnType<typeof borderTopLeftRadius.parse>;
-    borderTopRightRadius: ReturnType<typeof borderTopRightRadius.parse>;
-    borderBottomRightRadius: ReturnType<typeof borderBottomRightRadius.parse>;
-    borderBottomLeftRadius: ReturnType<typeof borderBottomLeftRadius.parse>;
-    borderTopStyle: ReturnType<typeof borderTopStyle.parse>;
-    borderRightStyle: ReturnType<typeof borderRightStyle.parse>;
-    borderBottomStyle: ReturnType<typeof borderBottomStyle.parse>;
-    borderLeftStyle: ReturnType<typeof borderLeftStyle.parse>;
-    borderTopWidth: ReturnType<typeof borderTopWidth.parse>;
-    borderRightWidth: ReturnType<typeof borderRightWidth.parse>;
-    borderBottomWidth: ReturnType<typeof borderBottomWidth.parse>;
-    borderLeftWidth: ReturnType<typeof borderLeftWidth.parse>;
-    boxShadow: ReturnType<typeof boxShadow.parse>;
-    clipPath: ClipPathValue;
-    color: Color;
-    direction: ReturnType<typeof direction.parse>;
-    display: ReturnType<typeof display.parse>;
-    float: ReturnType<typeof float.parse>;
-    fontFamily: ReturnType<typeof fontFamily.parse>;
-    fontSize: LengthPercentage;
-    fontStyle: ReturnType<typeof fontStyle.parse>;
-    fontVariant: ReturnType<typeof fontVariant.parse>;
-    fontWeight: ReturnType<typeof fontWeight.parse>;
-    letterSpacing: ReturnType<typeof letterSpacing.parse>;
-    lineBreak: ReturnType<typeof lineBreak.parse>;
-    lineHeight: CSSValue;
-    listStyleImage: ReturnType<typeof listStyleImage.parse>;
-    listStylePosition: ReturnType<typeof listStylePosition.parse>;
-    listStyleType: ReturnType<typeof listStyleType.parse>;
-    marginTop: CSSValue;
-    marginRight: CSSValue;
-    marginBottom: CSSValue;
-    marginLeft: CSSValue;
-    opacity: ReturnType<typeof opacity.parse>;
-    overflowX: OVERFLOW;
-    overflowY: OVERFLOW;
-    overflowWrap: ReturnType<typeof overflowWrap.parse>;
-    paddingTop: LengthPercentage;
-    paddingRight: LengthPercentage;
-    paddingBottom: LengthPercentage;
-    paddingLeft: LengthPercentage;
-    paintOrder: ReturnType<typeof paintOrder.parse>;
-    position: ReturnType<typeof position.parse>;
-    textAlign: ReturnType<typeof textAlign.parse>;
-    textDecorationColor: Color;
-    textDecorationLine: ReturnType<typeof textDecorationLine.parse>;
-    textDecorationStyle: ReturnType<typeof textDecorationStyle.parse>;
-    textDecorationThickness: ReturnType<typeof textDecorationThickness.parse>;
-    textUnderlineOffset: ReturnType<typeof textUnderlineOffset.parse>;
-    textShadow: ReturnType<typeof textShadow.parse>;
-    textTransform: ReturnType<typeof textTransform.parse>;
-    textOverflow: ReturnType<typeof textOverflow.parse>;
-    transform: ReturnType<typeof transform.parse>;
-    transformOrigin: ReturnType<typeof transformOrigin.parse>;
-    rotate: ReturnType<typeof rotate.parse>;
-    visibility: ReturnType<typeof visibility.parse>;
-    webkitTextStrokeColor: Color;
-    webkitTextStrokeWidth: ReturnType<typeof webkitTextStrokeWidth.parse>;
-    webkitLineClamp: ReturnType<typeof webkitLineClamp.parse>;
-    wordBreak: ReturnType<typeof wordBreak.parse>;
-    writingMode: ReturnType<typeof writingMode.parse>;
-    zIndex: ReturnType<typeof zIndex.parse>;
-    objectFit: ReturnType<typeof objectFit.parse>;
-    imageRendering: ReturnType<typeof imageRendering.parse>;
+    animationDuration!: ReturnType<typeof duration.parse>;
+    backgroundClip!: ReturnType<typeof backgroundClip.parse>;
+    backgroundColor!: Color;
+    backgroundImage!: ReturnType<typeof backgroundImage.parse>;
+    backgroundOrigin!: ReturnType<typeof backgroundOrigin.parse>;
+    backgroundPosition!: ReturnType<typeof backgroundPosition.parse>;
+    backgroundRepeat!: ReturnType<typeof backgroundRepeat.parse>;
+    backgroundSize!: ReturnType<typeof backgroundSize.parse>;
+    borderTopColor!: Color;
+    borderRightColor!: Color;
+    borderBottomColor!: Color;
+    borderLeftColor!: Color;
+    borderTopLeftRadius!: ReturnType<typeof borderTopLeftRadius.parse>;
+    borderTopRightRadius!: ReturnType<typeof borderTopRightRadius.parse>;
+    borderBottomRightRadius!: ReturnType<typeof borderBottomRightRadius.parse>;
+    borderBottomLeftRadius!: ReturnType<typeof borderBottomLeftRadius.parse>;
+    borderTopStyle!: ReturnType<typeof borderTopStyle.parse>;
+    borderRightStyle!: ReturnType<typeof borderRightStyle.parse>;
+    borderBottomStyle!: ReturnType<typeof borderBottomStyle.parse>;
+    borderLeftStyle!: ReturnType<typeof borderLeftStyle.parse>;
+    borderTopWidth!: ReturnType<typeof borderTopWidth.parse>;
+    borderRightWidth!: ReturnType<typeof borderRightWidth.parse>;
+    borderBottomWidth!: ReturnType<typeof borderBottomWidth.parse>;
+    borderLeftWidth!: ReturnType<typeof borderLeftWidth.parse>;
+    boxShadow!: ReturnType<typeof boxShadow.parse>;
+    clipPath!: ClipPathValue;
+    color!: Color;
+    direction!: ReturnType<typeof direction.parse>;
+    display!: ReturnType<typeof display.parse>;
+    float!: ReturnType<typeof float.parse>;
+    fontFamily!: ReturnType<typeof fontFamily.parse>;
+    fontSize!: LengthPercentage;
+    fontStyle!: ReturnType<typeof fontStyle.parse>;
+    fontVariant!: ReturnType<typeof fontVariant.parse>;
+    fontWeight!: ReturnType<typeof fontWeight.parse>;
+    letterSpacing!: ReturnType<typeof letterSpacing.parse>;
+    lineBreak!: ReturnType<typeof lineBreak.parse>;
+    lineHeight!: CSSValue;
+    listStyleImage!: ReturnType<typeof listStyleImage.parse>;
+    listStylePosition!: ReturnType<typeof listStylePosition.parse>;
+    listStyleType!: ReturnType<typeof listStyleType.parse>;
+    marginTop!: CSSValue;
+    marginRight!: CSSValue;
+    marginBottom!: CSSValue;
+    marginLeft!: CSSValue;
+    opacity!: ReturnType<typeof opacity.parse>;
+    overflowX!: OVERFLOW;
+    overflowY!: OVERFLOW;
+    overflowWrap!: ReturnType<typeof overflowWrap.parse>;
+    paddingTop!: LengthPercentage;
+    paddingRight!: LengthPercentage;
+    paddingBottom!: LengthPercentage;
+    paddingLeft!: LengthPercentage;
+    paintOrder!: ReturnType<typeof paintOrder.parse>;
+    position!: ReturnType<typeof position.parse>;
+    textAlign!: ReturnType<typeof textAlign.parse>;
+    textDecorationColor!: Color;
+    textDecorationLine!: ReturnType<typeof textDecorationLine.parse>;
+    textDecorationStyle!: ReturnType<typeof textDecorationStyle.parse>;
+    textDecorationThickness!: ReturnType<typeof textDecorationThickness.parse>;
+    textUnderlineOffset!: ReturnType<typeof textUnderlineOffset.parse>;
+    textShadow!: ReturnType<typeof textShadow.parse>;
+    textTransform!: ReturnType<typeof textTransform.parse>;
+    textOverflow!: ReturnType<typeof textOverflow.parse>;
+    transform!: ReturnType<typeof transform.parse>;
+    transformOrigin!: ReturnType<typeof transformOrigin.parse>;
+    rotate!: ReturnType<typeof rotate.parse>;
+    visibility!: ReturnType<typeof visibility.parse>;
+    webkitTextStrokeColor!: Color;
+    webkitTextStrokeWidth!: ReturnType<typeof webkitTextStrokeWidth.parse>;
+    webkitLineClamp!: ReturnType<typeof webkitLineClamp.parse>;
+    wordBreak!: ReturnType<typeof wordBreak.parse>;
+    writingMode!: ReturnType<typeof writingMode.parse>;
+    zIndex!: ReturnType<typeof zIndex.parse>;
+    objectFit!: ReturnType<typeof objectFit.parse>;
+    imageRendering!: ReturnType<typeof imageRendering.parse>;
 
     constructor(context: Context, declaration: CSSStyleDeclaration) {
-        this.animationDuration = parse(context, duration, declaration.animationDuration);
-        this.backgroundClip = parse(context, backgroundClip, declaration.backgroundClip);
-        this.backgroundColor = parse(context, backgroundColor, declaration.backgroundColor);
-        this.backgroundImage = parse(context, backgroundImage, declaration.backgroundImage);
-        this.backgroundOrigin = parse(context, backgroundOrigin, declaration.backgroundOrigin);
-        this.backgroundPosition = parse(context, backgroundPosition, declaration.backgroundPosition);
-        this.backgroundRepeat = parse(context, backgroundRepeat, declaration.backgroundRepeat);
-        this.backgroundSize = parse(context, backgroundSize, declaration.backgroundSize);
-        this.borderTopColor = parse(context, borderTopColor, declaration.borderTopColor);
-        this.borderRightColor = parse(context, borderRightColor, declaration.borderRightColor);
-        this.borderBottomColor = parse(context, borderBottomColor, declaration.borderBottomColor);
-        this.borderLeftColor = parse(context, borderLeftColor, declaration.borderLeftColor);
-        this.borderTopLeftRadius = parse(context, borderTopLeftRadius, declaration.borderTopLeftRadius);
-        this.borderTopRightRadius = parse(context, borderTopRightRadius, declaration.borderTopRightRadius);
-        this.borderBottomRightRadius = parse(context, borderBottomRightRadius, declaration.borderBottomRightRadius);
-        this.borderBottomLeftRadius = parse(context, borderBottomLeftRadius, declaration.borderBottomLeftRadius);
-        this.borderTopStyle = parse(context, borderTopStyle, declaration.borderTopStyle);
-        this.borderRightStyle = parse(context, borderRightStyle, declaration.borderRightStyle);
-        this.borderBottomStyle = parse(context, borderBottomStyle, declaration.borderBottomStyle);
-        this.borderLeftStyle = parse(context, borderLeftStyle, declaration.borderLeftStyle);
-        this.borderTopWidth = parse(context, borderTopWidth, declaration.borderTopWidth);
-        this.borderRightWidth = parse(context, borderRightWidth, declaration.borderRightWidth);
-        this.borderBottomWidth = parse(context, borderBottomWidth, declaration.borderBottomWidth);
-        this.borderLeftWidth = parse(context, borderLeftWidth, declaration.borderLeftWidth);
-        this.boxShadow = parse(context, boxShadow, declaration.boxShadow);
-        this.clipPath = parse(context, clipPath, declaration.clipPath);
-        this.color = parse(context, color, declaration.color);
-        this.direction = parse(context, direction, declaration.direction);
-        this.display = parse(context, display, declaration.display);
+        // Standard properties: descriptor maps directly to a CSS property name
+        const standardProps: [keyof CSSParsedDeclaration, CSSPropertyDescriptor<unknown>, string][] = [
+            ['animationDuration', duration, 'animationDuration'],
+            ['backgroundClip', backgroundClip, 'backgroundClip'],
+            ['backgroundColor', backgroundColor, 'backgroundColor'],
+            ['backgroundImage', backgroundImage, 'backgroundImage'],
+            ['backgroundOrigin', backgroundOrigin, 'backgroundOrigin'],
+            ['backgroundPosition', backgroundPosition, 'backgroundPosition'],
+            ['backgroundRepeat', backgroundRepeat, 'backgroundRepeat'],
+            ['backgroundSize', backgroundSize, 'backgroundSize'],
+            ['borderTopColor', borderTopColor, 'borderTopColor'],
+            ['borderRightColor', borderRightColor, 'borderRightColor'],
+            ['borderBottomColor', borderBottomColor, 'borderBottomColor'],
+            ['borderLeftColor', borderLeftColor, 'borderLeftColor'],
+            ['borderTopLeftRadius', borderTopLeftRadius, 'borderTopLeftRadius'],
+            ['borderTopRightRadius', borderTopRightRadius, 'borderTopRightRadius'],
+            ['borderBottomRightRadius', borderBottomRightRadius, 'borderBottomRightRadius'],
+            ['borderBottomLeftRadius', borderBottomLeftRadius, 'borderBottomLeftRadius'],
+            ['borderTopStyle', borderTopStyle, 'borderTopStyle'],
+            ['borderRightStyle', borderRightStyle, 'borderRightStyle'],
+            ['borderBottomStyle', borderBottomStyle, 'borderBottomStyle'],
+            ['borderLeftStyle', borderLeftStyle, 'borderLeftStyle'],
+            ['borderTopWidth', borderTopWidth, 'borderTopWidth'],
+            ['borderRightWidth', borderRightWidth, 'borderRightWidth'],
+            ['borderBottomWidth', borderBottomWidth, 'borderBottomWidth'],
+            ['borderLeftWidth', borderLeftWidth, 'borderLeftWidth'],
+            ['boxShadow', boxShadow, 'boxShadow'],
+            ['clipPath', clipPath, 'clipPath'],
+            ['color', color, 'color'],
+            ['direction', direction, 'direction'],
+            ['display', display, 'display'],
+            ['fontFamily', fontFamily, 'fontFamily'],
+            ['fontSize', fontSize, 'fontSize'],
+            ['fontStyle', fontStyle, 'fontStyle'],
+            ['fontVariant', fontVariant, 'fontVariant'],
+            ['fontWeight', fontWeight, 'fontWeight'],
+            ['letterSpacing', letterSpacing, 'letterSpacing'],
+            ['lineBreak', lineBreak, 'lineBreak'],
+            ['lineHeight', lineHeight, 'lineHeight'],
+            ['listStyleImage', listStyleImage, 'listStyleImage'],
+            ['listStylePosition', listStylePosition, 'listStylePosition'],
+            ['listStyleType', listStyleType, 'listStyleType'],
+            ['marginTop', marginTop, 'marginTop'],
+            ['marginRight', marginRight, 'marginRight'],
+            ['marginBottom', marginBottom, 'marginBottom'],
+            ['marginLeft', marginLeft, 'marginLeft'],
+            ['opacity', opacity, 'opacity'],
+            ['overflowWrap', overflowWrap, 'overflowWrap'],
+            ['paddingTop', paddingTop, 'paddingTop'],
+            ['paddingRight', paddingRight, 'paddingRight'],
+            ['paddingBottom', paddingBottom, 'paddingBottom'],
+            ['paddingLeft', paddingLeft, 'paddingLeft'],
+            ['paintOrder', paintOrder, 'paintOrder'],
+            ['position', position, 'position'],
+            ['textAlign', textAlign, 'textAlign'],
+            ['textDecorationStyle', textDecorationStyle, 'textDecorationStyle'],
+            ['textDecorationThickness', textDecorationThickness, 'textDecorationThickness'],
+            ['textUnderlineOffset', textUnderlineOffset, 'textUnderlineOffset'],
+            ['textShadow', textShadow, 'textShadow'],
+            ['textTransform', textTransform, 'textTransform'],
+            ['textOverflow', textOverflow, 'textOverflow'],
+            ['transform', transform, 'transform'],
+            ['transformOrigin', transformOrigin, 'transformOrigin'],
+            ['rotate', rotate, 'rotate'],
+            ['visibility', visibility, 'visibility'],
+            ['webkitTextStrokeColor', webkitTextStrokeColor, 'webkitTextStrokeColor'],
+            ['webkitTextStrokeWidth', webkitTextStrokeWidth, 'webkitTextStrokeWidth'],
+            ['webkitLineClamp', webkitLineClamp, 'webkitLineClamp'],
+            ['wordBreak', wordBreak, 'wordBreak'],
+            ['writingMode', writingMode, 'writingMode'],
+            ['zIndex', zIndex, 'zIndex'],
+            ['objectFit', objectFit, 'objectFit'],
+            ['imageRendering', imageRendering, 'imageRendering']
+        ];
+
+        for (const [key, descriptor, cssProp] of standardProps) {
+            (this as Record<string, unknown>)[key] = parse(
+                context,
+                descriptor,
+                (declaration as Record<string, string | undefined>)[cssProp]
+            );
+        }
+
+        // Special cases that need different CSS property names or fallback values
         this.float = parse(context, float, declaration.cssFloat);
-        this.fontFamily = parse(context, fontFamily, declaration.fontFamily);
-        this.fontSize = parse(context, fontSize, declaration.fontSize);
-        this.fontStyle = parse(context, fontStyle, declaration.fontStyle);
-        this.fontVariant = parse(context, fontVariant, declaration.fontVariant);
-        this.fontWeight = parse(context, fontWeight, declaration.fontWeight);
-        this.letterSpacing = parse(context, letterSpacing, declaration.letterSpacing);
-        this.lineBreak = parse(context, lineBreak, declaration.lineBreak);
-        this.lineHeight = parse(context, lineHeight, declaration.lineHeight);
-        this.listStyleImage = parse(context, listStyleImage, declaration.listStyleImage);
-        this.listStylePosition = parse(context, listStylePosition, declaration.listStylePosition);
-        this.listStyleType = parse(context, listStyleType, declaration.listStyleType);
-        this.marginTop = parse(context, marginTop, declaration.marginTop);
-        this.marginRight = parse(context, marginRight, declaration.marginRight);
-        this.marginBottom = parse(context, marginBottom, declaration.marginBottom);
-        this.marginLeft = parse(context, marginLeft, declaration.marginLeft);
-        this.opacity = parse(context, opacity, declaration.opacity);
-        const overflowTuple = parse(context, overflow, declaration.overflow);
-        this.overflowX = overflowTuple[0];
-        this.overflowY = overflowTuple[overflowTuple.length > 1 ? 1 : 0];
-        this.overflowWrap = parse(context, overflowWrap, declaration.overflowWrap);
-        this.paddingTop = parse(context, paddingTop, declaration.paddingTop);
-        this.paddingRight = parse(context, paddingRight, declaration.paddingRight);
-        this.paddingBottom = parse(context, paddingBottom, declaration.paddingBottom);
-        this.paddingLeft = parse(context, paddingLeft, declaration.paddingLeft);
-        this.paintOrder = parse(context, paintOrder, declaration.paintOrder);
-        this.position = parse(context, position, declaration.position);
-        this.textAlign = parse(context, textAlign, declaration.textAlign);
         this.textDecorationColor = parse(
             context,
             textDecorationColor,
@@ -238,24 +266,11 @@ export class CSSParsedDeclaration {
             textDecorationLine,
             declaration.textDecorationLine ?? declaration.textDecoration
         );
-        this.textDecorationStyle = parse(context, textDecorationStyle, declaration.textDecorationStyle);
-        this.textDecorationThickness = parse(context, textDecorationThickness, declaration.textDecorationThickness);
-        this.textUnderlineOffset = parse(context, textUnderlineOffset, declaration.textUnderlineOffset);
-        this.textShadow = parse(context, textShadow, declaration.textShadow);
-        this.textTransform = parse(context, textTransform, declaration.textTransform);
-        this.textOverflow = parse(context, textOverflow, declaration.textOverflow);
-        this.transform = parse(context, transform, declaration.transform);
-        this.transformOrigin = parse(context, transformOrigin, declaration.transformOrigin);
-        this.rotate = parse(context, rotate, declaration.rotate);
-        this.visibility = parse(context, visibility, declaration.visibility);
-        this.webkitTextStrokeColor = parse(context, webkitTextStrokeColor, declaration.webkitTextStrokeColor);
-        this.webkitTextStrokeWidth = parse(context, webkitTextStrokeWidth, declaration.webkitTextStrokeWidth);
-        this.webkitLineClamp = parse(context, webkitLineClamp, declaration.webkitLineClamp);
-        this.wordBreak = parse(context, wordBreak, declaration.wordBreak);
-        this.writingMode = parse(context, writingMode, declaration.writingMode);
-        this.zIndex = parse(context, zIndex, declaration.zIndex);
-        this.objectFit = parse(context, objectFit, declaration.objectFit);
-        this.imageRendering = parse(context, imageRendering, declaration.imageRendering);
+
+        // overflow returns a tuple that must be split into X/Y
+        const overflowTuple = parse(context, overflow, declaration.overflow);
+        this.overflowX = overflowTuple[0];
+        this.overflowY = overflowTuple[overflowTuple.length > 1 ? 1 : 0];
     }
 
     isVisible(): boolean {
