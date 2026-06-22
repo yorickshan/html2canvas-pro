@@ -17,15 +17,16 @@ const banner = `/*!
 export default {
     input: `src/index.ts`,
     output: [
-        { 
-            file: pkg.main, 
-            name: 'html2canvas', 
-            format: 'umd', 
-            banner, 
+        {
+            file: pkg.main,
+            name: 'html2canvas',
+            format: 'umd',
+            exports: 'named',
+            banner,
             sourcemap: true,
             footer: 'if (typeof window !== "undefined" && window.html2canvas && window.html2canvas.default) { window.html2canvas = window.html2canvas.default; }'
         },
-        { file: pkg.module, format: 'esm', banner, sourcemap: true },
+        { file: pkg.module, format: 'esm', exports: 'named', banner, sourcemap: true },
     ],
     external: [],
     watch: {
