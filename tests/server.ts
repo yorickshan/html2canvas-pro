@@ -7,7 +7,6 @@ import path from 'path';
 import serveIndex from 'serve-index';
 import fs from 'fs';
 import bodyParser from 'body-parser';
-import mkdirp from 'mkdirp';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const proxy = require('./proxy.cjs');
@@ -58,8 +57,8 @@ const prefix = 'data:image/png;base64,';
 const screenshotFolder = '../tmp/reftests';
 const metadataFolder = '../tmp/reftests/metadata';
 
-mkdirp.sync(path.resolve(__dirname, screenshotFolder));
-mkdirp.sync(path.resolve(__dirname, metadataFolder));
+fs.mkdirSync(path.resolve(__dirname, screenshotFolder), { recursive: true });
+fs.mkdirSync(path.resolve(__dirname, metadataFolder), { recursive: true });
 
 const writeScreenshot = async (buffer: Buffer, body: ScreenshotRequest) => {
     const { default: filenamifyUrl } = await import('filenamify-url');
