@@ -1,4 +1,57 @@
 
+## [2.1.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.0.4...v2.1.0) (2026-06-22)
+
+
+### Features
+
+* add mix-blend-mode CSS property support ([e4ee3b7](https://github.com/yorickshan/html2canvas-pro/commit/e4ee3b76c75254097beadc27c914768ae27e5638)), closes [#123](https://github.com/yorickshan/html2canvas-pro/issues/123)
+* Phase 4 API improvements ([c7cd541](https://github.com/yorickshan/html2canvas-pro/commit/c7cd541ac6abf84ae932acf6e47f7a938e9a072c))
+* **rendering:** enhance object-fit calculations and add related tests ([aed1547](https://github.com/yorickshan/html2canvas-pro/commit/aed15477b7188eb3917613be3248575d46854ce8))
+
+
+### Performance
+
+* deferred CSS parsing, TypeDoc, benchmarks ([34e2ae1](https://github.com/yorickshan/html2canvas-pro/commit/34e2ae1ae116e429d226246904df66fddb4f16de))
+* Phase 3 performance improvements ([eefd0e3](https://github.com/yorickshan/html2canvas-pro/commit/eefd0e38634181083eef7ec7601a273bb574afd0))
+* skip pseudo-element getComputedStyle for void/replaced elements ([d0a99a9](https://github.com/yorickshan/html2canvas-pro/commit/d0a99a90c6fd8002b521794a588e45751a0210c1))
+
+
+### Refactor
+
+* migrate from Jest to Vitest ([04fb48b](https://github.com/yorickshan/html2canvas-pro/commit/04fb48b1d7ef4f5cd63d7737f77666aa19bab363))
+* Phase 1 low-risk improvements ([21fa001](https://github.com/yorickshan/html2canvas-pro/commit/21fa00190153f31575648dc1d1a46bd0756c90cb))
+* Phase 2 architecture improvements ([5471d20](https://github.com/yorickshan/html2canvas-pro/commit/5471d20afef44f127852b305aa1736ca37813b37))
+
+
+### Documentation
+
+* refresh documentation for v2.0.4 ([3d1426e](https://github.com/yorickshan/html2canvas-pro/commit/3d1426e5dca3f4bcd105d79f4e35e58ca0b2fe79))
+
+
+### Chore
+
+* migrate from npm to pnpm ([2ec2787](https://github.com/yorickshan/html2canvas-pro/commit/2ec27870c558cc5020f7e4f267e51599f13a80e8))
+* update vitepress to version 1.6.4 in package.json and pnpm-lock.yaml ([c228b20](https://github.com/yorickshan/html2canvas-pro/commit/c228b207c6fbc176ca27c1c6837ed8e587060e56))
+* upgrade CI node-version from 20 to 24 ([09e95e2](https://github.com/yorickshan/html2canvas-pro/commit/09e95e2bf032c3abd12077c524840330fa6137e2))
+
+
+### Fixes
+
+* add --configPlugin typescript to rollup commands for Node 24 CI compatibility ([3f0c686](https://github.com/yorickshan/html2canvas-pro/commit/3f0c686a296f8f6154f72ae208695646d6f15a8b))
+* add exports named to rollup output to suppress mixed exports warning ([95ddbec](https://github.com/yorickshan/html2canvas-pro/commit/95ddbec2223122a53c68e997214878de9e8dcf60))
+* add packageManager field for pnpm/action-setup in CI ([7ca5f4f](https://github.com/yorickshan/html2canvas-pro/commit/7ca5f4f0ca7cf0bcf8b4559534bff5bfca1dc412))
+* correct dependabot package-ecosystem from pnpm to npm ([b6d4001](https://github.com/yorickshan/html2canvas-pro/commit/b6d400101e891425bd3d184d061d4e6701c42aec))
+* explicitly list karma plugins instead of using wildcard ([943d2e0](https://github.com/yorickshan/html2canvas-pro/commit/943d2e05ef8997679cd12ff9176ec4a440a42b64))
+* extend scroll position fallback to desktop Safari ([b2c0276](https://github.com/yorickshan/html2canvas-pro/commit/b2c027639529d19957aeab0ad5a9933b333c8661)), closes [#106](https://github.com/yorickshan/html2canvas-pro/issues/106)
+* post-Phase 5 type fixes and exports cleanup ([8c96dc8](https://github.com/yorickshan/html2canvas-pro/commit/8c96dc8a711af941e8fadb71a3bddcfb94e76f44))
+* replace jest-image-snapshot with pixelmatch, remove karma-sauce-launcher ([767db21](https://github.com/yorickshan/html2canvas-pro/commit/767db21bf7cc010f4cfd13612dfddd16b10a6d73))
+* replace mkdirp CLI with mkdir -p for CI compatibility ([5619d2b](https://github.com/yorickshan/html2canvas-pro/commit/5619d2be62515c0c2f60771e88286f44b2593e71))
+* replace mkdirp with fs.mkdirSync in test server ([eb23651](https://github.com/yorickshan/html2canvas-pro/commit/eb23651c61231440e68e3858dbb4b1f7f13f82f9))
+* resolve TS warnings in bounds mock and test server deps ([f317002](https://github.com/yorickshan/html2canvas-pro/commit/f317002a210668518c1f25d22ab0d49e619ed0c4))
+* resolve TS warnings in reftest-diff by replacing it.each with for loop ([7f8a80d](https://github.com/yorickshan/html2canvas-pro/commit/7f8a80db24d6fbafd6407a8ee38f078b2ffc8028))
+* suppress rollup sourcemap warnings by removing sourceMap from base tsconfig ([fb2006c](https://github.com/yorickshan/html2canvas-pro/commit/fb2006c2127bec6f1e12843eaca4ded8ef3784aa))
+* use pnpm-compatible binary calls in build scripts ([0b8b8f9](https://github.com/yorickshan/html2canvas-pro/commit/0b8b8f9fcc99a1d1295912c3e6b91f036e29a44b))
+
 ### [2.0.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.0.3...v2.0.4) (2026-05-26)
 
 
