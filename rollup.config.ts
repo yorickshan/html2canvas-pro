@@ -41,8 +41,6 @@ export default {
         // Compile TypeScript files
         typescript({
             tsconfig: './tsconfig.build.json',
-            sourceMap: true,
-            inlineSources: true,
             compilerOptions: {
                 outDir: 'dist',
                 declarationDir: 'dist/types'

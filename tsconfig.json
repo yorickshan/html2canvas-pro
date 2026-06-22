@@ -11,7 +11,6 @@
         "target": "es2020",
         "module": "esnext",
         "lib": ["es2020", "dom"],
-        "sourceMap": true,
         "outDir": "dist/lib",
         "declaration": true,
         "skipLibCheck": true,
