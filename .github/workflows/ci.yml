@@ -33,6 +33,24 @@ jobs:
               run: npm ci
             - name: Build
               run: npm run build
+            - name: Check bundle size
+              run: |
+                  echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+                  for file in dist/html2canvas-pro.js dist/html2canvas-pro.min.js dist/html2canvas-pro.esm.js; do
+                    if [ -f "$file" ]; then
+                      size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+                      size_kb=$(echo "scale=1; $size / 1024" | bc)
+                      echo "- \`$file\`: **${size_kb} KB** ($size bytes)" >> $GITHUB_STEP_SUMMARY
+                      # Alert if full bundle exceeds 200 KB
+                      if [ "$file" = "dist/html2canvas-pro.js" ] && [ "$size" -gt 204800 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::Full bundle exceeds 200 KB (${size_kb} KB)"
+                      fi
+                      # Alert if minified bundle exceeds 80 KB
+                      if [ "$file" = "dist/html2canvas-pro.min.js" ] && [ "$size" -gt 81920 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::Minified bundle exceeds 80 KB (${size_kb} KB)"
+                      fi
+                    fi
+                  done
             - name: Pack
               run: |
                   npm pack
