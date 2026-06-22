@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { IMAGE_RENDERING } from '../image-rendering';
 
 /**

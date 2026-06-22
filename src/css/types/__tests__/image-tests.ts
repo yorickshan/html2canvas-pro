@@ -9,9 +9,9 @@ import { deg } from '../angle';
 const parse = (context: Context, value: string) => image.parse(context, Parser.parseValue(value));
 const colorParse = (context: Context, value: string) => color.parse(context, Parser.parseValue(value));
 
-jest.mock('../../../core/features');
+vi.mock('../../../core/features');
 
-jest.mock('../../../core/context');
+vi.mock('../../../core/context');
 import { Context } from '../../../core/context';
 
 import { Html2CanvasConfig } from '../../../config';

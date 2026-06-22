@@ -1,5 +1,3 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
-
 /**
  * Performance tests for image smoothing
  * Measures the performance impact of enabling/disabling image smoothing

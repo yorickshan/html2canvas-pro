@@ -9,7 +9,7 @@ export class Context {
 
     constructor() {
         this.cache = {
-            addImage: jest.fn().mockImplementation((src: string): Promise<void> => {
+            addImage: vi.fn().mockImplementation((src: string): Promise<void> => {
                 const result = Promise.resolve();
                 this._cache[src] = result;
                 return result;

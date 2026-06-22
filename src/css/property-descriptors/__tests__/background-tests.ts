@@ -5,10 +5,10 @@ import { CSSImageType } from '../../types/image';
 import { pack } from '../../types/color-utilities';
 import { deg } from '../../types/angle';
 
-jest.mock('../../../core/context');
+vi.mock('../../../core/context');
 import { Context } from '../../../core/context';
 
-jest.mock('../../../core/features');
+vi.mock('../../../core/features');
 
 const backgroundImageParse = (context: Context, value: string) =>
     backgroundImage.parse(context, Parser.parseValues(value));

@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
 import { imageRendering, IMAGE_RENDERING } from '../image-rendering';
 import { Context } from '../../../core/context';
 import { Html2CanvasConfig } from '../../../config';

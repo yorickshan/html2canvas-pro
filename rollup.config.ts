@@ -39,8 +39,9 @@ export default {
         // Allow json resolution
         json(),
         // Compile TypeScript files
-        typescript({ 
-            sourceMap: true, 
+        typescript({
+            tsconfig: './tsconfig.build.json',
+            sourceMap: true,
             inlineSources: true,
             compilerOptions: {
                 outDir: 'dist',

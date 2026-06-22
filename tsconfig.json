@@ -7,7 +7,7 @@
         "strictNullChecks": true,
         "strictPropertyInitialization": true,
         "noUncheckedIndexedAccess": false,
-        "types": ["node", "jest"],
+        "types": ["node", "vitest/globals"],
         "target": "es2020",
         "module": "esnext",
         "lib": ["es2020", "dom"],
