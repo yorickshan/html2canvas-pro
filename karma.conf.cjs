@@ -208,7 +208,13 @@ module.exports = function(config) {
         ],
 
         plugins: [
-            'karma-*',
+            'karma-mocha',
+            'karma-junit-reporter',
+            'karma-chrome-launcher',
+            'karma-firefox-launcher',
+            'karma-edge-launcher',
+            'karma-ie-launcher',
+            'karma-safarinative-launcher',
             {
                 'framework:inline-mocha-fix': ['factory', injectTypedArrayPolyfills]
             },
