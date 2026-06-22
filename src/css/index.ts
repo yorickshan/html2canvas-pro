@@ -170,81 +170,100 @@ export class CSSParsedDeclaration {
     objectFit!: ReturnType<typeof objectFit.parse>;
     imageRendering!: ReturnType<typeof imageRendering.parse>;
 
+    private static readonly standardProps: [keyof CSSParsedDeclaration, CSSPropertyDescriptor<unknown>, string][] = [
+        ['animationDuration', duration, 'animationDuration'],
+        ['backgroundClip', backgroundClip, 'backgroundClip'],
+        ['backgroundColor', backgroundColor, 'backgroundColor'],
+        ['backgroundImage', backgroundImage, 'backgroundImage'],
+        ['backgroundOrigin', backgroundOrigin, 'backgroundOrigin'],
+        ['backgroundPosition', backgroundPosition, 'backgroundPosition'],
+        ['backgroundRepeat', backgroundRepeat, 'backgroundRepeat'],
+        ['backgroundSize', backgroundSize, 'backgroundSize'],
+        ['borderTopColor', borderTopColor, 'borderTopColor'],
+        ['borderRightColor', borderRightColor, 'borderRightColor'],
+        ['borderBottomColor', borderBottomColor, 'borderBottomColor'],
+        ['borderLeftColor', borderLeftColor, 'borderLeftColor'],
+        ['borderTopLeftRadius', borderTopLeftRadius, 'borderTopLeftRadius'],
+        ['borderTopRightRadius', borderTopRightRadius, 'borderTopRightRadius'],
+        ['borderBottomRightRadius', borderBottomRightRadius, 'borderBottomRightRadius'],
+        ['borderBottomLeftRadius', borderBottomLeftRadius, 'borderBottomLeftRadius'],
+        ['borderTopStyle', borderTopStyle, 'borderTopStyle'],
+        ['borderRightStyle', borderRightStyle, 'borderRightStyle'],
+        ['borderBottomStyle', borderBottomStyle, 'borderBottomStyle'],
+        ['borderLeftStyle', borderLeftStyle, 'borderLeftStyle'],
+        ['borderTopWidth', borderTopWidth, 'borderTopWidth'],
+        ['borderRightWidth', borderRightWidth, 'borderRightWidth'],
+        ['borderBottomWidth', borderBottomWidth, 'borderBottomWidth'],
+        ['borderLeftWidth', borderLeftWidth, 'borderLeftWidth'],
+        ['boxShadow', boxShadow, 'boxShadow'],
+        ['clipPath', clipPath, 'clipPath'],
+        ['color', color, 'color'],
+        ['direction', direction, 'direction'],
+        ['display', display, 'display'],
+        ['fontFamily', fontFamily, 'fontFamily'],
+        ['fontSize', fontSize, 'fontSize'],
+        ['fontStyle', fontStyle, 'fontStyle'],
+        ['fontVariant', fontVariant, 'fontVariant'],
+        ['fontWeight', fontWeight, 'fontWeight'],
+        ['letterSpacing', letterSpacing, 'letterSpacing'],
+        ['lineBreak', lineBreak, 'lineBreak'],
+        ['lineHeight', lineHeight, 'lineHeight'],
+        ['listStyleImage', listStyleImage, 'listStyleImage'],
+        ['listStylePosition', listStylePosition, 'listStylePosition'],
+        ['listStyleType', listStyleType, 'listStyleType'],
+        ['marginTop', marginTop, 'marginTop'],
+        ['marginRight', marginRight, 'marginRight'],
+        ['marginBottom', marginBottom, 'marginBottom'],
+        ['marginLeft', marginLeft, 'marginLeft'],
+        ['opacity', opacity, 'opacity'],
+        ['overflowWrap', overflowWrap, 'overflowWrap'],
+        ['paddingTop', paddingTop, 'paddingTop'],
+        ['paddingRight', paddingRight, 'paddingRight'],
+        ['paddingBottom', paddingBottom, 'paddingBottom'],
+        ['paddingLeft', paddingLeft, 'paddingLeft'],
+        ['paintOrder', paintOrder, 'paintOrder'],
+        ['position', position, 'position'],
+        ['textAlign', textAlign, 'textAlign'],
+        ['textDecorationStyle', textDecorationStyle, 'textDecorationStyle'],
+        ['textDecorationThickness', textDecorationThickness, 'textDecorationThickness'],
+        ['textUnderlineOffset', textUnderlineOffset, 'textUnderlineOffset'],
+        ['textShadow', textShadow, 'textShadow'],
+        ['textTransform', textTransform, 'textTransform'],
+        ['textOverflow', textOverflow, 'textOverflow'],
+        ['transform', transform, 'transform'],
+        ['transformOrigin', transformOrigin, 'transformOrigin'],
+        ['rotate', rotate, 'rotate'],
+        ['visibility', visibility, 'visibility'],
+        ['webkitTextStrokeColor', webkitTextStrokeColor, 'webkitTextStrokeColor'],
+        ['webkitTextStrokeWidth', webkitTextStrokeWidth, 'webkitTextStrokeWidth'],
+        ['webkitLineClamp', webkitLineClamp, 'webkitLineClamp'],
+        ['wordBreak', wordBreak, 'wordBreak'],
+        ['writingMode', writingMode, 'writingMode'],
+        ['zIndex', zIndex, 'zIndex'],
+        ['objectFit', objectFit, 'objectFit'],
+        ['imageRendering', imageRendering, 'imageRendering']
+    ];
+
     constructor(context: Context, declaration: CSSStyleDeclaration) {
-        // Standard properties: descriptor maps directly to a CSS property name
-        const standardProps: [keyof CSSParsedDeclaration, CSSPropertyDescriptor<unknown>, string][] = [
-            ['animationDuration', duration, 'animationDuration'],
-            ['backgroundClip', backgroundClip, 'backgroundClip'],
-            ['backgroundColor', backgroundColor, 'backgroundColor'],
-            ['backgroundImage', backgroundImage, 'backgroundImage'],
-            ['backgroundOrigin', backgroundOrigin, 'backgroundOrigin'],
-            ['backgroundPosition', backgroundPosition, 'backgroundPosition'],
-            ['backgroundRepeat', backgroundRepeat, 'backgroundRepeat'],
-            ['backgroundSize', backgroundSize, 'backgroundSize'],
-            ['borderTopColor', borderTopColor, 'borderTopColor'],
-            ['borderRightColor', borderRightColor, 'borderRightColor'],
-            ['borderBottomColor', borderBottomColor, 'borderBottomColor'],
-            ['borderLeftColor', borderLeftColor, 'borderLeftColor'],
-            ['borderTopLeftRadius', borderTopLeftRadius, 'borderTopLeftRadius'],
-            ['borderTopRightRadius', borderTopRightRadius, 'borderTopRightRadius'],
-            ['borderBottomRightRadius', borderBottomRightRadius, 'borderBottomRightRadius'],
-            ['borderBottomLeftRadius', borderBottomLeftRadius, 'borderBottomLeftRadius'],
-            ['borderTopStyle', borderTopStyle, 'borderTopStyle'],
-            ['borderRightStyle', borderRightStyle, 'borderRightStyle'],
-            ['borderBottomStyle', borderBottomStyle, 'borderBottomStyle'],
-            ['borderLeftStyle', borderLeftStyle, 'borderLeftStyle'],
-            ['borderTopWidth', borderTopWidth, 'borderTopWidth'],
-            ['borderRightWidth', borderRightWidth, 'borderRightWidth'],
-            ['borderBottomWidth', borderBottomWidth, 'borderBottomWidth'],
-            ['borderLeftWidth', borderLeftWidth, 'borderLeftWidth'],
-            ['boxShadow', boxShadow, 'boxShadow'],
-            ['clipPath', clipPath, 'clipPath'],
-            ['color', color, 'color'],
-            ['direction', direction, 'direction'],
-            ['display', display, 'display'],
-            ['fontFamily', fontFamily, 'fontFamily'],
-            ['fontSize', fontSize, 'fontSize'],
-            ['fontStyle', fontStyle, 'fontStyle'],
-            ['fontVariant', fontVariant, 'fontVariant'],
-            ['fontWeight', fontWeight, 'fontWeight'],
-            ['letterSpacing', letterSpacing, 'letterSpacing'],
-            ['lineBreak', lineBreak, 'lineBreak'],
-            ['lineHeight', lineHeight, 'lineHeight'],
-            ['listStyleImage', listStyleImage, 'listStyleImage'],
-            ['listStylePosition', listStylePosition, 'listStylePosition'],
-            ['listStyleType', listStyleType, 'listStyleType'],
-            ['marginTop', marginTop, 'marginTop'],
-            ['marginRight', marginRight, 'marginRight'],
-            ['marginBottom', marginBottom, 'marginBottom'],
-            ['marginLeft', marginLeft, 'marginLeft'],
-            ['opacity', opacity, 'opacity'],
-            ['overflowWrap', overflowWrap, 'overflowWrap'],
-            ['paddingTop', paddingTop, 'paddingTop'],
-            ['paddingRight', paddingRight, 'paddingRight'],
-            ['paddingBottom', paddingBottom, 'paddingBottom'],
-            ['paddingLeft', paddingLeft, 'paddingLeft'],
-            ['paintOrder', paintOrder, 'paintOrder'],
-            ['position', position, 'position'],
-            ['textAlign', textAlign, 'textAlign'],
-            ['textDecorationStyle', textDecorationStyle, 'textDecorationStyle'],
-            ['textDecorationThickness', textDecorationThickness, 'textDecorationThickness'],
-            ['textUnderlineOffset', textUnderlineOffset, 'textUnderlineOffset'],
-            ['textShadow', textShadow, 'textShadow'],
-            ['textTransform', textTransform, 'textTransform'],
-            ['textOverflow', textOverflow, 'textOverflow'],
-            ['transform', transform, 'transform'],
-            ['transformOrigin', transformOrigin, 'transformOrigin'],
-            ['rotate', rotate, 'rotate'],
-            ['visibility', visibility, 'visibility'],
-            ['webkitTextStrokeColor', webkitTextStrokeColor, 'webkitTextStrokeColor'],
-            ['webkitTextStrokeWidth', webkitTextStrokeWidth, 'webkitTextStrokeWidth'],
-            ['webkitLineClamp', webkitLineClamp, 'webkitLineClamp'],
-            ['wordBreak', wordBreak, 'wordBreak'],
-            ['writingMode', writingMode, 'writingMode'],
-            ['zIndex', zIndex, 'zIndex'],
-            ['objectFit', objectFit, 'objectFit'],
-            ['imageRendering', imageRendering, 'imageRendering']
-        ];
+        const standardProps = CSSParsedDeclaration.standardProps;
+
+        // Fast path: display:none elements are invisible and their descendants
+        // are never rendered. Parse only initial values instead of full computed styles.
+        if (declaration.display === 'none') {
+            this.display = DISPLAY.NONE;
+            for (const [key, descriptor] of standardProps) {
+                if (key !== 'display') {
+                    (this as Record<string, unknown>)[key] = parse(context, descriptor, undefined);
+                }
+            }
+            this.float = parse(context, float, undefined);
+            this.textDecorationColor = parse(context, textDecorationColor, undefined);
+            this.textDecorationLine = parse(context, textDecorationLine, undefined);
+            const overflowTuple = parse(context, overflow, undefined);
+            this.overflowX = overflowTuple[0];
+            this.overflowY = overflowTuple[overflowTuple.length > 1 ? 1 : 0];
+            return;
+        }
 
         for (const [key, descriptor, cssProp] of standardProps) {
             (this as Record<string, unknown>)[key] = parse(

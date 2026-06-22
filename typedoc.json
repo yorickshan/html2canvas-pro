@@ -1,0 +1,35 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "entryPoints": ["src/index.ts"],
+    "entryPointStrategy": "expand",
+    "out": "docs/api",
+    "tsconfig": "tsconfig.json",
+    "name": "html2canvas-pro",
+    "includeVersion": true,
+    "exclude": ["**/__tests__/**", "**/node_modules/**"],
+    "excludeExternals": true,
+    "excludePrivate": true,
+    "excludeProtected": false,
+    "skipErrorChecking": true,
+    "readme": "none",
+    "navigation": {
+        "includeCategories": true,
+        "includeGroups": true
+    },
+    "categorizeByGroup": true,
+    "visibilityFilters": {
+        "protected": false,
+        "private": false,
+        "inherited": true,
+        "external": false
+    },
+    "sort": ["source-order", "visibility"],
+    "kindSortOrder": [
+        "Class",
+        "Interface",
+        "TypeAlias",
+        "Function",
+        "Variable",
+        "Enum"
+    ]
+}

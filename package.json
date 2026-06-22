@@ -107,6 +107,7 @@
     "ts-jest": "^29.1.5",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.3",
+    "typedoc": "^0.28.19",
     "typescript": "^5.5.4",
     "uglify-js": "^3.13.10",
     "vitepress": "^1.3.0",
@@ -124,6 +125,7 @@
     "lint": "eslint src/**/*.ts --max-warnings 0",
     "test": "npm run lint && npm run unittest && npm run karma",
     "unittest": "jest",
+    "bench:css-parse": "npx tsx scripts/benchmarks/css-parse.bench.ts",
     "reftests-diff": "mkdirp tmp/snapshots && jest --roots=tests --testMatch=**/reftest-diff.ts",
     "prekarma": "node scripts/ensure-karma-prereqs.mjs",
     "karma": "tsx tests/karma",
@@ -135,7 +137,9 @@
     "prepare": "if [ \"$SKIP_PREPARE\" != \"true\" ]; then husky install; fi",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "docs:api": "typedoc",
+    "docs:api:watch": "typedoc --watch"
   },
   "dependencies": {
     "css-line-break": "^2.1.0",
