@@ -4,7 +4,7 @@
 
 ```bash
 pnpm install
-pnpm build       # TypeScript compile + Rollup bundle
+pnpm build       # TypeScript compile + Rolldown bundle
 pnpm test        # Run all unit tests (vitest)
 pnpm typecheck   # TypeScript type check only
 ```
@@ -126,12 +126,12 @@ Tests are colocated with source in `__tests__/` directories:
 ## Build System
 
 ```
-Rollup → UMD bundle (dist/html2canvas.js)
-       → ESM bundle (dist/html2canvas.esm.js)
-       → Test runner bundle (dist/html2canvas.testrunner.js)
+Rolldown → UMD bundle (dist/html2canvas-pro.js)
+        → ESM bundle (dist/html2canvas-pro.esm.js)
+        → Test runner bundle (build/testrunner.js)
 ```
 
-- `pnpm build` — full build (tsc + rollup)
+- `pnpm build` — full build (tsc + rolldown)
 - `pnpm typecheck` — TypeScript check only
 - Git hooks (Husky) run prettier + eslint on staged files
 

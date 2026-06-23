@@ -19,7 +19,8 @@ tmp/
 jest.config.js
 karma.conf.js
 karma.js
-rollup.config.ts
+rolldown.config.ts
+rolldown.testrunner.config.ts
 .history
 .husky
 .commitlintrc.json

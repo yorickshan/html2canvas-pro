@@ -1,5 +1,5 @@
-import { Html2CanvasConfig, ConfigOptions, setDefaultConfig } from './config';
-import { createDefaultValidator, Validator, ValidationResult } from './core/validator';
+import { Html2CanvasConfig, type ConfigOptions, setDefaultConfig } from './config';
+import { createDefaultValidator, Validator, type ValidationResult } from './core/validator';
 import { PerformanceMonitor } from './core/performance-monitor';
 import { renderElement } from './core/render-element';
 import type { Options } from './options';
