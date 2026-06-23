@@ -13,9 +13,9 @@ jobs:
         runs-on: ubuntu-latest
         name: Build
         steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v3
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v5
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
               with:
                   node-version: 24
                   cache: 'pnpm'
@@ -47,19 +47,19 @@ jobs:
                   mv html2canvas-*.tgz html2canvas-pro.tgz
                   tar --list --verbose --file=html2canvas-pro.tgz
             - name: Upload npm pack
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                   name: pnpm-package
                   path: html2canvas-pro.tgz
                   if-no-files-found: error
             - name: Upload dist
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                   name: dist
                   path: dist
                   if-no-files-found: error
             - name: Upload build
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                   name: build
                   path: build
@@ -69,9 +69,9 @@ jobs:
         runs-on: ubuntu-latest
         name: Test
         steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v3
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v5
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
               with:
                   node-version: 24
                   cache: 'pnpm'
@@ -105,21 +105,21 @@ jobs:
             TARGET_BROWSER: ${{ matrix.config.targetBrowser }}
         needs: build
         steps:
-            - uses: actions/checkout@v4
-            - uses: pnpm/action-setup@v3
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v5
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
               with:
                   node-version: 24
                   cache: 'pnpm'
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
             - name: Download library
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   name: dist
                   path: dist
             - name: Download test-runner
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   name: build
                   path: build
@@ -138,7 +138,7 @@ jobs:
               if: ${{ matrix.config.xvfb == true }}
               run: DISPLAY=:99 pnpm karma
             - name: Upload screenshots
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v6
               with:
                   name: reftest-results-${{ matrix.config.targetBrowser }}
                   path: tmp/reftests
@@ -155,19 +155,19 @@ jobs:
             # Required for OIDC trusted publishing to npm
             id-token: write
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
             - name: Download NPM package
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   name: pnpm-package
                   path: npm
             - name: Download library
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v7
               with:
                   name: dist
                   path: dist
             - name: Create Github Release
-              uses: softprops/action-gh-release@v2
+              uses: softprops/action-gh-release@v3
               with:
                   tag_name: ${{ github.ref }}
                   body: |
@@ -180,8 +180,8 @@ jobs:
                     dist/html2canvas-pro.esm.js
             - name: Unpack pnpm package
               run: cd npm && tar -xvzf "html2canvas-pro.tgz"
-            - uses: pnpm/action-setup@v3
-            - uses: actions/setup-node@v4
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
               with:
                   node-version: 24
                   registry-url: 'https://registry.npmjs.org'
