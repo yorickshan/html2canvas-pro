@@ -17,8 +17,6 @@ import { CSSParsedDeclaration } from '../../css';
 import { Bounds } from '../../css/layout/bounds';
 import { TextBounds, segmentGraphemes } from '../../css/layout/text';
 import { asString } from '../../css/types/color-utilities';
-import { TEXT_DECORATION_LINE } from '../../css/property-descriptors/text-decoration-line';
-import { TEXT_DECORATION_STYLE } from '../../css/property-descriptors/text-decoration-style';
 import { PAINT_ORDER_LAYER } from '../../css/property-descriptors/paint-order';
 import { DIRECTION } from '../../css/property-descriptors/direction';
 import { DISPLAY } from '../../css/property-descriptors/display';
@@ -31,6 +29,7 @@ import {
     isVerticalWritingMode,
     WRITING_MODE
 } from '../../css/property-descriptors/writing-mode';
+import { TextDecorationRenderer } from './text/text-decoration-renderer';
 
 /**
  * Dependencies required for TextRenderer
@@ -134,11 +133,12 @@ const getTextStrokeLineJoin = (): CanvasLineJoin => {
 export class TextRenderer {
     private readonly ctx: CanvasRenderingContext2D;
     private readonly options: { scale: number };
+    private readonly decorationRenderer: TextDecorationRenderer;
 
     constructor(deps: TextRendererDependencies) {
         this.ctx = deps.ctx;
-        // context stored but not used directly in this renderer
         this.options = deps.options;
+        this.decorationRenderer = new TextDecorationRenderer(deps.ctx);
     }
 
     /**
@@ -328,132 +328,7 @@ export class TextRenderer {
     }
 
     private renderTextDecoration(bounds: Bounds, styles: CSSParsedDeclaration): void {
-        this.ctx.fillStyle = asString(styles.textDecorationColor || styles.color);
-
-        // Calculate decoration line thickness
-        let thickness = 1; // default
-        if (typeof styles.textDecorationThickness === 'number') {
-            thickness = styles.textDecorationThickness;
-        } else if (styles.textDecorationThickness === 'from-font') {
-            // Use a reasonable default based on font size
-            thickness = Math.max(1, Math.floor(styles.fontSize.number * 0.05));
-        }
-        // 'auto' uses default thickness of 1
-
-        // Calculate underline offset
-        let underlineOffset = 0;
-        if (typeof styles.textUnderlineOffset === 'number') {
-            // It's a pixel value
-            underlineOffset = styles.textUnderlineOffset;
-        }
-        // 'auto' uses default offset of 0
-
-        const decorationStyle = styles.textDecorationStyle;
-
-        styles.textDecorationLine.forEach((textDecorationLine) => {
-            let y = 0;
-
-            switch (textDecorationLine) {
-                case TEXT_DECORATION_LINE.UNDERLINE:
-                    y = bounds.top + bounds.height - thickness + underlineOffset;
-                    break;
-                case TEXT_DECORATION_LINE.OVERLINE:
-                    y = bounds.top;
-                    break;
-                case TEXT_DECORATION_LINE.LINE_THROUGH:
-                    y = bounds.top + (bounds.height / 2 - thickness / 2);
-                    break;
-                default:
-                    return;
-            }
-
-            this.drawDecorationLine(bounds.left, y, bounds.width, thickness, decorationStyle);
-        });
-    }
-
-    private drawDecorationLine(x: number, y: number, width: number, thickness: number, style: number): void {
-        switch (style) {
-            case TEXT_DECORATION_STYLE.SOLID:
-                // Solid line (default)
-                this.ctx.fillRect(x, y, width, thickness);
-                break;
-
-            case TEXT_DECORATION_STYLE.DOUBLE:
-                // Double line
-                const gap = Math.max(1, thickness);
-                this.ctx.fillRect(x, y, width, thickness);
-                this.ctx.fillRect(x, y + thickness + gap, width, thickness);
-                break;
-
-            case TEXT_DECORATION_STYLE.DOTTED:
-                // Dotted line
-                this.ctx.save();
-                this.ctx.beginPath();
-                this.ctx.setLineDash([thickness, thickness * 2]);
-                this.ctx.lineWidth = thickness;
-                this.ctx.strokeStyle = this.ctx.fillStyle;
-                this.ctx.moveTo(x, y + thickness / 2);
-                this.ctx.lineTo(x + width, y + thickness / 2);
-                this.ctx.stroke();
-                this.ctx.restore();
-                break;
-
-            case TEXT_DECORATION_STYLE.DASHED:
-                // Dashed line
-                this.ctx.save();
-                this.ctx.beginPath();
-                this.ctx.setLineDash([thickness * 3, thickness * 2]);
-                this.ctx.lineWidth = thickness;
-                this.ctx.strokeStyle = this.ctx.fillStyle;
-                this.ctx.moveTo(x, y + thickness / 2);
-                this.ctx.lineTo(x + width, y + thickness / 2);
-                this.ctx.stroke();
-                this.ctx.restore();
-                break;
-
-            case TEXT_DECORATION_STYLE.WAVY:
-                // Wavy line (approximation using quadratic curves)
-                this.ctx.save();
-                this.ctx.beginPath();
-                this.ctx.lineWidth = thickness;
-                this.ctx.strokeStyle = this.ctx.fillStyle;
-
-                const amplitude = thickness * 2;
-                const wavelength = thickness * 4;
-                let currentX = x;
-
-                this.ctx.moveTo(currentX, y + thickness / 2);
-
-                while (currentX < x + width) {
-                    const nextX = Math.min(currentX + wavelength / 2, x + width);
-                    this.ctx.quadraticCurveTo(
-                        currentX + wavelength / 4,
-                        y + thickness / 2 - amplitude,
-                        nextX,
-                        y + thickness / 2
-                    );
-                    currentX = nextX;
-
-                    if (currentX < x + width) {
-                        const nextX2 = Math.min(currentX + wavelength / 2, x + width);
-                        this.ctx.quadraticCurveTo(
-                            currentX + wavelength / 4,
-                            y + thickness / 2 + amplitude,
-                            nextX2,
-                            y + thickness / 2
-                        );
-                        currentX = nextX2;
-                    }
-                }
-
-                this.ctx.stroke();
-                this.ctx.restore();
-                break;
-
-            default:
-                // Fallback to solid
-                this.ctx.fillRect(x, y, width, thickness);
-        }
+        this.decorationRenderer.render(bounds, styles);
     }
 
     // Helper method to truncate text and add ellipsis if needed
