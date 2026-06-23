@@ -10,6 +10,23 @@ export interface COUNTER_INCREMENT {
 
 export type CounterIncrement = COUNTER_INCREMENT[] | null;
 
+/** Shared counter-ID parsing: returns next number or a fallback default. */
+export const parseCounterValue = (tokens: CSSValue[], defaultNumber: number): [string, number][] => {
+    const entries: [string, number][] = [];
+    const filtered = tokens.filter(nonWhiteSpace);
+
+    for (let i = 0; i < filtered.length; i++) {
+        const counter = filtered[i];
+        const next = filtered[i + 1];
+        if (counter.type === TokenType.IDENT_TOKEN) {
+            const num = next && isNumberToken(next) ? next.number : defaultNumber;
+            entries.push([counter.value, num]);
+        }
+    }
+
+    return entries;
+};
+
 export const counterIncrement: IPropertyListDescriptor<CounterIncrement> = {
     name: 'counter-increment',
     initialValue: 'none',
@@ -21,23 +38,10 @@ export const counterIncrement: IPropertyListDescriptor<CounterIncrement> = {
         }
 
         const first = tokens[0];
-
         if (first.type === TokenType.IDENT_TOKEN && first.value === 'none') {
             return null;
         }
 
-        const increments = [];
-        const filtered = tokens.filter(nonWhiteSpace);
-
-        for (let i = 0; i < filtered.length; i++) {
-            const counter = filtered[i];
-            const next = filtered[i + 1];
-            if (counter.type === TokenType.IDENT_TOKEN) {
-                const increment = next && isNumberToken(next) ? next.number : 1;
-                increments.push({ counter: counter.value, increment });
-            }
-        }
-
-        return increments;
+        return parseCounterValue(tokens, 1).map(([counter, increment]) => ({ counter, increment }));
     }
 };

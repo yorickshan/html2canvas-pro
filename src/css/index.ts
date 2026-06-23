@@ -411,7 +411,6 @@ const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?:
     if (valueCache) {
         const cached = valueCache.get(rawValue);
         if (cached !== undefined) {
-            // Move entry to end for LRU ordering (Map preserves insertion order)
             valueCache.delete(rawValue);
             valueCache.set(rawValue, cached);
             return cached;
@@ -423,55 +422,45 @@ const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?:
     const parser = new Parser(tokenizer.read());
     Tokenizer.release(tokenizer);
 
-    let result: any;
-    switch (descriptor.type) {
-        case PropertyDescriptorParsingType.IDENT_VALUE: {
-            const token = parser.parseComponentValue();
-            result = descriptor.parse(context, isIdentToken(token) ? token.value : descriptor.initialValue);
-            break;
-        }
-        case PropertyDescriptorParsingType.VALUE:
-            result = descriptor.parse(context, parser.parseComponentValue());
-            break;
-        case PropertyDescriptorParsingType.LIST:
-            result = descriptor.parse(context, parser.parseComponentValues());
-            break;
-        case PropertyDescriptorParsingType.TOKEN_VALUE:
-            result = parser.parseComponentValue();
-            break;
-        case PropertyDescriptorParsingType.TYPE_VALUE:
-            switch (descriptor.format) {
-                case 'angle':
-                    result = angle.parse(context, parser.parseComponentValue());
-                    break;
-                case 'color':
-                    result = colorType.parse(context, parser.parseComponentValue());
-                    break;
-                case 'image':
-                    result = image.parse(context, parser.parseComponentValue());
-                    break;
-                case 'length': {
-                    const length = parser.parseComponentValue();
-                    result = isLength(length) ? length : ZERO_LENGTH;
-                    break;
-                }
-                case 'length-percentage': {
-                    const value = parser.parseComponentValue();
-                    result = isLengthPercentage(value) ? value : ZERO_LENGTH;
-                    break;
-                }
-                case 'time':
-                    result = time.parse(context, parser.parseComponentValue());
-                    break;
+    // Use IIFE so TS infers the return type of each branch (no `let result: any`)
+    const result = (() => {
+        switch (descriptor.type) {
+            case PropertyDescriptorParsingType.IDENT_VALUE: {
+                const token = parser.parseComponentValue();
+                return descriptor.parse(context, isIdentToken(token) ? token.value : descriptor.initialValue);
             }
-            break;
-    }
+            case PropertyDescriptorParsingType.VALUE:
+                return descriptor.parse(context, parser.parseComponentValue());
+            case PropertyDescriptorParsingType.LIST:
+                return descriptor.parse(context, parser.parseComponentValues());
+            case PropertyDescriptorParsingType.TOKEN_VALUE:
+                return parser.parseComponentValue();
+            case PropertyDescriptorParsingType.TYPE_VALUE:
+                switch (descriptor.format) {
+                    case 'angle':
+                        return angle.parse(context, parser.parseComponentValue());
+                    case 'color':
+                        return colorType.parse(context, parser.parseComponentValue());
+                    case 'image':
+                        return image.parse(context, parser.parseComponentValue());
+                    case 'length': {
+                        const length = parser.parseComponentValue();
+                        return isLength(length) ? length : ZERO_LENGTH;
+                    }
+                    case 'length-percentage': {
+                        const value = parser.parseComponentValue();
+                        return isLengthPercentage(value) ? value : ZERO_LENGTH;
+                    }
+                    case 'time':
+                        return time.parse(context, parser.parseComponentValue());
+                }
+        }
+    })();
 
     if (!valueCache) {
         valueCache = new Map();
         parseCache.set(descriptor, valueCache);
     }
-    // LRU eviction: delete oldest entry (first key) instead of full-clear
     if (valueCache.size >= PARSE_CACHE_MAX_PER_DESCRIPTOR) {
         const oldestKey = valueCache.keys().next().value;
         valueCache.delete(oldestKey);
