@@ -39,12 +39,6 @@ importers:
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
-      '@types/filenamify-url':
-        specifier: ^2.0.1
-        version: 2.0.1
-      '@types/glob':
-        specifier: ^9.0.0
-        version: 9.0.0
       '@types/karma':
         specifier: ^6.3.0
         version: 6.3.9
@@ -60,9 +54,6 @@ importers:
       '@types/pngjs':
         specifier: ^6.0.5
         version: 6.0.5
-      '@types/promise-polyfill':
-        specifier: ^6.0.3
-        version: 6.0.6
       '@types/serve-index':
         specifier: ^1.9.4
         version: 1.9.4
@@ -99,9 +90,6 @@ importers:
       cz-conventional-changelog:
         specifier: ^3.3.0
         version: 3.3.0(@types/node@25.9.4)(typescript@5.9.3)
-      es6-promise:
-        specifier: ^4.2.8
-        version: 4.2.8
       eslint:
         specifier: ^9.13.0
         version: 9.39.4(jiti@2.6.1)
@@ -123,9 +111,6 @@ importers:
       husky:
         specifier: ^9.1.7
         version: 9.1.7
-      js-polyfills:
-        specifier: ^0.1.42
-        version: 0.1.43
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -1406,14 +1391,6 @@ packages:
   '@types/express@5.0.6':
     resolution: {integrity: sha512-sKYVuV7Sv9fbPIt/442koC7+IIwK5olP1KWeD88e/idgoJqDm3JV/YUiPwkoKK92ylff2MGxSz1CSjsXelx0YA==}
 
-  '@types/filenamify-url@2.0.1':
-    resolution: {integrity: sha512-UqmKzReX02cOMyqa6Co+/oHs0nhjvzzLEpWk8KRHxvov/cl3bLZgq51I1J0A2psYAPZOtVXwFoC0Po9bzBfm3w==}
-    deprecated: This is a stub types definition. filenamify-url provides its own type definitions, so you do not need this installed.
-
-  '@types/glob@9.0.0':
-    resolution: {integrity: sha512-00UxlRaIUvYm4R4W9WYkN8/J+kV8fmOQ7okeH6YFtGWFMt3odD45tpG5yA5wnL7HE6lLgjaTW5n14ju2hl2NNA==}
-    deprecated: This is a stub types definition. glob provides its own type definitions, so you do not need this installed.
-
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
 
@@ -1455,9 +1432,6 @@ packages:
 
   '@types/pngjs@6.0.5':
     resolution: {integrity: sha512-0k5eKfrA83JOZPppLtS2C7OUtyNAl2wKNxfyYl9Q5g9lPkgBl/9hNyAu6HuEH2J4XmIv2znEpkDd0SaZVxW6iQ==}
-
-  '@types/promise-polyfill@6.0.6':
-    resolution: {integrity: sha512-nKg0HIgdKRKfi5S3IlrpiNWqxiJOqYOV70jAtalqhvb5zJt5IoQMgy1QS3y5wsbUQPOCZHQxaPg+btBUVbA+hA==}
 
   '@types/qs@6.15.1':
     resolution: {integrity: sha512-GZHUBZR9hckSUhrxmp1nG6NwdpM9fCunJwyThLW1X3AyHgd9IlHb6VANpQQqDr2o/qQp6McZ3y/IA2rVzKzSbw==}
@@ -2620,9 +2594,6 @@ packages:
   es-toolkit@1.48.1:
     resolution: {integrity: sha512-wfnXlwd5I75eXRtdD2vuEs50xHHESECDsGD7yiQnfFVNoa5522NwXEbmgo98LfiukSQHs+mBM7/YG3qKJB9/mQ==}
 
-  es6-promise@4.2.8:
-    resolution: {integrity: sha512-HJDGx5daxeIvxdBxvG2cb9g4tEvwIk3i8+nhX0yGrYmZUzbkdg8QbDevheDB8gd0//uPj4c1EQua8Q+MViT0/w==}
-
   esbuild@0.21.5:
     resolution: {integrity: sha512-mg3OPMV4hXywwpoDxu3Qda5xCKQi+vCTZq8S9J/EpkhB2HzKXq4SNFZE3+NK93JYxc8VMSep+lOUSC/RVKaBqw==}
     engines: {node: '>=12'}
@@ -3343,10 +3314,6 @@ packages:
   jiti@2.6.1:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
-
-  js-polyfills@0.1.43:
-    resolution: {integrity: sha512-wWCJcw7uMA12uk7qcqZlIQy9nj+Evh1wVUmn5MOlJ7GPC8HT5PLjB9Uiqjw9ldAbbOuNOWJ6ENb7NwU6qqf48g==}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   js-tokens@10.0.0:
     resolution: {integrity: sha512-lM/UBzQmfJRo9ABXbPWemivdCW8V2G8FHaHdypQaIy523snUjog0W71ayWXTjiR+ixeMyVHN2XcpnTd/liPg/Q==}
@@ -6149,14 +6116,6 @@ snapshots:
       '@types/express-serve-static-core': 5.1.1
       '@types/serve-static': 2.2.0
 
-  '@types/filenamify-url@2.0.1':
-    dependencies:
-      filenamify-url: 4.0.0
-
-  '@types/glob@9.0.0':
-    dependencies:
-      glob: 13.0.6
-
   '@types/hast@3.0.4':
     dependencies:
       '@types/unist': 3.0.3
@@ -6200,8 +6159,6 @@ snapshots:
   '@types/pngjs@6.0.5':
     dependencies:
       '@types/node': 25.9.4
-
-  '@types/promise-polyfill@6.0.6': {}
 
   '@types/qs@6.15.1': {}
 
@@ -7496,8 +7453,6 @@ snapshots:
 
   es-toolkit@1.48.1: {}
 
-  es6-promise@4.2.8: {}
-
   esbuild@0.21.5:
     optionalDependencies:
       '@esbuild/aix-ppc64': 0.21.5
@@ -8324,8 +8279,6 @@ snapshots:
       '@pkgjs/parseargs': 0.11.0
 
   jiti@2.6.1: {}
-
-  js-polyfills@0.1.43: {}
 
   js-tokens@10.0.0: {}
 

@@ -1,15 +1,11 @@
 import { testList, ignoredTests } from '../build/reftests.js';
 // @ts-ignore
 import { default as platform } from 'platform';
-// @ts-ignore
-import Promise from 'es6-promise';
 import { createDefaultValidator } from '../src/index';
 import { ScreenshotRequest } from './types';
 
 const reftestValidator = createDefaultValidator({ allowLocalhostProxy: true });
 
-// @ts-ignore
-window.Promise = Promise;
 const testRunnerUrl = location.href;
 const hasHistoryApi = typeof window.history !== 'undefined' && typeof window.history.replaceState !== 'undefined';
 

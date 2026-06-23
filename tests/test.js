@@ -17,11 +17,7 @@ var REFTEST = window.location.search.indexOf('reftest') !== -1;
         );
     }
 
-    (typeof Promise === 'undefined' ? ['/node_modules/es6-promise/dist/es6-promise.auto.min'] : [])
-        .concat([
-            '/dist/html2canvas-pro'
-        ])
-        .forEach(appendScript);
+    appendScript('/dist/html2canvas-pro');
 
     window.addEventListener("unhandledrejection", function(event) {
         console.info('UNHANDLED PROMISE REJECTION:', event);

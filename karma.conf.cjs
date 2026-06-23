@@ -1,7 +1,6 @@
 // Karma configuration
 // Generated on Sat Aug 05 2017 23:42:26 GMT+0800 (Malay Peninsula Standard Time)
 
-const path = require('path');
 const simctl = require('node-simctl');
 const iosSimulator = require('appium-ios-simulator');
 const listenAddress = 'localhost';
@@ -135,17 +134,6 @@ module.exports = function(config) {
         }
     };
 
-    const injectTypedArrayPolyfills = function(files) {
-        files.unshift({
-            pattern: path.resolve(__dirname, './node_modules/js-polyfills/typedarray.js'),
-            included: true,
-            served: true,
-            watched: false
-        });
-    };
-
-    injectTypedArrayPolyfills.$inject = ['config.files'];
-
     const MobileSafari = function(baseBrowserDecorator, args) {
         if(process.platform !== "darwin"){
             log.error("This launcher only works in MacOS.");
@@ -197,7 +185,7 @@ module.exports = function(config) {
 
         // frameworks to use
         // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-        frameworks: ['mocha', 'inline-mocha-fix'],
+        frameworks: ['mocha'],
 
         // list of files / patterns to load in the browser
         files: [
@@ -215,9 +203,6 @@ module.exports = function(config) {
             'karma-edge-launcher',
             'karma-ie-launcher',
             'karma-safarinative-launcher',
-            {
-                'framework:inline-mocha-fix': ['factory', injectTypedArrayPolyfills]
-            },
             {
                 'launcher:MobileSafari': ['type', MobileSafari]
             }
