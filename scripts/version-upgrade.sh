@@ -25,5 +25,5 @@ npx conventional-changelog -p conventionalcommits -i CHANGELOG.md -r 1
 # Commit and tag
 git add package.json CHANGELOG.md
 git commit -m "chore(release): v$VERSION"
-git tag "v$VERSION"
+git tag -a "v$VERSION" -m "v$VERSION"
 git push --follow-tags origin main
