@@ -1,6 +1,7 @@
 import { DimensionToken, FLAG_INTEGER, NumberValueToken, TokenType } from '../syntax/tokenizer';
 import { CSSValue, CSSFunction, isDimensionToken } from '../syntax/parser';
 import { isLength } from './length';
+import safeEvalArithmetic from './safe-eval';
 export type LengthPercentage = DimensionToken | NumberValueToken;
 export type LengthPercentageTuple = [LengthPercentage] | [LengthPercentage, LengthPercentage];
 
@@ -72,8 +73,8 @@ export const evaluateCalcToLengthPercentage = (calcToken: CSSFunction, contextVa
         }
 
         // Evaluate the expression
-        // Note: Using Function constructor (similar to color.ts line 185)
-        const result = new Function('return ' + expression)();
+        // Uses safe arithmetic evaluator instead of new Function() for CodeQL
+        const result = safeEvalArithmetic(expression);
 
         if (typeof result === 'number' && !isNaN(result)) {
             // Return as a number token in px

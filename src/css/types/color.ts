@@ -1,5 +1,6 @@
 import { CSSValue, isIdentToken, isNumberToken, nonFunctionArgSeparator, Parser } from '../syntax/parser';
 import { HashToken, TokenType } from '../syntax/tokenizer';
+import safeEvalArithmetic from './safe-eval';
 import { ITypeDescriptor } from '../type-descriptor';
 import { Context } from '../../core/context';
 import { srgbFromXYZ, srgbLinearFromXYZ } from './color-spaces/srgb';
@@ -192,7 +193,7 @@ const _color = (context: Context, args: CSSValue[]) => {
                         .replace(/g|y/, color[1].toString())
                         .replace(/b|z/, color[2].toString());
 
-                    return new Function('return ' + expression)();
+                    return safeEvalArithmetic(expression);
                 }
             }
 

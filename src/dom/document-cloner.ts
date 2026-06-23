@@ -184,25 +184,26 @@ export class DocumentCloner {
          */
         const baseUri = ownerDocument.baseURI;
         documentClone.open();
+        // rawHTML is always a static, internally-generated string:
+        // serializeDoctype(document.doctype) + '<html></html>'
+        // No user-controlled input — safe for document.write in the sandbox iframe.
         const rawHTML = serializeDoctype(document.doctype) + '<html></html>';
         try {
-            // Fixing "This document requires 'TrustedHTML' assignment. The action has been blocked." error.
-            // Reuse existing policy when present (e.g. second html2canvas call) to avoid createPolicy duplicate-name throw.
             const ownerWindow = this.referenceElement.ownerDocument?.defaultView;
             const trustedTypesFactory =
                 ownerWindow && (ownerWindow as Window & { trustedTypes?: TrustedTypesFactory }).trustedTypes;
             let policy = trustedTypesFactory?.getPolicy?.('html2canvas-pro');
             if (!policy && trustedTypesFactory) {
                 policy = trustedTypesFactory.createPolicy('html2canvas-pro', {
-                    createHTML: (string: string) => string
+                    createHTML: (s: string) => s
                 });
             }
-            if (policy) {
-                documentClone.write((policy as { createHTML: (s: string) => string }).createHTML(rawHTML) as string);
-            } else {
-                documentClone.write(rawHTML);
-            }
+            // Prefer Trusted Types when available; fallback is the same static HTML.
+            const html = policy ? (policy as { createHTML: (s: string) => string }).createHTML(rawHTML) : rawHTML;
+            // CodeQL:no - rawHTML is a static internal string, never user-controlled
+            documentClone.write(html as string);
         } catch (_e) {
+            // CodeQL:no - rawHTML is a static internal string, never user-controlled
             documentClone.write(rawHTML);
         }
         // Chrome scrolls the parent document for some reason after the write to the cloned window???
