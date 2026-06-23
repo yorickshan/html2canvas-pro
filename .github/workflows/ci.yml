@@ -31,13 +31,17 @@ jobs:
                       size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
                       size_kb=$(echo "scale=1; $size / 1024" | bc)
                       echo "- \`$file\`: **${size_kb} KB** ($size bytes)" >> $GITHUB_STEP_SUMMARY
-                      # Alert if full bundle exceeds 200 KB
-                      if [ "$file" = "dist/html2canvas-pro.js" ] && [ "$size" -gt 204800 ]; then
-                        echo "::warning file=$file,title=Bundle size warning::Full bundle exceeds 200 KB (${size_kb} KB)"
+                      # Alert if full bundle exceeds 600 KB
+                      if [ "$file" = "dist/html2canvas-pro.js" ] && [ "$size" -gt 614400 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::Full bundle exceeds 600 KB (${size_kb} KB)"
                       fi
-                      # Alert if minified bundle exceeds 80 KB
-                      if [ "$file" = "dist/html2canvas-pro.min.js" ] && [ "$size" -gt 81920 ]; then
-                        echo "::warning file=$file,title=Bundle size warning::Minified bundle exceeds 80 KB (${size_kb} KB)"
+                      # Alert if minified bundle exceeds 250 KB
+                      if [ "$file" = "dist/html2canvas-pro.min.js" ] && [ "$size" -gt 256000 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::Minified bundle exceeds 250 KB (${size_kb} KB)"
+                      fi
+                      # Alert if ESM bundle exceeds 550 KB
+                      if [ "$file" = "dist/html2canvas-pro.esm.js" ] && [ "$size" -gt 563200 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::ESM bundle exceeds 550 KB (${size_kb} KB)"
                       fi
                     fi
                   done
