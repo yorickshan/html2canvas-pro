@@ -16,6 +16,8 @@ jobs:
         contents: write
     steps:
     - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
     - uses: pnpm/action-setup@v3
     - uses: actions/setup-node@v4
       with:
@@ -25,10 +27,10 @@ jobs:
       run: pnpm install --frozen-lockfile
     - name: Configure git
       run: |
-        git config user.name "CI"
-        git config user.email "yorickshan@gmail.com"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
     - name: Create release
-      run: pnpm release -- --preset eslint --release-as ${{ github.event.inputs.version }}
+      run: pnpm release ${{ github.event.inputs.version }}
     - name: Print details
       run: |
         cat package.json

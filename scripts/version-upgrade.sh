@@ -1,17 +1,29 @@
 #!/bin/bash
+set -e
 
 git pull -r
 
 if [ $# -ne 1 ]; then
-  echo "Usage: pnpm release <version_name>."
+  echo "Usage: pnpm release <version>"
+  echo "  version: major | minor | patch | premajor | preminor | prepatch | prerelease"
   exit 1
 fi
 
-if git rev-parse "v$1" >/dev/null 2>&1
-then
-  echo "Tag 'v$1' exists."
+VERSION=$1
+
+if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+  echo "Tag v$VERSION already exists."
   exit 1
 fi
 
-npx standard-version --release-as $1
-git push --follow-tags
+# Bump version in package.json (no git commit/tag)
+npm version "$VERSION" --no-git-tag-version
+
+# Generate changelog
+npx conventional-changelog -p conventionalcommits -i CHANGELOG.md -s -r 1
+
+# Commit and tag
+git add package.json CHANGELOG.md
+git commit -m "chore(release): v$VERSION"
+git tag "v$VERSION"
+git push --follow-tags origin main
