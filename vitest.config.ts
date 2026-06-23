@@ -11,8 +11,7 @@ export default defineConfig({
             exclude: [
                 'src/**/__tests__/**',
                 'src/**/__mocks__/**',
-                'src/global.d.ts',
-                'src/invariant.ts'
+                'src/global.d.ts'
             ],
             thresholds: {
                 branches: 10,

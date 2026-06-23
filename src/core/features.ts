@@ -96,7 +96,7 @@ const testForeignObject = (document: Document): Promise<boolean> => {
     canvas.height = size;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-        return Promise.reject(false);
+        return Promise.reject(new Error('Failed to get 2D rendering context'));
     }
     ctx.fillStyle = 'rgb(0, 255, 0)';
     ctx.fillRect(0, 0, size, size);
@@ -121,7 +121,7 @@ const testForeignObject = (document: Document): Promise<boolean> => {
             // Firefox 55 does not render inline <img /> tags
             return isGreenPixel(data)
                 ? loadSerializedSVG(createForeignObjectSVG(size, size, 0, 0, node))
-                : Promise.reject(false);
+                : Promise.reject(new Error('ForeignObject rendering not supported'));
         })
         .then((img: HTMLImageElement) => {
             ctx.drawImage(img, 0, 0);

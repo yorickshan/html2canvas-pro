@@ -9,7 +9,6 @@
   "sideEffects": false,
   "files": [
     "dist/",
-    "src/",
     "LICENSE"
   ],
   "exports": {
@@ -77,7 +76,6 @@
     "filenamify-url": "4.0.0",
     "glob": "^13.0.0",
     "husky": "^9.1.7",
-    "jquery": "^3.5.1",
     "js-polyfills": "^0.1.42",
     "jsdom": "^29.1.1",
     "karma": "^6.3.2",
@@ -133,7 +131,6 @@
     "watch:unittest": "vitest",
     "start": "tsx tests/server --port=8080 --cors=8081",
     "commitlint": "commitlint --config .commitlintrc.json -e -V",
-    "tag": "sh scripts/create-tag.sh",
     "prepare": "if [ \"$SKIP_PREPARE\" != \"true\" ]; then husky install; fi",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",

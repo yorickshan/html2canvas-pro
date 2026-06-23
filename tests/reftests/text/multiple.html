@@ -6,13 +6,19 @@
         <script type="text/javascript" src="../../test.js"></script>
         <script type="text/javascript">
             function setUp() {
-                $('body').empty();
-                $.each(['arial','verdana','courier new'],function(i,e){
-                    var div = $('<div />').css('font-family',e).appendTo('body');
-                    for(var i=0;i<=5;i++){
-                        $('<div />').text('Testing texts').css('margin-top',1).css('border','1px solid black').css('font-size',(16+i*6)).appendTo(div);
+                document.body.innerHTML = '';
+                ['arial','verdana','courier new'].forEach(function(e) {
+                    var div = document.createElement('div');
+                    div.style.fontFamily = e;
+                    document.body.appendChild(div);
+                    for (var i = 0; i <= 5; i++) {
+                        var text = document.createElement('div');
+                        text.textContent = 'Testing texts';
+                        text.style.marginTop = '1px';
+                        text.style.border = '1px solid black';
+                        text.style.fontSize = (16 + i * 6) + 'px';
+                        div.appendChild(text);
                     }
-
                 });
             }
         </script>

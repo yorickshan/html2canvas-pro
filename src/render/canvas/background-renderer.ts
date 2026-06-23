@@ -126,7 +126,10 @@ export class BackgroundRenderer {
         const canvas = ownerDocument.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return;
+        }
         const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
 
         processColorStops(backgroundImage.stops, lineLength || 1).forEach((colorStop) =>
@@ -235,7 +238,10 @@ export class BackgroundRenderer {
         const canvas = ownerDocument.createElement('canvas');
         canvas.width = Math.max(1, width);
         canvas.height = Math.max(1, height);
-        const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return image;
+        }
 
         // Apply image smoothing based on CSS image-rendering property
         if (imageRendering === IMAGE_RENDERING.PIXELATED || imageRendering === IMAGE_RENDERING.CRISP_EDGES) {

@@ -13,7 +13,11 @@ export class ForeignObjectRenderer {
         this.context = context;
         this.options = options;
         this.canvas = options.canvas ? options.canvas : document.createElement('canvas');
-        this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
+        const ctx = this.canvas.getContext('2d');
+        if (!ctx) {
+            throw new Error('Failed to get 2D rendering context from canvas');
+        }
+        this.ctx = ctx;
         this.canvas.width = Math.floor(options.width * options.scale);
         this.canvas.height = Math.floor(options.height * options.scale);
         this.canvas.style.width = `${options.width}px`;
