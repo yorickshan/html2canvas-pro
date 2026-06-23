@@ -102,7 +102,7 @@ export class ElementPaint {
         }
 
         if (this.container.styles.mixBlendMode !== MIX_BLEND_MODE.NORMAL) {
-            this.effects.push(new BlendEffect(this.container.styles.mixBlendMode as GlobalCompositeOperation));
+            this.effects.push(new BlendEffect(this.container.styles.mixBlendMode));
         }
 
         if (this.container.styles.filter !== null) {

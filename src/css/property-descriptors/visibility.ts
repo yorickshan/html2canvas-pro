@@ -7,7 +7,7 @@ export const enum VISIBILITY {
 }
 
 export const visibility: IPropertyIdentValueDescriptor<VISIBILITY> = {
-    name: 'visible',
+    name: 'visibility',
     initialValue: 'none',
     prefix: false,
     type: PropertyDescriptorParsingType.IDENT_VALUE,

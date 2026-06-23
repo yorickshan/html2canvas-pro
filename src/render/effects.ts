@@ -1,4 +1,5 @@
 import { Matrix } from '../css/property-descriptors/transform';
+import { MixBlendMode, MIX_BLEND_MODE } from '../css/property-descriptors/mix-blend-mode';
 import { Path } from './path';
 
 export const enum EffectType {
@@ -60,11 +61,38 @@ export class ClipPathEffect implements IElementEffect {
     constructor(readonly applyClip: (ctx: CanvasRenderingContext2D) => void) {}
 }
 
+/**
+ * Maps a CSS mix-blend-mode value to the corresponding Canvas {@link GlobalCompositeOperation}.
+ * All CSS blend mode values are supported by the Canvas 2D API except 'normal',
+ * which maps to the default 'source-over'.
+ */
+const MIX_BLEND_MODE_TO_COMPOSITE: Record<MixBlendMode, GlobalCompositeOperation> = {
+    [MIX_BLEND_MODE.NORMAL]: 'source-over',
+    [MIX_BLEND_MODE.MULTIPLY]: 'multiply',
+    [MIX_BLEND_MODE.SCREEN]: 'screen',
+    [MIX_BLEND_MODE.OVERLAY]: 'overlay',
+    [MIX_BLEND_MODE.DARKEN]: 'darken',
+    [MIX_BLEND_MODE.LIGHTEN]: 'lighten',
+    [MIX_BLEND_MODE.COLOR_DODGE]: 'color-dodge',
+    [MIX_BLEND_MODE.COLOR_BURN]: 'color-burn',
+    [MIX_BLEND_MODE.HARD_LIGHT]: 'hard-light',
+    [MIX_BLEND_MODE.SOFT_LIGHT]: 'soft-light',
+    [MIX_BLEND_MODE.DIFFERENCE]: 'difference',
+    [MIX_BLEND_MODE.EXCLUSION]: 'exclusion',
+    [MIX_BLEND_MODE.HUE]: 'hue',
+    [MIX_BLEND_MODE.SATURATION]: 'saturation',
+    [MIX_BLEND_MODE.COLOR]: 'color',
+    [MIX_BLEND_MODE.LUMINOSITY]: 'luminosity'
+};
+
 export class BlendEffect implements IElementEffect {
     readonly type: EffectType = EffectType.BLEND;
     readonly target: number = EffectTarget.BACKGROUND_BORDERS | EffectTarget.CONTENT;
+    readonly compositeOperation: GlobalCompositeOperation;
 
-    constructor(readonly compositeOperation: GlobalCompositeOperation) {}
+    constructor(readonly mixBlendMode: MixBlendMode) {
+        this.compositeOperation = MIX_BLEND_MODE_TO_COMPOSITE[mixBlendMode];
+    }
 }
 
 export class FilterEffect implements IElementEffect {

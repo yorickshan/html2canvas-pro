@@ -12,7 +12,7 @@ export const enum OBJECT_FIT {
 export type ObjectFit = number;
 
 export const objectFit: IPropertyListDescriptor<ObjectFit> = {
-    name: 'objectFit',
+    name: 'object-fit',
     initialValue: 'fill',
     prefix: false,
     type: PropertyDescriptorParsingType.LIST,
