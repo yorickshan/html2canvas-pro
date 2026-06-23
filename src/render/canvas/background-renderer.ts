@@ -18,7 +18,8 @@ import {
     CSSRadialGradientImage,
     CSSURLImage,
     isLinearGradient,
-    isRadialGradient
+    isRadialGradient,
+    isRepeatingLinearGradient
 } from '../../css/types/image';
 import { calculateBackgroundRendering } from '../background';
 import { calculateGradientDirection, calculateRadius, processColorStops } from '../../css/types/functions/gradient';
@@ -67,15 +68,38 @@ export class BackgroundRenderer {
      */
     async renderBackgroundImage(container: ElementContainer): Promise<void> {
         let index = container.styles.backgroundImage.length - 1;
+        const blendModes = container.styles.backgroundBlendMode;
+        let layerCount = 0;
+
         for (const backgroundImage of container.styles.backgroundImage.slice(0).reverse()) {
+            // Save context and apply blend mode for non-first layers
+            if (layerCount > 0) {
+                const blendMode = blendModes[layerCount] ?? blendModes[0] ?? 'normal';
+                if (blendMode !== 'normal') {
+                    this.ctx.save();
+                    this.ctx.globalCompositeOperation = blendMode as GlobalCompositeOperation;
+                }
+            }
+
             if (backgroundImage.type === CSSImageType.URL) {
                 await this.renderBackgroundURLImage(container, backgroundImage as CSSURLImage, index);
             } else if (isLinearGradient(backgroundImage)) {
                 this.renderLinearGradient(container, backgroundImage, index);
+            } else if (isRepeatingLinearGradient(backgroundImage)) {
+                this.renderRepeatingLinearGradient(container, backgroundImage, index);
             } else if (isRadialGradient(backgroundImage)) {
                 this.renderRadialGradient(container, backgroundImage, index);
             }
+
+            if (layerCount > 0) {
+                const blendMode = blendModes[layerCount] ?? blendModes[0] ?? 'normal';
+                if (blendMode !== 'normal') {
+                    this.ctx.restore();
+                }
+            }
+
             index--;
+            layerCount++;
         }
     }
 
@@ -107,6 +131,68 @@ export class BackgroundRenderer {
                 this.resizeImage(image as HTMLImageElement, width, height, container.styles.imageRendering),
                 'repeat'
             ) as CanvasPattern;
+            this.renderRepeat(path, pattern, x, y);
+        }
+    }
+
+    /**
+     * Render a repeating linear gradient background.
+     * Renders one cycle of the gradient to a pattern canvas, then fills
+     * the background area using createPattern('repeat').
+     */
+    private renderRepeatingLinearGradient(
+        container: ElementContainer,
+        backgroundImage: CSSLinearGradientImage,
+        index: number
+    ): void {
+        const [path, x, y, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
+        const [lineLength, x0, x1, y0, y1] = calculateGradientDirection(backgroundImage.angle, width, height);
+
+        // Determine the repeating pattern length from color stops
+        const processedStops = processColorStops(backgroundImage.stops, lineLength || 1);
+        const lastStop = processedStops[processedStops.length - 1];
+        const firstStop = processedStops[0];
+        const patternLength = lastStop.stop - firstStop.stop;
+
+        if (patternLength <= 0) {
+            // Fallback: render as normal linear gradient
+            this.renderLinearGradient(container, backgroundImage, index);
+            return;
+        }
+
+        // Scale direction vectors to match the pattern length
+        const dirX = x1 - x0;
+        const dirY = y1 - y0;
+        const totalLength = Math.sqrt(dirX * dirX + dirY * dirY);
+        const scale = patternLength / (totalLength || 1);
+        const pX0 = x0;
+        const pY0 = y0;
+        const pX1 = x0 + dirX * scale;
+        const pY1 = y0 + dirY * scale;
+
+        const ownerDocument = this.canvas.ownerDocument ?? document;
+        const canvas = ownerDocument.createElement('canvas');
+        // Create a canvas large enough to hold one full repeating unit
+        const canvasSize = Math.max(1, Math.ceil(patternLength));
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return;
+        }
+
+        const gradient = ctx.createLinearGradient(pX0 - x, pY0 - y, pX1 - x, pY1 - y);
+
+        // Normalize stops to [0, 1] range for one repeating unit
+        processedStops.forEach((colorStop) => {
+            gradient.addColorStop((colorStop.stop - firstStop.stop) / patternLength, asString(colorStop.color));
+        });
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+        if (canvasSize > 0) {
+            const pattern = this.ctx.createPattern(canvas, 'repeat') as CanvasPattern;
             this.renderRepeat(path, pattern, x, y);
         }
     }

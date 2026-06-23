@@ -38,6 +38,7 @@ import { IFrameElementContainer } from '../../dom/replaced-elements/iframe-eleme
 import { Context } from '../../core/context';
 import { BackgroundRenderer } from './background-renderer';
 import { BorderRenderer } from './border-renderer';
+import { BorderImageRenderer } from './border-image-renderer';
 import { EffectsRenderer } from './effects-renderer';
 import { TextRenderer } from './text-renderer';
 import { createCanvasPath, formatCanvasPath } from './canvas-path';
@@ -82,6 +83,7 @@ export class CanvasRenderer {
     private readonly fontMetrics: FontMetrics;
     private readonly backgroundRenderer: BackgroundRenderer;
     private readonly borderRenderer: BorderRenderer;
+    private readonly borderImageRenderer: BorderImageRenderer;
     private readonly effectsRenderer: EffectsRenderer;
     private readonly textRenderer: TextRenderer;
 
@@ -132,6 +134,8 @@ export class CanvasRenderer {
                 formatPath: (paths) => this.formatPath(paths)
             }
         );
+
+        this.borderImageRenderer = new BorderImageRenderer(this.ctx);
 
         this.effectsRenderer = new EffectsRenderer({ ctx: this.ctx }, { path: (paths) => this.path(paths) });
 
@@ -188,7 +192,8 @@ export class CanvasRenderer {
                 intrinsicWidth,
                 intrinsicHeight,
                 box,
-                container.styles.objectFit
+                container.styles.objectFit,
+                container.styles.objectPosition
             );
             this.ctx.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
             this.ctx.restore();
@@ -562,6 +567,34 @@ export class CanvasRenderer {
                     this.ctx.fill();
                     this.ctx.restore();
                 });
+        }
+
+        // Render border-image if present (replaces traditional borders per CSS spec)
+        if (styles.borderImageSource) {
+            const source = styles.borderImageSource;
+            if (source.type === CSSImageType.URL) {
+                const url = (source as CSSURLImage).url;
+                try {
+                    const image = await this.context.cache.match(url);
+                    if (image) {
+                        const bounds = paint.container.bounds;
+                        this.borderImageRenderer.renderBorderImage(
+                            bounds,
+                            image as HTMLImageElement,
+                            styles.borderImageSlice,
+                            styles.borderImageRepeat,
+                            Math.max(0, styles.borderTopWidth),
+                            Math.max(0, styles.borderRightWidth),
+                            Math.max(0, styles.borderBottomWidth),
+                            Math.max(0, styles.borderLeftWidth)
+                        );
+                    }
+                } catch (e) {
+                    this.context.logger.error(`Error loading border-image ${url}`);
+                }
+            }
+            // When border-image is present, skip regular border rendering
+            return;
         }
 
         let side = 0;

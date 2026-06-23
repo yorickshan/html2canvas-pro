@@ -6,7 +6,8 @@ export const enum EffectType {
     CLIP = 1,
     OPACITY = 2,
     CLIP_PATH = 3,
-    BLEND = 4
+    BLEND = 4,
+    FILTER = 5
 }
 
 export const enum EffectTarget {
@@ -66,6 +67,13 @@ export class BlendEffect implements IElementEffect {
     constructor(readonly compositeOperation: GlobalCompositeOperation) {}
 }
 
+export class FilterEffect implements IElementEffect {
+    readonly type: EffectType = EffectType.FILTER;
+    readonly target: number = EffectTarget.BACKGROUND_BORDERS | EffectTarget.CONTENT;
+
+    constructor(readonly filterString: string) {}
+}
+
 export const isTransformEffect = (effect: IElementEffect): effect is TransformEffect =>
     effect.type === EffectType.TRANSFORM;
 export const isClipEffect = (effect: IElementEffect): effect is ClipEffect => effect.type === EffectType.CLIP;
@@ -73,3 +81,4 @@ export const isOpacityEffect = (effect: IElementEffect): effect is OpacityEffect
 export const isClipPathEffect = (effect: IElementEffect): effect is ClipPathEffect =>
     effect.type === EffectType.CLIP_PATH;
 export const isBlendEffect = (effect: IElementEffect): effect is BlendEffect => effect.type === EffectType.BLEND;
+export const isFilterEffect = (effect: IElementEffect): effect is FilterEffect => effect.type === EffectType.FILTER;

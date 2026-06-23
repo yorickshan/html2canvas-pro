@@ -6,6 +6,7 @@ import {
     ClipEffect,
     ClipPathEffect,
     EffectTarget,
+    FilterEffect,
     IElementEffect,
     isClipEffect,
     OpacityEffect,
@@ -102,6 +103,19 @@ export class ElementPaint {
 
         if (this.container.styles.mixBlendMode !== MIX_BLEND_MODE.NORMAL) {
             this.effects.push(new BlendEffect(this.container.styles.mixBlendMode as GlobalCompositeOperation));
+        }
+
+        if (this.container.styles.filter !== null) {
+            this.effects.push(new FilterEffect(this.container.styles.filter));
+        }
+
+        if (this.container.styles.zoom !== 1) {
+            const origin = this.container.styles.transformOrigin;
+            const offsetX = this.container.bounds.left + getAbsoluteValue(origin[0], this.container.bounds.width);
+            const offsetY = this.container.bounds.top + getAbsoluteValue(origin[1], this.container.bounds.height);
+            const z = this.container.styles.zoom;
+            const zoomMatrix: Matrix = [z, 0, 0, z, 0, 0];
+            this.effects.push(new TransformEffect(offsetX, offsetY, zoomMatrix));
         }
     }
 

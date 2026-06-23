@@ -92,6 +92,15 @@ import { objectFit } from './property-descriptors/object-fit';
 import { textOverflow } from './property-descriptors/text-overflow';
 import { imageRendering } from './property-descriptors/image-rendering';
 import { mixBlendMode, MixBlendMode } from './property-descriptors/mix-blend-mode';
+import { filter } from './property-descriptors/filter';
+import { fontVariantLigatures } from './property-descriptors/font-variant-ligatures';
+import { zoom } from './property-descriptors/zoom';
+import { objectPosition } from './property-descriptors/object-position';
+import { backgroundBlendMode } from './property-descriptors/background-blend-mode';
+import { borderImageSource } from './property-descriptors/border-image-source';
+import { borderImageSlice } from './property-descriptors/border-image-slice';
+import { borderImageRepeat } from './property-descriptors/border-image-repeat';
+import { boxDecorationBreak } from './property-descriptors/box-decoration-break';
 
 export class CSSParsedDeclaration {
     animationDuration!: ReturnType<typeof duration.parse>;
@@ -171,6 +180,15 @@ export class CSSParsedDeclaration {
     objectFit!: ReturnType<typeof objectFit.parse>;
     imageRendering!: ReturnType<typeof imageRendering.parse>;
     mixBlendMode!: MixBlendMode;
+    filter!: ReturnType<typeof filter.parse>;
+    fontVariantLigatures!: ReturnType<typeof fontVariantLigatures.parse>;
+    zoom!: ReturnType<typeof zoom.parse>;
+    objectPosition!: ReturnType<typeof objectPosition.parse>;
+    backgroundBlendMode!: ReturnType<typeof backgroundBlendMode.parse>;
+    borderImageSource!: ReturnType<typeof borderImageSource.parse>;
+    borderImageSlice!: ReturnType<typeof borderImageSlice.parse>;
+    borderImageRepeat!: ReturnType<typeof borderImageRepeat.parse>;
+    boxDecorationBreak!: ReturnType<typeof boxDecorationBreak.parse>;
 
     private static readonly standardProps: [keyof CSSParsedDeclaration, CSSPropertyDescriptor<unknown>, string][] = [
         ['animationDuration', duration, 'animationDuration'],
@@ -244,7 +262,16 @@ export class CSSParsedDeclaration {
         ['zIndex', zIndex, 'zIndex'],
         ['objectFit', objectFit, 'objectFit'],
         ['imageRendering', imageRendering, 'imageRendering'],
-        ['mixBlendMode', mixBlendMode, 'mixBlendMode']
+        ['mixBlendMode', mixBlendMode, 'mixBlendMode'],
+        ['filter', filter, 'filter'],
+        ['fontVariantLigatures', fontVariantLigatures, 'fontVariantLigatures'],
+        ['zoom', zoom, 'zoom'],
+        ['objectPosition', objectPosition, 'objectPosition'],
+        ['backgroundBlendMode', backgroundBlendMode, 'backgroundBlendMode'],
+        ['borderImageSource', borderImageSource, 'borderImageSource'],
+        ['borderImageSlice', borderImageSlice, 'borderImageSlice'],
+        ['borderImageRepeat', borderImageRepeat, 'borderImageRepeat'],
+        ['boxDecorationBreak', boxDecorationBreak, 'boxDecorationBreak']
     ];
 
     constructor(context: Context, declaration: CSSStyleDeclaration) {

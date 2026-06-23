@@ -13,6 +13,7 @@ import {
     isBlendEffect,
     isClipEffect,
     isClipPathEffect,
+    isFilterEffect,
     isOpacityEffect,
     isTransformEffect
 } from '../effects';
@@ -96,6 +97,8 @@ export class EffectsRenderer {
             effect.applyClip(this.ctx);
         } else if (isBlendEffect(effect)) {
             this.ctx.globalCompositeOperation = effect.compositeOperation;
+        } else if (isFilterEffect(effect)) {
+            this.ctx.filter = effect.filterString;
         }
 
         this.activeEffects.push(effect);

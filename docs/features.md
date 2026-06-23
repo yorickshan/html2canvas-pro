@@ -4,20 +4,28 @@ Below is a list of all the supported CSS properties and values.
 
  - background
    - background-clip (**Does not support `text`**)
+   - background-blend-mode
    - background-color
    - background-image
        - url()
        - linear-gradient()
+       - repeating-linear-gradient()
        - radial-gradient()
    - background-origin
    - background-position
    - background-size
  - border
    - border-color
+   - border-image
+     - border-image-source
+     - border-image-slice
+     - border-image-repeat
    - border-radius
    - border-style
    - border-width
  - bottom
+ - box-decoration-break (**Parsed only** — no visual effect in single-element rendering)
+ - box-shadow
  - box-sizing
  - clip-path
    - `inset()`
@@ -28,6 +36,17 @@ Below is a list of all the supported CSS properties and values.
  - content
  - color
  - display
+ - filter
+   - blur()
+   - brightness()
+   - contrast()
+   - drop-shadow()
+   - grayscale()
+   - hue-rotate()
+   - invert()
+   - opacity()
+   - saturate()
+   - sepia()
  - flex
  - float
  - font
@@ -35,6 +54,7 @@ Below is a list of all the supported CSS properties and values.
    - font-size
    - font-style
    - font-variant
+   - font-variant-ligatures (**Parsed only** — Canvas renders via browser font engine)
    - font-weight
  - height
  - image-rendering (`auto`, `pixelated`, `crisp-edges`, `smooth`)
@@ -51,6 +71,8 @@ Below is a list of all the supported CSS properties and values.
  - max-width
  - min-height
  - min-width
+ - object-fit
+ - object-position
  - opacity
  - overflow
  - overflow-wrap
@@ -80,18 +102,21 @@ Below is a list of all the supported CSS properties and values.
  - word-wrap
  - writing-mode
  - z-index
+ - zoom
 
-## Unsupported CSS properties
-These CSS properties are **NOT** currently supported
- - [background-blend-mode](https://github.com/niklasvh/html2canvas/issues/966)
- - [border-image](https://github.com/niklasvh/html2canvas/issues/1287)
- - [box-decoration-break](https://github.com/niklasvh/html2canvas/issues/552)
- - [box-shadow](https://github.com/niklasvh/html2canvas/pull/1086)
- - [filter](https://github.com/niklasvh/html2canvas/issues/493)
- - [font-variant-ligatures](https://github.com/niklasvh/html2canvas/pull/1085)
- - object-position
- - [repeating-linear-gradient()](https://github.com/niklasvh/html2canvas/issues/1162)
- - [zoom](https://github.com/niklasvh/html2canvas/issues/732)
+## CSS properties supported as of v2.1.1+
+
+All previously listed unsupported properties are now implemented:
+
+ - **background-blend-mode** — Full support for blend modes on background image layers
+ - **border-image** — 9-slice border image rendering with stretch/repeat/round
+ - **box-decoration-break** — Parsed (`slice` / `clone`); no visual difference in single-element rendering
+ - **box-shadow** — Full support including inset shadows
+ - **filter** — CSS filter functions: `blur()`, `brightness()`, `contrast()`, `drop-shadow()`, `grayscale()`, `hue-rotate()`, `invert()`, `opacity()`, `saturate()`, `sepia()`
+ - **font-variant-ligatures** — Parsed; Canvas text rendering is handled by the browser font engine
+ - **object-position** — Controls alignment of replaced elements (images, canvas, SVG) within their content box
+ - **repeating-linear-gradient()** — Repeating linear gradient backgrounds
+ - **zoom** — Element zoom via CSS transform scale
 
 ## Additional Features
 

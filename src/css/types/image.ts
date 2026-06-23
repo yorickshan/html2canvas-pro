@@ -8,12 +8,14 @@ import { LengthPercentage } from './length-percentage';
 import { webkitGradient } from './functions/-webkit-gradient';
 import { radialGradient } from './functions/radial-gradient';
 import { prefixRadialGradient } from './functions/-prefix-radial-gradient';
+import { repeatingLinearGradient } from './functions/repeating-linear-gradient';
 import { Context } from '../../core/context';
 
 export const enum CSSImageType {
     URL,
     LINEAR_GRADIENT,
-    RADIAL_GRADIENT
+    RADIAL_GRADIENT,
+    REPEATING_LINEAR_GRADIENT
 }
 
 export const isLinearGradient = (background: ICSSImage): background is CSSLinearGradientImage => {
@@ -22,6 +24,10 @@ export const isLinearGradient = (background: ICSSImage): background is CSSLinear
 
 export const isRadialGradient = (background: ICSSImage): background is CSSRadialGradientImage => {
     return background.type === CSSImageType.RADIAL_GRADIENT;
+};
+
+export const isRepeatingLinearGradient = (background: ICSSImage): background is CSSLinearGradientImage => {
+    return background.type === CSSImageType.REPEATING_LINEAR_GRADIENT;
 };
 
 export interface UnprocessedGradientColorStop {
@@ -53,7 +59,7 @@ interface ICSSGradientImage extends ICSSImage {
 
 export interface CSSLinearGradientImage extends ICSSGradientImage {
     angle: number | GradientCorner;
-    type: CSSImageType.LINEAR_GRADIENT;
+    type: CSSImageType.LINEAR_GRADIENT | CSSImageType.REPEATING_LINEAR_GRADIENT;
 }
 
 export const enum CSSRadialShape {
@@ -116,5 +122,10 @@ const SUPPORTED_IMAGE_FUNCTIONS: Record<string, (context: Context, args: CSSValu
     '-ms-radial-gradient': prefixRadialGradient,
     '-o-radial-gradient': prefixRadialGradient,
     '-webkit-radial-gradient': prefixRadialGradient,
-    '-webkit-gradient': webkitGradient
+    '-webkit-gradient': webkitGradient,
+    'repeating-linear-gradient': repeatingLinearGradient,
+    '-webkit-repeating-linear-gradient': repeatingLinearGradient,
+    '-moz-repeating-linear-gradient': repeatingLinearGradient,
+    '-ms-repeating-linear-gradient': repeatingLinearGradient,
+    '-o-repeating-linear-gradient': repeatingLinearGradient
 };
