@@ -6,43 +6,21 @@ import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
 import { Path, transformPath } from '../path';
 import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
 import { BoundCurves, calculateBorderBoxPath, calculateContentBoxPath, calculatePaddingBoxPath } from '../bound-curves';
-import { Vector } from '../vector';
 import { CSSImageType, CSSURLImage } from '../../css/types/image';
 import { getBackgroundValueForIndex } from '../background';
-import { TextBounds } from '../../css/layout/text';
-import { ImageElementContainer } from '../../dom/replaced-elements/image-element-container';
 import { contentBox } from '../box-sizing';
-import { CanvasElementContainer } from '../../dom/replaced-elements/canvas-element-container';
-import { SVGElementContainer } from '../../dom/replaced-elements/svg-element-container';
 import { ReplacedElementContainer } from '../../dom/replaced-elements';
 import { EffectTarget } from '../effects';
-import { contains } from '../../core/bitwise';
-import { getAbsoluteValue } from '../../css/types/length-percentage';
 import { FontMetrics } from '../font-metrics';
-import { DISPLAY } from '../../css/property-descriptors/display';
-import { Bounds } from '../../css/layout/bounds';
-import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering';
-import { LIST_STYLE_TYPE } from '../../css/property-descriptors/list-style-type';
-import { computeLineHeight } from '../../css/property-descriptors/line-height';
-import {
-    CHECKBOX,
-    INPUT_COLOR,
-    PLACEHOLDER_COLOR,
-    InputElementContainer,
-    RADIO
-} from '../../dom/replaced-elements/input-element-container';
-import { TEXT_ALIGN } from '../../css/property-descriptors/text-align';
-import { TextareaElementContainer } from '../../dom/elements/textarea-element-container';
-import { SelectElementContainer } from '../../dom/elements/select-element-container';
-import { IFrameElementContainer } from '../../dom/replaced-elements/iframe-element-container';
+import { TextRenderer } from './text-renderer';
 import { Context } from '../../core/context';
 import { BackgroundRenderer } from './background-renderer';
 import { BorderRenderer } from './border-renderer';
 import { BorderImageRenderer } from './border-image-renderer';
 import { EffectsRenderer } from './effects-renderer';
-import { TextRenderer } from './text-renderer';
 import { createCanvasPath, formatCanvasPath } from './canvas-path';
 import { calculateObjectFitRendering } from '../object-fit';
+import { renderReplacedElements, renderFormElements, renderListMarker } from './content-renderer';
 
 export type RenderConfigurations = RenderOptions & {
     backgroundColor: Color | null;
@@ -206,220 +184,18 @@ export class CanvasRenderer {
         const curves = paint.curves;
         const styles = container.styles;
         // Use content box for text overflow calculation (excludes padding and border)
-        // This matches browser behavior where text-overflow uses the content width
         const textBounds = contentBox(container);
         for (const child of container.textNodes) {
             await this.textRenderer.renderTextNode(child, styles, textBounds);
         }
 
-        if (container instanceof ImageElementContainer) {
-            try {
-                const image = await this.context.cache.match(container.src);
+        await renderReplacedElements(this.ctx, this.context, this.options, container, curves, styles, (c, cv, img) =>
+            this.renderReplacedElement(c, cv, img)
+        );
 
-                // Apply image smoothing based on CSS image-rendering property and global options
-                const prevSmoothing = this.ctx.imageSmoothingEnabled;
+        renderFormElements(this.ctx, this.fontMetrics, this.textRenderer, this.path.bind(this), container, styles);
 
-                // CSS image-rendering property overrides global settings
-                if (
-                    styles.imageRendering === IMAGE_RENDERING.PIXELATED ||
-                    styles.imageRendering === IMAGE_RENDERING.CRISP_EDGES
-                ) {
-                    this.context.logger.debug(
-                        `Disabling image smoothing for ${container.src} due to CSS image-rendering: ${styles.imageRendering === IMAGE_RENDERING.PIXELATED ? 'pixelated' : 'crisp-edges'}`
-                    );
-                    this.ctx.imageSmoothingEnabled = false;
-                } else if (styles.imageRendering === IMAGE_RENDERING.SMOOTH) {
-                    this.context.logger.debug(
-                        `Enabling image smoothing for ${container.src} due to CSS image-rendering: smooth`
-                    );
-                    this.ctx.imageSmoothingEnabled = true;
-                }
-                // IMAGE_RENDERING.AUTO: keep current global setting
-
-                this.renderReplacedElement(container, curves, image!);
-
-                // Restore previous smoothing state
-                this.ctx.imageSmoothingEnabled = prevSmoothing;
-            } catch (e) {
-                this.context.logger.error(`Error loading image ${container.src}`);
-            }
-        }
-
-        if (container instanceof CanvasElementContainer) {
-            this.renderReplacedElement(container, curves, container.canvas);
-        }
-
-        if (container instanceof SVGElementContainer) {
-            try {
-                const image = await this.context.cache.match(container.svg);
-                this.renderReplacedElement(container, curves, image!);
-            } catch (e) {
-                this.context.logger.error(`Error loading svg ${container.svg.substring(0, 255)}`);
-            }
-        }
-
-        if (container instanceof IFrameElementContainer && container.tree) {
-            const iframeRenderer = new CanvasRenderer(this.context, {
-                scale: this.options.scale,
-                backgroundColor: container.backgroundColor,
-                x: 0,
-                y: 0,
-                width: container.width,
-                height: container.height
-            });
-
-            const canvas = await iframeRenderer.render(container.tree);
-            if (container.width && container.height) {
-                this.ctx.drawImage(
-                    canvas,
-                    0,
-                    0,
-                    container.width,
-                    container.height,
-                    container.bounds.left,
-                    container.bounds.top,
-                    container.bounds.width,
-                    container.bounds.height
-                );
-            }
-        }
-
-        if (container instanceof InputElementContainer) {
-            const size = Math.min(container.bounds.width, container.bounds.height);
-
-            if (container.type === CHECKBOX) {
-                if (container.checked) {
-                    this.ctx.save();
-                    this.path([
-                        new Vector(container.bounds.left + size * 0.39363, container.bounds.top + size * 0.79),
-                        new Vector(container.bounds.left + size * 0.16, container.bounds.top + size * 0.5549),
-                        new Vector(container.bounds.left + size * 0.27347, container.bounds.top + size * 0.44071),
-                        new Vector(container.bounds.left + size * 0.39694, container.bounds.top + size * 0.5649),
-                        new Vector(container.bounds.left + size * 0.72983, container.bounds.top + size * 0.23),
-                        new Vector(container.bounds.left + size * 0.84, container.bounds.top + size * 0.34085),
-                        new Vector(container.bounds.left + size * 0.39363, container.bounds.top + size * 0.79)
-                    ]);
-
-                    this.ctx.fillStyle = asString(INPUT_COLOR);
-                    this.ctx.fill();
-                    this.ctx.restore();
-                }
-            } else if (container.type === RADIO) {
-                if (container.checked) {
-                    this.ctx.save();
-                    this.ctx.beginPath();
-                    this.ctx.arc(
-                        container.bounds.left + size / 2,
-                        container.bounds.top + size / 2,
-                        size / 4,
-                        0,
-                        Math.PI * 2,
-                        true
-                    );
-                    this.ctx.fillStyle = asString(INPUT_COLOR);
-                    this.ctx.fill();
-                    this.ctx.restore();
-                }
-            }
-        }
-
-        if (isTextInputElement(container) && container.value.length) {
-            const [font, fontFamily, fontSize] = this.textRenderer.createFontStyle(styles);
-            const { baseline } = this.fontMetrics.getMetrics(fontFamily, fontSize);
-
-            this.ctx.font = font;
-
-            // Fix for Issue #92: Use placeholder color when rendering placeholder text
-            const isPlaceholder = container instanceof InputElementContainer && container.isPlaceholder;
-            this.ctx.fillStyle = isPlaceholder ? asString(PLACEHOLDER_COLOR) : asString(styles.color);
-
-            this.ctx.textBaseline = 'alphabetic';
-            this.ctx.textAlign = canvasTextAlign(container.styles.textAlign);
-
-            const bounds = contentBox(container);
-
-            let x = 0;
-
-            switch (container.styles.textAlign) {
-                case TEXT_ALIGN.CENTER:
-                    x += bounds.width / 2;
-                    break;
-                case TEXT_ALIGN.RIGHT:
-                    x += bounds.width;
-                    break;
-            }
-
-            // Fix for Issue #92: Position text vertically centered in single-line input
-            // Only apply vertical centering for InputElementContainer, not for textarea or select
-            let verticalOffset = 0;
-            if (container instanceof InputElementContainer) {
-                const fontSizeValue = getAbsoluteValue(styles.fontSize, 0);
-                verticalOffset = (bounds.height - fontSizeValue) / 2;
-            }
-
-            // Create text bounds with horizontal and vertical offsets
-            // Height is not modified as it doesn't affect text rendering position
-            const textBounds = bounds.add(x, verticalOffset, 0, 0);
-
-            this.ctx.save();
-            this.path([
-                new Vector(bounds.left, bounds.top),
-                new Vector(bounds.left + bounds.width, bounds.top),
-                new Vector(bounds.left + bounds.width, bounds.top + bounds.height),
-                new Vector(bounds.left, bounds.top + bounds.height)
-            ]);
-
-            this.ctx.clip();
-
-            this.textRenderer.renderTextWithLetterSpacing(
-                new TextBounds(container.value, textBounds),
-                styles.letterSpacing,
-                baseline,
-                styles.writingMode
-            );
-            this.ctx.restore();
-            this.ctx.textBaseline = 'alphabetic';
-            this.ctx.textAlign = 'left';
-        }
-
-        if (contains(container.styles.display, DISPLAY.LIST_ITEM)) {
-            if (container.styles.listStyleImage !== null) {
-                const img = container.styles.listStyleImage;
-                if (img.type === CSSImageType.URL) {
-                    let image;
-                    const url = (img as CSSURLImage).url;
-                    try {
-                        image = await this.context.cache.match(url);
-                        this.ctx.drawImage(image!, container.bounds.left - (image!.width + 10), container.bounds.top);
-                    } catch (e) {
-                        this.context.logger.error(`Error loading list-style-image ${url}`);
-                    }
-                }
-            } else if (paint.listValue && container.styles.listStyleType !== LIST_STYLE_TYPE.NONE) {
-                const [font] = this.textRenderer.createFontStyle(styles);
-
-                this.ctx.font = font;
-                this.ctx.fillStyle = asString(styles.color);
-
-                this.ctx.textBaseline = 'middle';
-                this.ctx.textAlign = 'right';
-                const bounds = new Bounds(
-                    container.bounds.left,
-                    container.bounds.top + getAbsoluteValue(container.styles.paddingTop, container.bounds.width),
-                    container.bounds.width,
-                    computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 1
-                );
-
-                this.textRenderer.renderTextWithLetterSpacing(
-                    new TextBounds(paint.listValue, bounds),
-                    styles.letterSpacing,
-                    computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 2,
-                    styles.writingMode
-                );
-                this.ctx.textBaseline = 'bottom';
-                this.ctx.textAlign = 'left';
-            }
-        }
+        await renderListMarker(this.ctx, this.context, this.textRenderer, paint, container, styles);
     }
 
     async renderStackContent(stack: StackingContext): Promise<void> {
@@ -640,19 +416,6 @@ export class CanvasRenderer {
     }
 }
 
-const isTextInputElement = (
-    container: ElementContainer
-): container is InputElementContainer | TextareaElementContainer | SelectElementContainer => {
-    if (container instanceof TextareaElementContainer) {
-        return true;
-    } else if (container instanceof SelectElementContainer) {
-        return true;
-    } else if (container instanceof InputElementContainer && container.type !== RADIO && container.type !== CHECKBOX) {
-        return true;
-    }
-    return false;
-};
-
 const calculateBackgroundCurvedPaintingArea = (clip: BACKGROUND_CLIP, curves: BoundCurves): Path[] => {
     switch (clip) {
         case BACKGROUND_CLIP.BORDER_BOX:
@@ -662,17 +425,5 @@ const calculateBackgroundCurvedPaintingArea = (clip: BACKGROUND_CLIP, curves: Bo
         case BACKGROUND_CLIP.PADDING_BOX:
         default:
             return calculatePaddingBoxPath(curves);
-    }
-};
-
-const canvasTextAlign = (textAlign: TEXT_ALIGN): CanvasTextAlign => {
-    switch (textAlign) {
-        case TEXT_ALIGN.CENTER:
-            return 'center';
-        case TEXT_ALIGN.RIGHT:
-            return 'right';
-        case TEXT_ALIGN.LEFT:
-        default:
-            return 'left';
     }
 };

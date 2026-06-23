@@ -101,6 +101,10 @@ import { borderImageSource } from './property-descriptors/border-image-source';
 import { borderImageSlice } from './property-descriptors/border-image-slice';
 import { borderImageRepeat } from './property-descriptors/border-image-repeat';
 import { boxDecorationBreak } from './property-descriptors/box-decoration-break';
+import { BorderStyles } from './grouped/border-styles';
+import { BackgroundStyles } from './grouped/background-styles';
+import { FontStyles } from './grouped/font-styles';
+import { LayoutStyles } from './grouped/layout-styles';
 
 export class CSSParsedDeclaration {
     animationDuration!: ReturnType<typeof duration.parse>;
@@ -189,6 +193,25 @@ export class CSSParsedDeclaration {
     borderImageSlice!: ReturnType<typeof borderImageSlice.parse>;
     borderImageRepeat!: ReturnType<typeof borderImageRepeat.parse>;
     boxDecorationBreak!: ReturnType<typeof boxDecorationBreak.parse>;
+
+    // ── Grouped read-only accessors ──────────────────────────────
+    private _border?: BorderStyles;
+    private _background?: BackgroundStyles;
+    private _font?: FontStyles;
+    private _layout?: LayoutStyles;
+
+    get border(): BorderStyles {
+        return this._border ?? (this._border = new BorderStyles(this));
+    }
+    get background(): BackgroundStyles {
+        return this._background ?? (this._background = new BackgroundStyles(this));
+    }
+    get font(): FontStyles {
+        return this._font ?? (this._font = new FontStyles(this));
+    }
+    get layout(): LayoutStyles {
+        return this._layout ?? (this._layout = new LayoutStyles(this));
+    }
 
     private static readonly standardProps: [keyof CSSParsedDeclaration, CSSPropertyDescriptor<unknown>, string][] = [
         ['animationDuration', duration, 'animationDuration'],
