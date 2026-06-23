@@ -20,7 +20,7 @@ fi
 npm version "$VERSION" --no-git-tag-version
 
 # Generate changelog
-npx conventional-changelog -p conventionalcommits -i CHANGELOG.md -s -r 1
+npx conventional-changelog -p conventionalcommits -i CHANGELOG.md -r 1
 
 # Commit and tag
 git add package.json CHANGELOG.md
