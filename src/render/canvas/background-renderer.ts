@@ -53,11 +53,19 @@ export class BackgroundRenderer {
     private readonly context: Context;
     private readonly canvas: HTMLCanvasElement;
 
+    /**
+     * Instance-level LRU cache for background-image patterns.
+     * CanvasPatterns are tied to the rendering context and must not be
+     * shared across different render passes. This cache lives for the
+     * duration of one html2canvas() call.
+     */
+    private readonly patternCache = new Map<string, CanvasPattern>();
+    private static readonly PATTERN_CACHE_MAX = 50;
+
     constructor(deps: BackgroundRendererDependencies) {
         this.ctx = deps.ctx;
         this.context = deps.context;
         this.canvas = deps.canvas;
-        // Options stored in deps but not needed as instance property
     }
 
     /**
@@ -127,10 +135,28 @@ export class BackgroundRenderer {
                 imageHeight,
                 imageWidth / imageHeight
             ]);
-            const pattern = this.ctx.createPattern(
-                this.resizeImage(image as HTMLImageElement, width, height, container.styles.imageRendering),
-                'repeat'
-            ) as CanvasPattern;
+
+            // Cache key: URL + resized dimensions + imageRendering (pattern is dependent on all three)
+            const cacheKey = `${url}|${Math.round(width)}x${Math.round(height)}|${container.styles.imageRendering}`;
+            let pattern = this.patternCache.get(cacheKey);
+
+            if (!pattern) {
+                const resized = this.resizeImage(
+                    image as HTMLImageElement,
+                    width,
+                    height,
+                    container.styles.imageRendering
+                );
+                pattern = this.ctx.createPattern(resized, 'repeat') as CanvasPattern;
+
+                // LRU eviction
+                if (this.patternCache.size >= BackgroundRenderer.PATTERN_CACHE_MAX) {
+                    const oldestKey = this.patternCache.keys().next().value;
+                    this.patternCache.delete(oldestKey);
+                }
+                this.patternCache.set(cacheKey, pattern);
+            }
+
             this.renderRepeat(path, pattern, x, y);
         }
     }

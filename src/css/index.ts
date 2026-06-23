@@ -411,6 +411,9 @@ const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?:
     if (valueCache) {
         const cached = valueCache.get(rawValue);
         if (cached !== undefined) {
+            // Move entry to end for LRU ordering (Map preserves insertion order)
+            valueCache.delete(rawValue);
+            valueCache.set(rawValue, cached);
             return cached;
         }
     }
@@ -468,8 +471,10 @@ const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?:
         valueCache = new Map();
         parseCache.set(descriptor, valueCache);
     }
+    // LRU eviction: delete oldest entry (first key) instead of full-clear
     if (valueCache.size >= PARSE_CACHE_MAX_PER_DESCRIPTOR) {
-        valueCache.clear();
+        const oldestKey = valueCache.keys().next().value;
+        valueCache.delete(oldestKey);
     }
     valueCache.set(rawValue, result);
 
