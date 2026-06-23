@@ -31,8 +31,17 @@ import { CSSImageType, CSSURLImage } from '../../css/types/image';
 import { getAbsoluteValue } from '../../css/types/length-percentage';
 import { computeLineHeight } from '../../css/property-descriptors/line-height';
 import { contains } from '../../core/bitwise';
-import { CanvasRenderer, RenderConfigurations } from './canvas-renderer';
+import { Color } from '../../css/types/color';
 import { CSSParsedDeclaration } from '../../css/index';
+
+/**
+ * Factory type for creating an iframe canvas renderer — avoids circular import
+ * from canvas-renderer.ts which in turn imports content-renderer.ts.
+ */
+type IframeRendererFactory = (
+    context: Context,
+    options: { scale: number; backgroundColor: Color | null; x: number; y: number; width: number; height: number }
+) => { render: (element: ElementContainer) => Promise<HTMLCanvasElement> };
 
 /**
  * Render replaced elements: Image, Canvas, SVG, IFrame.
@@ -40,7 +49,8 @@ import { CSSParsedDeclaration } from '../../css/index';
 export async function renderReplacedElements(
     ctx: CanvasRenderingContext2D,
     context: Context,
-    options: RenderConfigurations,
+    options: { scale: number; backgroundColor: Color | null; x: number; y: number; width: number; height: number },
+    iframeRendererFactory: IframeRendererFactory,
     container: ElementContainer,
     curves: BoundCurves,
     styles: CSSParsedDeclaration,
@@ -85,7 +95,7 @@ export async function renderReplacedElements(
     }
 
     if (container instanceof IFrameElementContainer && container.tree) {
-        const iframeRenderer = new CanvasRenderer(context, {
+        const iframeRenderer = iframeRendererFactory(context, {
             scale: options.scale,
             backgroundColor: container.backgroundColor,
             x: 0,

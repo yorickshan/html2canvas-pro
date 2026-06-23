@@ -189,8 +189,22 @@ export class CanvasRenderer {
             await this.textRenderer.renderTextNode(child, styles, textBounds);
         }
 
-        await renderReplacedElements(this.ctx, this.context, this.options, container, curves, styles, (c, cv, img) =>
-            this.renderReplacedElement(c, cv, img)
+        await renderReplacedElements(
+            this.ctx,
+            this.context,
+            {
+                scale: this.options.scale,
+                backgroundColor: this.options.backgroundColor,
+                x: this.options.x,
+                y: this.options.y,
+                width: this.options.width,
+                height: this.options.height
+            },
+            (ctx, opts) => new CanvasRenderer(ctx, opts),
+            container,
+            curves,
+            styles,
+            (c, cv, img) => this.renderReplacedElement(c, cv, img)
         );
 
         renderFormElements(this.ctx, this.fontMetrics, this.textRenderer, this.path.bind(this), container, styles);
