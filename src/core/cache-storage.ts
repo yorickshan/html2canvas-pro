@@ -1,48 +1,6 @@
 import { FEATURES } from './features';
 import { Context } from './context';
 
-/**
- * CacheStorage (Deprecated static methods)
- *
- * @deprecated The static methods of CacheStorage are deprecated.
- * Use OriginChecker class instead for instance-based origin checking.
- *
- * For backward compatibility, these methods remain but should not be used in new code.
- */
-export class CacheStorage {
-    private static _link?: HTMLAnchorElement;
-    private static _origin = 'about:blank';
-
-    /**
-     * @deprecated Use OriginChecker.getOrigin() instead
-     */
-    static getOrigin(url: string): string {
-        const link = CacheStorage._link;
-        if (!link) {
-            return 'about:blank';
-        }
-
-        link.href = url;
-        link.href = link.href; // IE9, LOL! - http://jsfiddle.net/niklasvh/2e48b/
-        return link.protocol + link.hostname + link.port;
-    }
-
-    /**
-     * @deprecated Use OriginChecker.isSameOrigin() instead
-     */
-    static isSameOrigin(src: string): boolean {
-        return CacheStorage.getOrigin(src) === CacheStorage._origin;
-    }
-
-    /**
-     * @deprecated No longer needed. OriginChecker is created per Context.
-     */
-    static setContext(window: Window): void {
-        CacheStorage._link = window.document.createElement('a');
-        CacheStorage._origin = CacheStorage.getOrigin(window.location.href);
-    }
-}
-
 export interface ResourceOptions {
     imageTimeout: number;
     useCORS: boolean;

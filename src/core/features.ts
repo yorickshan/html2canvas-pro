@@ -215,7 +215,9 @@ export const FEATURES = {
     get SUPPORT_NATIVE_TEXT_SEGMENTATION(): boolean {
         'use strict';
 
-        const value = !!(typeof Intl !== 'undefined' && (Intl as any).Segmenter);
+        // Intl.Segmenter is TC39 Stage 4 but not yet in TS lib types
+
+        const value = !!(typeof Intl !== 'undefined' && (Intl as unknown as { Segmenter: unknown }).Segmenter);
         Object.defineProperty(FEATURES, 'SUPPORT_NATIVE_TEXT_SEGMENTATION', { value });
         return value;
     }

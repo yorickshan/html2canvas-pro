@@ -1,6 +1,5 @@
 import { deepStrictEqual, fail } from 'assert';
 import { FEATURES } from '../features';
-import { CacheStorage } from '../cache-storage';
 import { Context } from '../context';
 import { Bounds } from '../../css/layout/bounds';
 import { Html2CanvasConfig } from '../../config';
@@ -35,9 +34,6 @@ const createMockContext = (origin: string, opts = {}) => {
             }
         }
     };
-
-    // For backward compatibility, also initialize static CacheStorage
-    CacheStorage.setContext(mockWindow as Window);
 
     const config = new Html2CanvasConfig({ window: mockWindow as Window });
 

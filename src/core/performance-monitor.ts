@@ -10,7 +10,7 @@ export interface PerformanceMetric {
     startTime: number;
     endTime?: number;
     duration?: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 /**
@@ -70,7 +70,7 @@ export class PerformanceMonitor {
      * @param name - Unique name for this metric
      * @param metadata - Optional metadata to attach
      */
-    start(name: string, metadata?: Record<string, any>): void {
+    start(name: string, metadata?: Record<string, unknown>): void {
         if (!this.enabled) {
             return;
         }
@@ -123,7 +123,7 @@ export class PerformanceMonitor {
      * @param metadata - Optional metadata
      * @returns The function's return value
      */
-    measure<T>(name: string, fn: () => T, metadata?: Record<string, any>): T {
+    measure<T>(name: string, fn: () => T, metadata?: Record<string, unknown>): T {
         this.start(name, metadata);
         try {
             const result = fn();
@@ -143,7 +143,7 @@ export class PerformanceMonitor {
      * @param metadata - Optional metadata
      * @returns Promise resolving to the function's return value
      */
-    async measureAsync<T>(name: string, fn: () => Promise<T>, metadata?: Record<string, any>): Promise<T> {
+    async measureAsync<T>(name: string, fn: () => Promise<T>, metadata?: Record<string, unknown>): Promise<T> {
         this.start(name, metadata);
         try {
             const result = await fn();

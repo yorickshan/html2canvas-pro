@@ -101,6 +101,7 @@ import { borderImageSource } from './property-descriptors/border-image-source';
 import { borderImageSlice } from './property-descriptors/border-image-slice';
 import { borderImageRepeat } from './property-descriptors/border-image-repeat';
 import { boxDecorationBreak } from './property-descriptors/box-decoration-break';
+import { PARSE_CACHE_MAX_PER_DESCRIPTOR } from '../core/constants';
 import { BorderStyles } from './grouped/border-styles';
 import { BackgroundStyles } from './grouped/background-styles';
 import { FontStyles } from './grouped/font-styles';
@@ -402,7 +403,6 @@ export class CSSParsedCounterDeclaration {
 }
 
 const parseCache = new Map<CSSPropertyDescriptor<any>, Map<string, unknown>>();
-const PARSE_CACHE_MAX_PER_DESCRIPTOR = 200;
 
 const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?: string | null) => {
     const rawValue = style !== null && typeof style !== 'undefined' ? style.toString() : descriptor.initialValue;

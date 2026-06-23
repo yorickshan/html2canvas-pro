@@ -82,26 +82,3 @@ export class Html2CanvasConfig {
         });
     }
 }
-
-/**
- * Default global configuration (for backward compatibility)
- * @deprecated Use Html2CanvasConfig instances instead
- */
-let _defaultConfig: Html2CanvasConfig | null = null;
-
-/**
- * Set default configuration
- * @deprecated Pass configuration directly to html2canvas instead
- */
-export function setDefaultConfig(config: Html2CanvasConfig): void {
-    console.warn('[html2canvas-pro] setDefaultConfig is deprecated. Pass configuration to html2canvas directly.');
-    _defaultConfig = config;
-}
-
-/**
- * Get default configuration
- * @deprecated Pass configuration directly to html2canvas instead
- */
-export function getDefaultConfig(): Html2CanvasConfig | null {
-    return _defaultConfig;
-}

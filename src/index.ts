@@ -1,4 +1,4 @@
-import { Html2CanvasConfig, type ConfigOptions, setDefaultConfig } from './config';
+import { Html2CanvasConfig, type ConfigOptions } from './config';
 import { createDefaultValidator, Validator, type ValidationResult } from './core/validator';
 import { PerformanceMonitor } from './core/performance-monitor';
 import { renderElement } from './core/render-element';
@@ -48,25 +48,6 @@ const html2canvas = (
 
     return renderElement(element, options, finalConfig);
 };
-
-/**
- * Set CSP nonce for inline styles.
- *
- * @deprecated Since 2.0.0. Pass `cspNonce` in options instead:
- *             `html2canvas(element, { cspNonce: '...' })`
- */
-const setCspNonce = (nonce: string) => {
-    console.warn(
-        '[html2canvas-pro] setCspNonce is deprecated. ' +
-            'Pass cspNonce in options instead: html2canvas(element, { cspNonce: "..." })'
-    );
-
-    if (typeof window !== 'undefined') {
-        setDefaultConfig(new Html2CanvasConfig({ window, cspNonce: nonce }));
-    }
-};
-
-html2canvas.setCspNonce = setCspNonce;
 
 export default html2canvas;
 export {

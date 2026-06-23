@@ -5,7 +5,7 @@ import { Context } from '../../core/context';
 export type BorderRadius = LengthPercentageTuple;
 
 const borderRadiusForSide = (side: string): IPropertyListDescriptor<BorderRadius> => ({
-    name: `border-radius-${side}`,
+    name: `border-${side}-radius`,
     initialValue: '0 0',
     prefix: false,
     type: PropertyDescriptorParsingType.LIST,
