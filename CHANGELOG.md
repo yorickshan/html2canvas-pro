@@ -1,3 +1,16 @@
+## [2.1.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.1.0...v2.1.1) (2026-06-23)
+
+### Features
+
+* add CodeQL workflow for automated code analysis and remove unused dependencies ([12e9551](https://github.com/yorickshan/html2canvas-pro/commit/12e95517e1eb66364228355528d40c8f34748b29))
+* enhance version upgrade script for better versioning and changelog generation ([1c28f5e](https://github.com/yorickshan/html2canvas-pro/commit/1c28f5e202a7e38a31b66d425b4e932d75a6cb08))
+
+### Bug Fixes
+
+* add annotation to version tag in release script ([58e8e29](https://github.com/yorickshan/html2canvas-pro/commit/58e8e29e177773ff129eed29b4de24feb599f35b))
+* remove deprecated husky v9 bootstrap lines, use pnpm in hooks ([f451783](https://github.com/yorickshan/html2canvas-pro/commit/f4517832074121bba1cfdf1ffd82b7a177a7b361))
+* remove unnecessary flag from changelog generation command ([ef7d739](https://github.com/yorickshan/html2canvas-pro/commit/ef7d7392911ea2f1c3053556f0e4f22143ad5e06))
+* update bundle size thresholds for warnings in CI workflow ([d934cf0](https://github.com/yorickshan/html2canvas-pro/commit/d934cf0f15669de32c7f9dae3d4a1029aa098585))
 
 ## [2.1.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.0.4...v2.1.0) (2026-06-22)
 
