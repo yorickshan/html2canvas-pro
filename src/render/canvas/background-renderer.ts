@@ -58,6 +58,9 @@ export class BackgroundRenderer {
      * CanvasPatterns are tied to the rendering context and must not be
      * shared across different render passes. This cache lives for the
      * duration of one html2canvas() call.
+     *
+     * Also reused for linear-gradient and repeating-linear-gradient
+     * pattern canvases to avoid redundant offscreen canvas allocation.
      */
     private readonly patternCache = new Map<string, CanvasPattern>();
     private static readonly PATTERN_CACHE_MAX = 50;
@@ -197,28 +200,39 @@ export class BackgroundRenderer {
         const pY1 = y0 + dirY * scale;
 
         const ownerDocument = this.canvas.ownerDocument ?? document;
-        const canvas = ownerDocument.createElement('canvas');
-        // Create a canvas large enough to hold one full repeating unit
-        const canvasSize = Math.max(1, Math.ceil(patternLength));
-        canvas.width = canvasSize;
-        canvas.height = canvasSize;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            return;
+
+        // Cache key for this repeating gradient pattern
+        const cacheKey = `rlg|${backgroundImage.angle}|${Math.round(patternLength)}|${JSON.stringify(backgroundImage.stops)}`;
+
+        let pattern = this.patternCache.get(cacheKey);
+        if (!pattern) {
+            const canvas = ownerDocument.createElement('canvas');
+            // Create a canvas large enough to hold one full repeating unit
+            const canvasSize = Math.max(1, Math.ceil(patternLength));
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return;
+            }
+
+            const gradient = ctx.createLinearGradient(pX0 - x, pY0 - y, pX1 - x, pY1 - y);
+
+            // Normalize stops to [0, 1] range for one repeating unit
+            processedStops.forEach((colorStop) => {
+                gradient.addColorStop((colorStop.stop - firstStop.stop) / patternLength, asString(colorStop.color));
+            });
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+            if (canvasSize > 0) {
+                pattern = this.ctx.createPattern(canvas, 'repeat') as CanvasPattern;
+                this.lruSet(this.patternCache, cacheKey, pattern);
+            }
         }
 
-        const gradient = ctx.createLinearGradient(pX0 - x, pY0 - y, pX1 - x, pY1 - y);
-
-        // Normalize stops to [0, 1] range for one repeating unit
-        processedStops.forEach((colorStop) => {
-            gradient.addColorStop((colorStop.stop - firstStop.stop) / patternLength, asString(colorStop.color));
-        });
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvasSize, canvasSize);
-
-        if (canvasSize > 0) {
-            const pattern = this.ctx.createPattern(canvas, 'repeat') as CanvasPattern;
+        if (pattern) {
             this.renderRepeat(path, pattern, x, y);
         }
     }
@@ -234,24 +248,34 @@ export class BackgroundRenderer {
         const [path, x, y, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
         const [lineLength, x0, x1, y0, y1] = calculateGradientDirection(backgroundImage.angle, width, height);
 
-        const ownerDocument = this.canvas.ownerDocument ?? document;
-        const canvas = ownerDocument.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            return;
+        // Cache key: angle + dimensions + serialised colour stops
+        const cacheKey = `lg|${backgroundImage.angle}|${Math.round(width)}x${Math.round(height)}|${JSON.stringify(backgroundImage.stops)}`;
+
+        let pattern = this.patternCache.get(cacheKey);
+        if (!pattern) {
+            const ownerDocument = this.canvas.ownerDocument ?? document;
+            const canvas = ownerDocument.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return;
+            }
+            const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+
+            processColorStops(backgroundImage.stops, lineLength || 1).forEach((colorStop) =>
+                gradient.addColorStop(colorStop.stop, asString(colorStop.color))
+            );
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            if (width > 0 && height > 0) {
+                pattern = this.ctx.createPattern(canvas, 'repeat') as CanvasPattern;
+                this.lruSet(this.patternCache, cacheKey, pattern);
+            }
         }
-        const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
 
-        processColorStops(backgroundImage.stops, lineLength || 1).forEach((colorStop) =>
-            gradient.addColorStop(colorStop.stop, asString(colorStop.color))
-        );
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
-        if (width > 0 && height > 0) {
-            const pattern = this.ctx.createPattern(canvas, 'repeat') as CanvasPattern;
+        if (pattern) {
             this.renderRepeat(path, pattern, x, y);
         }
     }
@@ -385,5 +409,16 @@ export class BackgroundRenderer {
      */
     private path(paths: Path[]): void {
         createCanvasPath(this.ctx, paths);
+    }
+
+    /**
+     * LRU-aware set for CanvasPattern caches. Evicts oldest entry on overflow.
+     */
+    private lruSet(cache: Map<string, CanvasPattern>, key: string, value: CanvasPattern): void {
+        if (cache.size >= BackgroundRenderer.PATTERN_CACHE_MAX) {
+            const oldestKey = cache.keys().next().value;
+            cache.delete(oldestKey);
+        }
+        cache.set(key, value);
     }
 }
