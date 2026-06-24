@@ -120,7 +120,7 @@ html2canvas(element, {
 });
 ```
 
-> **Deprecated:** `html2canvas.setCspNonce(nonce)` is deprecated since 2.0.0. Use the `cspNonce` option instead.
+> **Removed:** `html2canvas.setCspNonce(nonce)` has been removed since 2.1.0. Use the `cspNonce` option passed to `html2canvas` instead.
 
 ## Custom isSameOrigin Usage
 

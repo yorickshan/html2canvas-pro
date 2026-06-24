@@ -1,8 +1,8 @@
 # Proxy
 
-html2canvas-pro does not get around content policy restrictions set by your browser. Drawing images that reside outside of 
-the origin of the current page taint the canvas that they are drawn upon. If the canvas gets tainted, 
-it cannot be read anymore. If you wish to load images that reside outside of your pages origin, you can use a proxy to load the images.
+html2canvas-pro cannot bypass content policy restrictions set by your browser. Drawing images from outside
+the origin of the current page taints the canvas they are drawn on. Once tainted, the canvas can no longer
+be read. To load images that reside outside of your page's origin, you can use a proxy.
 
 ## Available proxies
 

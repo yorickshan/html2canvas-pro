@@ -21,16 +21,16 @@ Next generation JavaScript screenshots tool.
 
 ## Why html2canvas-pro?
 
-html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) that includes various fixes and new features. It offers several advantages over the original html2canvas, such as:
-- support color function ```color()``` (including relative colors)
-- support color function ```lab()``` / ```lch()``` / ```oklab()``` / ```oklch()```
-- Support object-fit of ```<img/>```
-- Support CSS ```clip-path``` (inset, circle, ellipse, polygon, path)
-- Support CSS ```writing-mode``` (horizontal-tb, vertical-rl, vertical-lr)
-- **Image smoothing control** - Support CSS `image-rendering` property and `imageSmoothing`/`imageSmoothingQuality` options
-- **Security validation** - Built-in input validation (XSS/SSRF protection)
-- **Performance monitoring** - Built-in performance measurement API
-- Fixed some [issues](./CHANGELOG.md)
+html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) that includes various fixes and new features. It offers several advantages over the original html2canvas:
+- Color function `color()` (including relative colors)
+- Color functions `lab()` / `lch()` / `oklab()` / `oklch()`
+- `object-fit` support for `<img/>`
+- CSS `clip-path` support (inset, circle, ellipse, polygon, path)
+- CSS `writing-mode` support (horizontal-tb, vertical-rl, vertical-lr)
+- **Image smoothing control** — CSS `image-rendering` property and `imageSmoothing`/`imageSmoothingQuality` options
+- **Security validation** — Built-in input validation (XSS/SSRF protection)
+- **Performance monitoring** — Built-in performance measurement API
+- Various bug fixes from the [changelog](./CHANGELOG.md)
 
 If you found this helpful, don't forget to
 leave a star 🌟.
