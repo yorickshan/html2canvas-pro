@@ -12,10 +12,10 @@ Next generation JavaScript screenshots tool.
   <a href=https://npm.im/html2canvas-pro><img src="https://badgen.net/npm/v/html2canvas-pro" alt="npm version"></a>
   <a href=http://npm.im/html2canvas-pro><img src="https://badgen.net/npm/dm/html2canvas-pro" alt="npm downloads"></a>
   <a href="https://www.jsdelivr.com/package/npm/html2canvas-pro"><img src="https://data.jsdelivr.com/v1/package/npm/html2canvas-pro/badge" /></a>
+  <a href="https://deepwiki.com/yorickshan/html2canvas-pro"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 <p>
 <p align="center">
   <a href="https://yorickshan.github.io/html2canvas-pro/getting-started.html">Getting Started</a>
-  | <a href="https://deepwiki.com/yorickshan/html2canvas-pro">DeepWiki</a>
 </p>
 <br>
 
