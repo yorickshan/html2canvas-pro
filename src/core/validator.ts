@@ -452,7 +452,7 @@ export class Validator {
      * @param element - Element to validate
      * @returns Validation result
      */
-    validateElement(element: any): ValidationResult {
+    validateElement(element: unknown): ValidationResult {
         if (!element) {
             return {
                 valid: false,
@@ -470,6 +470,7 @@ export class Validator {
         // Accept real HTMLElement, or any element-like object with the minimal shape
         // required by the implementation (ownerDocument + defaultView) for backward
         // compatibility and test environments.
+        const el = element as Record<string, unknown>;
         if (typeof HTMLElement !== 'undefined' && element instanceof HTMLElement) {
             // Real DOM element
             if (!element.ownerDocument) {
@@ -479,13 +480,13 @@ export class Validator {
         }
 
         // Duck-typing: accept object with ownerDocument and defaultView (minimal contract)
-        if (!element.ownerDocument) {
+        if (!el.ownerDocument) {
             return {
                 valid: false,
                 error: 'Element must be attached to a document (ownerDocument required)'
             };
         }
-        if (!element.ownerDocument.defaultView) {
+        if (!(el.ownerDocument as Record<string, unknown>).defaultView) {
             return {
                 valid: false,
                 error: 'Document must be attached to a window (ownerDocument.defaultView required)'
@@ -501,11 +502,10 @@ export class Validator {
      * @param options - Options to validate
      * @returns Validation result with all errors
      */
-    validateOptions(options: any): ValidationResult {
+    validateOptions(options: Record<string, unknown>): ValidationResult {
         const errors: string[] = [];
 
-        // Validate proxy URL only when a non-empty string (allow null/undefined to mean "no proxy")
-        const proxyUrl = options.proxy;
+        const proxyUrl = options.proxy as string | undefined | null;
         if (proxyUrl !== undefined && proxyUrl !== null && typeof proxyUrl === 'string' && proxyUrl.length > 0) {
             const proxyResult = this.validateUrl(proxyUrl, 'proxy');
             if (!proxyResult.valid) {
@@ -517,7 +517,7 @@ export class Validator {
 
         // Validate image timeout
         if (options.imageTimeout !== undefined) {
-            const timeoutResult = this.validateImageTimeout(options.imageTimeout);
+            const timeoutResult = this.validateImageTimeout(options.imageTimeout as number);
             if (!timeoutResult.valid) {
                 errors.push(`Image timeout: ${timeoutResult.error}`);
             }
@@ -525,8 +525,8 @@ export class Validator {
 
         // Validate dimensions
         if (options.width !== undefined || options.height !== undefined) {
-            const width = options.width ?? 800;
-            const height = options.height ?? 600;
+            const width = (options.width as number) ?? 800;
+            const height = (options.height as number) ?? 600;
             const dimensionsResult = this.validateDimensions(width, height);
             if (!dimensionsResult.valid) {
                 errors.push(`Dimensions: ${dimensionsResult.error}`);
@@ -535,7 +535,7 @@ export class Validator {
 
         // Validate scale
         if (options.scale !== undefined) {
-            const scaleResult = this.validateScale(options.scale);
+            const scaleResult = this.validateScale(options.scale as number);
             if (!scaleResult.valid) {
                 errors.push(`Scale: ${scaleResult.error}`);
             }
@@ -543,7 +543,7 @@ export class Validator {
 
         // Validate CSP nonce
         if (options.cspNonce !== undefined) {
-            const nonceResult = this.validateCspNonce(options.cspNonce);
+            const nonceResult = this.validateCspNonce(options.cspNonce as string);
             if (!nonceResult.valid) {
                 errors.push(`CSP nonce: ${nonceResult.error}`);
             }
