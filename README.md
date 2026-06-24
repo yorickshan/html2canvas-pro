@@ -78,9 +78,9 @@ See the [Configuration Guide](/docs/configuration.md#canvas-dimensions) for more
 
 ## Contribution
 
-If you want to add a feature, feel free to submit a PR.
+If you'd like to add a feature, feel free to submit a PR.
 
-If you want to become a maintainer, please contact me.
+Interested in becoming a maintainer? Open an [issue](https://github.com/yorickshan/html2canvas-pro/issues) or reach out to [@yorickshan](https://github.com/yorickshan).
 
 ## License
 
