@@ -11,11 +11,8 @@
 export interface ValidationResult {
     valid: boolean;
     error?: string;
-    sanitized?: any;
-    /**
-     * Indicates if runtime validation is recommended
-     * (e.g., for proxy URLs to prevent DNS rebinding attacks)
-     */
+    sanitized?: unknown;
+    /** Indicates if runtime validation is recommended (e.g. for proxy URLs against DNS rebinding) */
     requiresRuntimeCheck?: boolean;
 }
 
@@ -48,7 +45,8 @@ export interface ValidatorConfig {
     /**
      * Custom validation function
      */
-    customValidator?: (value: any, type: string) => ValidationResult;
+    /** Custom validation function. Receives the raw value and its semantic type. */
+    customValidator?: (value: unknown, type: string) => ValidationResult;
 }
 
 /**

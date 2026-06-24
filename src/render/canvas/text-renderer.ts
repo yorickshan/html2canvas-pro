@@ -401,173 +401,131 @@ export class TextRenderer {
         ];
     }
 
+    /**
+     * Render text with -webkit-line-clamp truncation.
+     * Groups text bounds by their Y position into visual lines, then renders
+     * only the first N-1 complete lines followed by an ellipsis on the Nth line.
+     */
+    private renderLineClampedText(
+        text: TextContainer,
+        styles: CSSParsedDeclaration,
+        paintOrder: number[],
+        containerBounds?: Bounds
+    ): boolean {
+        const lineHeight = styles.fontSize.number * 1.5;
+        const lines: TextBounds[][] = [];
+        let currentLine: TextBounds[] = [];
+        let currentLineTop = text.textBounds[0].bounds.top;
+
+        text.textBounds.forEach((tb) => {
+            if (Math.abs(tb.bounds.top - currentLineTop) >= lineHeight * 0.5) {
+                if (currentLine.length > 0) lines.push(currentLine);
+                currentLine = [tb];
+                currentLineTop = tb.bounds.top;
+            } else {
+                currentLine.push(tb);
+            }
+        });
+        if (currentLine.length > 0) lines.push(currentLine);
+
+        const maxLines = styles.webkitLineClamp;
+        if (lines.length <= maxLines) return false; // fall through to normal rendering
+
+        // Render full lines (0..N-2)
+        for (let i = 0; i < maxLines - 1; i++) {
+            lines[i].forEach((tb) => this.renderTextBoundWithPaintOrder(tb, styles, paintOrder));
+        }
+
+        // Nth line: truncated with ellipsis
+        const lastLine = lines[maxLines - 1];
+        if (lastLine?.length && containerBounds) {
+            const textStr = lastLine.map((tb) => tb.text).join('');
+            const first = lastLine[0];
+            const avail = containerBounds.width - (first.bounds.left - containerBounds.left);
+            const truncated = this.truncateTextWithEllipsis(textStr, avail, styles.letterSpacing);
+            const bounds = new TextBounds(truncated, first.bounds);
+            for (const layer of paintOrder) {
+                if (layer === PAINT_ORDER_LAYER.FILL) {
+                    this.ctx.fillStyle = asString(styles.color);
+                    this.renderTextWithLetterSpacing(
+                        bounds,
+                        styles.letterSpacing,
+                        styles.fontSize.number,
+                        styles.writingMode
+                    );
+                } else if (layer === PAINT_ORDER_LAYER.STROKE) {
+                    this.renderTextStrokeWithStyle(bounds, styles);
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Render single-line text with text-overflow: ellipsis.
+     * Returns true if ellipsis was applied (caller should skip normal rendering).
+     */
+    private renderEllipsisText(
+        text: TextContainer,
+        styles: CSSParsedDeclaration,
+        paintOrder: number[],
+        containerBounds: Bounds
+    ): boolean {
+        const lineHeight = styles.fontSize.number * 1.5;
+        const firstTop = text.textBounds[0].bounds.top;
+        const isSingleLine = text.textBounds.every((tb) => Math.abs(tb.bounds.top - firstTop) < lineHeight * 0.5);
+        if (!isSingleLine) return false;
+
+        let fullText = text.textBounds
+            .map((tb) => tb.text)
+            .join('')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const fullWidth = this.ctx.measureText(fullText).width;
+        if (fullWidth <= containerBounds.width) return false;
+
+        const truncated = this.truncateTextWithEllipsis(fullText, containerBounds.width, styles.letterSpacing);
+        const bounds = new TextBounds(truncated, text.textBounds[0].bounds);
+        for (const layer of paintOrder) {
+            if (layer === PAINT_ORDER_LAYER.FILL) this.renderTextFillWithShadows(bounds, styles);
+            else if (layer === PAINT_ORDER_LAYER.STROKE) this.renderTextStrokeWithStyle(bounds, styles);
+        }
+        return true;
+    }
+
     async renderTextNode(text: TextContainer, styles: CSSParsedDeclaration, containerBounds?: Bounds): Promise<void> {
-        const [font] = this.createFontStyle(styles);
-
-        this.ctx.font = font;
-
+        this.ctx.font = this.createFontStyle(styles)[0];
         this.ctx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'alphabetic';
         const paintOrder = styles.paintOrder;
 
-        // Calculate line height for text layout detection (used by both line-clamp and ellipsis)
-        const lineHeight = styles.fontSize.number * 1.5;
-
-        // Check if we need to apply -webkit-line-clamp
-        // This limits text to a specific number of lines with ellipsis
-        const shouldApplyLineClamp =
+        // -webkit-line-clamp
+        const clamp =
             styles.webkitLineClamp > 0 &&
             (styles.display & DISPLAY.BLOCK) !== 0 &&
             styles.overflowY === OVERFLOW.HIDDEN &&
             text.textBounds.length > 0;
-
-        if (shouldApplyLineClamp) {
-            // Group text bounds by lines based on their Y position
-            const lines: TextBounds[][] = [];
-            let currentLine: TextBounds[] = [];
-            let currentLineTop = text.textBounds[0].bounds.top;
-
-            text.textBounds.forEach((tb) => {
-                // If this text bound is on a different line, start a new line
-                if (Math.abs(tb.bounds.top - currentLineTop) >= lineHeight * 0.5) {
-                    if (currentLine.length > 0) {
-                        lines.push(currentLine);
-                    }
-                    currentLine = [tb];
-                    currentLineTop = tb.bounds.top;
-                } else {
-                    currentLine.push(tb);
-                }
-            });
-
-            // Don't forget the last line
-            if (currentLine.length > 0) {
-                lines.push(currentLine);
-            }
-
-            // Only render up to webkitLineClamp lines
-            const maxLines = styles.webkitLineClamp;
-            if (lines.length > maxLines) {
-                // Render only the first (maxLines - 1) complete lines
-                for (let i = 0; i < maxLines - 1; i++) {
-                    lines[i].forEach((textBound) => {
-                        this.renderTextBoundWithPaintOrder(textBound, styles, paintOrder);
-                    });
-                }
-
-                // For the last line, truncate with ellipsis
-                const lastLine = lines[maxLines - 1];
-                if (lastLine && lastLine.length > 0 && containerBounds) {
-                    const lastLineText = lastLine.map((tb) => tb.text).join('');
-                    const firstBound = lastLine[0];
-                    const availableWidth = containerBounds.width - (firstBound.bounds.left - containerBounds.left);
-                    const truncatedText = this.truncateTextWithEllipsis(
-                        lastLineText,
-                        availableWidth,
-                        styles.letterSpacing
-                    );
-
-                    // Build TextBounds once; reused for fill and stroke without re-allocating.
-                    const truncatedBounds = new TextBounds(truncatedText, firstBound.bounds);
-
-                    paintOrder.forEach((paintOrderLayer) => {
-                        switch (paintOrderLayer) {
-                            case PAINT_ORDER_LAYER.FILL:
-                                this.ctx.fillStyle = asString(styles.color);
-                                this.renderTextWithLetterSpacing(
-                                    truncatedBounds,
-                                    styles.letterSpacing,
-                                    styles.fontSize.number,
-                                    styles.writingMode
-                                );
-                                break;
-                            case PAINT_ORDER_LAYER.STROKE:
-                                this.renderTextStrokeWithStyle(truncatedBounds, styles);
-                                break;
-                        }
-                    });
-                }
-                return; // Don't render anything else
-            }
-            // If lines.length <= maxLines, fall through to normal rendering
+        if (clamp) {
+            if (this.renderLineClampedText(text, styles, paintOrder, containerBounds)) return;
         }
 
-        // Check if we need to apply text-overflow: ellipsis
-        // Issue #203: Only apply ellipsis for single-line text overflow
-        // Multi-line text truncation (like -webkit-line-clamp) should not be affected
-        const shouldApplyEllipsis =
+        // text-overflow: ellipsis (single-line only)
+        const ellipsis =
             styles.textOverflow === TEXT_OVERFLOW.ELLIPSIS &&
             containerBounds &&
             styles.overflowX === OVERFLOW.HIDDEN &&
             text.textBounds.length > 0;
+        if (ellipsis && this.renderEllipsisText(text, styles, paintOrder, containerBounds)) return;
 
-        // Calculate total text width if ellipsis might be needed
-        let needsEllipsis = false;
-        let truncatedText = '';
-        if (shouldApplyEllipsis) {
-            // Check if all text bounds are on approximately the same line (single-line scenario)
-            // For multi-line text (like -webkit-line-clamp), textBounds will have different Y positions
-            const firstTop = text.textBounds[0].bounds.top;
-            const isSingleLine = text.textBounds.every((tb) => Math.abs(tb.bounds.top - firstTop) < lineHeight * 0.5);
-
-            if (isSingleLine) {
-                // Measure the full text content
-                // Note: text.textBounds may contain whitespace characters from HTML formatting
-                // We need to collapse them like the browser does for white-space: nowrap
-                let fullText = text.textBounds.map((tb) => tb.text).join('');
-
-                // Collapse whitespace: replace sequences of whitespace (including newlines) with single spaces
-                // and trim leading/trailing whitespace
-                fullText = fullText.replace(/\s+/g, ' ').trim();
-
-                const fullTextWidth = this.ctx.measureText(fullText).width;
-                const availableWidth = containerBounds.width;
-
-                if (fullTextWidth > availableWidth) {
-                    needsEllipsis = true;
-                    truncatedText = this.truncateTextWithEllipsis(fullText, availableWidth, styles.letterSpacing);
-                }
-            }
-        }
-
-        // If ellipsis is needed, render the truncated text once
-        if (needsEllipsis) {
-            const firstBound = text.textBounds[0];
-            // Build TextBounds once; reused across paint layers and every shadow pass
-            // to avoid repeated allocation inside forEach callbacks.
-            const truncatedBounds = new TextBounds(truncatedText, firstBound.bounds);
-
-            paintOrder.forEach((paintOrderLayer) => {
-                switch (paintOrderLayer) {
-                    case PAINT_ORDER_LAYER.FILL: {
-                        this.renderTextFillWithShadows(truncatedBounds, styles);
-                        break;
-                    }
-                    case PAINT_ORDER_LAYER.STROKE:
-                        this.renderTextStrokeWithStyle(truncatedBounds, styles);
-                        break;
-                }
-            });
-            return;
-        }
-
-        // Normal rendering (no ellipsis needed)
-        text.textBounds.forEach((text) => {
-            paintOrder.forEach((paintOrderLayer) => {
-                switch (paintOrderLayer) {
-                    case PAINT_ORDER_LAYER.FILL: {
-                        this.renderTextFillWithShadows(text, styles);
-
-                        if (styles.textDecorationLine.length) {
-                            this.renderTextDecoration(text.bounds, styles);
-                        }
-                        break;
-                    }
-                    case PAINT_ORDER_LAYER.STROKE: {
-                        this.renderTextStrokeWithStyle(text, styles);
-                        break;
-                    }
+        // Normal rendering: fill + stroke + decorations per text bound
+        text.textBounds.forEach((tb) => {
+            paintOrder.forEach((layer) => {
+                if (layer === PAINT_ORDER_LAYER.FILL) {
+                    this.renderTextFillWithShadows(tb, styles);
+                    if (styles.textDecorationLine.length) this.renderTextDecoration(tb.bounds, styles);
+                } else if (layer === PAINT_ORDER_LAYER.STROKE) {
+                    this.renderTextStrokeWithStyle(tb, styles);
                 }
             });
         });
