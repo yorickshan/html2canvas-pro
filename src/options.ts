@@ -57,4 +57,10 @@ export type Options = CloneOptions &
          * The render continues — this is a notification hook, not an abort.
          */
         onError?: (error: Error) => void;
+        /**
+         * Called at key milestones during the render pipeline.
+         * `phase` is one of: 'clone', 'parse', 'layout', 'render'.
+         * `progress` is 0..100 percentage estimate.
+         */
+        onProgress?: (phase: string, progress: number) => void;
     };

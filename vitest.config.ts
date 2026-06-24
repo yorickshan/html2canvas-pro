@@ -14,10 +14,10 @@ export default defineConfig({
                 'src/global.d.ts'
             ],
             thresholds: {
-                branches: 15,
-                functions: 15,
-                lines: 15,
-                statements: 15
+                branches: 20,
+                functions: 20,
+                lines: 20,
+                statements: 20
             }
         }
     }
