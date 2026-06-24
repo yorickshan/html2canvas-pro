@@ -650,10 +650,16 @@ const iframeLoader = (iframe: HTMLIFrameElement): Promise<HTMLIFrameElement> => 
 
         cloneWindow.onload = iframe.onload = () => {
             cloneWindow.onload = iframe.onload = null;
+            const MAX_POLL_ATTEMPTS = 600; // 30 seconds at 50ms intervals
+            let attempts = 0;
             const interval = setInterval(() => {
+                attempts++;
                 if (documentClone.body.childNodes.length > 0 && documentClone.readyState === 'complete') {
                     clearInterval(interval);
                     resolve(iframe);
+                } else if (attempts >= MAX_POLL_ATTEMPTS) {
+                    clearInterval(interval);
+                    resolve(iframe); // resolve anyway to avoid hanging
                 }
             }, 50);
         };

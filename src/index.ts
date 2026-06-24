@@ -59,6 +59,3 @@ export {
     createDefaultValidator,
     PerformanceMonitor
 };
-
-/** @internal Internal enum — prefer using Options.imageSmoothing */
-export { IMAGE_RENDERING } from './css/property-descriptors/image-rendering';
