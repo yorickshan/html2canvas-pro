@@ -16,5 +16,7 @@ interface DocumentType extends Node, ChildNode {
 
 interface Document {
     /** Override TS lib's FontFaceSet — we access .ready on documentClone.fonts */
-    fonts: any;
+    fonts?: {
+        ready?: Promise<void>;
+    };
 }

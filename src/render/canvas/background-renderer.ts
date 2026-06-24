@@ -141,7 +141,7 @@ export class BackgroundRenderer {
 
             // Cache key: URL + resized dimensions + imageRendering (pattern is dependent on all three)
             const cacheKey = `${url}|${Math.round(width)}x${Math.round(height)}|${container.styles.imageRendering}`;
-            let pattern = this.patternCache.get(cacheKey);
+            let pattern = this.lruGet(this.patternCache, cacheKey);
 
             if (!pattern) {
                 const resized = this.resizeImage(
@@ -204,7 +204,7 @@ export class BackgroundRenderer {
         // Cache key for this repeating gradient pattern
         const cacheKey = `rlg|${backgroundImage.angle}|${Math.round(patternLength)}|${JSON.stringify(backgroundImage.stops)}`;
 
-        let pattern = this.patternCache.get(cacheKey);
+        let pattern = this.lruGet(this.patternCache, cacheKey);
         if (!pattern) {
             const canvas = ownerDocument.createElement('canvas');
             // Create a canvas large enough to hold one full repeating unit
@@ -251,7 +251,7 @@ export class BackgroundRenderer {
         // Cache key: angle + dimensions + serialised colour stops
         const cacheKey = `lg|${backgroundImage.angle}|${Math.round(width)}x${Math.round(height)}|${JSON.stringify(backgroundImage.stops)}`;
 
-        let pattern = this.patternCache.get(cacheKey);
+        let pattern = this.lruGet(this.patternCache, cacheKey);
         if (!pattern) {
             const ownerDocument = this.canvas.ownerDocument ?? document;
             const canvas = ownerDocument.createElement('canvas');
@@ -412,8 +412,18 @@ export class BackgroundRenderer {
     }
 
     /**
-     * LRU-aware set for CanvasPattern caches. Evicts oldest entry on overflow.
+     * LRU-aware get: returns value and promotes the entry to end of Map.
      */
+    private lruGet(cache: Map<string, CanvasPattern>, key: string): CanvasPattern | undefined {
+        const value = cache.get(key);
+        if (value !== undefined) {
+            cache.delete(key);
+            cache.set(key, value);
+        }
+        return value;
+    }
+
+    /** LRU-aware set for CanvasPattern caches. Evicts oldest entry on overflow. */
     private lruSet(cache: Map<string, CanvasPattern>, key: string, value: CanvasPattern): void {
         if (cache.size >= BackgroundRenderer.PATTERN_CACHE_MAX) {
             const oldestKey = cache.keys().next().value;
