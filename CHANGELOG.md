@@ -1,3 +1,22 @@
+## [2.2.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.1.1...v2.2.0) (2026-06-24)
+
+### Features
+
+* add new CSS property descriptors and rendering support ([8a1d414](https://github.com/yorickshan/html2canvas-pro/commit/8a1d41454485d3a2aeddc9a69e0d39ebb0aa236e))
+* **Phase2:** add onError callback to Options and ContextOptions ([23c0d4a](https://github.com/yorickshan/html2canvas-pro/commit/23c0d4ac3b65c2e8b3514dc2351e219d691dbea2))
+* **Phase4-5:** add onProgress callback and raise coverage threshold ([6018890](https://github.com/yorickshan/html2canvas-pro/commit/6018890f838cfa98beb3cf9853a2af9a4d154bbd))
+* **Phase4:** wire onError callback to resource load failures ([0524056](https://github.com/yorickshan/html2canvas-pro/commit/0524056ce6207ee0e91b8af8a1b18e0d56fc1977))
+
+### Bug Fixes
+
+* resolve circular dependency between canvas-renderer and content-renderer ([fd6931f](https://github.com/yorickshan/html2canvas-pro/commit/fd6931f42973930a1eba3b127a7ff47d34af327d))
+* resolve CodeQL alerts — new Function and document.write ([1edd953](https://github.com/yorickshan/html2canvas-pro/commit/1edd953574b28c02a8ccb1a3a3f189dadd4a9a55))
+
+### Performance Improvements
+
+* **Phase3:** add LRU pattern cache for linear-gradient backgrounds ([0a82c98](https://github.com/yorickshan/html2canvas-pro/commit/0a82c9872c269387a85e052576bf658177771956))
+* **Phase3:** CSS parse cache LRU eviction and background pattern caching ([ec5a8e3](https://github.com/yorickshan/html2canvas-pro/commit/ec5a8e34913b8068b58a7ce7a4116fdc0eee0f26))
+
 ## [2.1.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.1.0...v2.1.1) (2026-06-23)
 
 ### Features
