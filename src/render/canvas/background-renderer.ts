@@ -153,12 +153,7 @@ export class BackgroundRenderer {
                 );
                 pattern = this.ctx.createPattern(resized, 'repeat') as CanvasPattern;
 
-                // LRU eviction
-                if (this.patternCache.size >= BackgroundRenderer.PATTERN_CACHE_MAX) {
-                    const oldestKey = this.patternCache.keys().next().value;
-                    this.patternCache.delete(oldestKey);
-                }
-                this.patternCache.set(cacheKey, pattern);
+                this.lruSet(this.patternCache, cacheKey, pattern);
             }
 
             this.renderRepeat(path, pattern, x, y);
@@ -302,30 +297,46 @@ export class BackgroundRenderer {
             ry = Math.max(ry, 0.01);
         }
         if (rx > 0 && ry > 0) {
-            const radialGradient = this.ctx.createRadialGradient(left + x, top + y, 0, left + x, top + y, rx);
+            // Cache key for radial gradient: position + radii + colour stops
+            const cacheKey = `rg|${Math.round(x)}x${Math.round(y)}|${Math.round(rx)}x${Math.round(ry)}|${JSON.stringify(backgroundImage.stops)}`;
 
-            processColorStops(backgroundImage.stops, rx * 2).forEach((colorStop) =>
-                radialGradient.addColorStop(colorStop.stop, asString(colorStop.color))
-            );
+            let pattern = this.lruGet(this.patternCache, cacheKey);
+            if (!pattern) {
+                const ownerDocument = this.canvas.ownerDocument ?? document;
+                const size = Math.ceil(Math.max(rx, ry) * 2);
+                const offscreen = ownerDocument.createElement('canvas');
+                offscreen.width = size;
+                offscreen.height = size;
+                const offCtx = offscreen.getContext('2d');
+                if (offCtx) {
+                    const offRadius = Math.max(rx, ry);
+                    const gradient = offCtx.createRadialGradient(
+                        offRadius,
+                        offRadius,
+                        0,
+                        offRadius,
+                        offRadius,
+                        offRadius
+                    );
+                    processColorStops(backgroundImage.stops, offRadius * 2).forEach((s) =>
+                        gradient.addColorStop(s.stop, asString(s.color))
+                    );
+                    offCtx.fillStyle = gradient;
+                    if (rx !== ry) offCtx.scale(1, ry / rx);
+                    offCtx.fillRect(0, 0, offRadius * 2, offRadius * 2);
+                    pattern = this.ctx.createPattern(offscreen, 'no-repeat') as CanvasPattern;
+                    this.lruSet(this.patternCache, cacheKey, pattern);
+                }
+            }
 
-            this.path(path);
-            this.ctx.fillStyle = radialGradient;
-            if (rx !== ry) {
-                // transforms for elliptical radial gradient
-                const midX = container.bounds.left + 0.5 * container.bounds.width;
-                const midY = container.bounds.top + 0.5 * container.bounds.height;
-                const f = ry / rx;
-                const invF = 1 / f;
-
+            if (pattern) {
+                this.path(path);
                 this.ctx.save();
-                this.ctx.translate(midX, midY);
-                this.ctx.transform(1, 0, 0, f, 0, 0);
-                this.ctx.translate(-midX, -midY);
-
-                this.ctx.fillRect(left, invF * (top - midY) + midY, width, height * invF);
+                this.ctx.clip();
+                this.ctx.translate(left + x - Math.max(rx, ry), top + y - Math.max(rx, ry));
+                this.ctx.fillStyle = pattern;
+                this.ctx.fillRect(0, 0, Math.max(rx, ry) * 2, Math.max(rx, ry) * 2);
                 this.ctx.restore();
-            } else {
-                this.ctx.fill();
             }
         }
     }
