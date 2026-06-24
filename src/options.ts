@@ -52,4 +52,9 @@ export type Options = CloneOptions &
          * @default browser default (usually 'low' or 'medium')
          */
         imageSmoothingQuality?: 'low' | 'medium' | 'high';
+        /**
+         * Called when a resource fails to load (image, font, iframe, etc.).
+         * The render continues — this is a notification hook, not an abort.
+         */
+        onError?: (error: Error) => void;
     };

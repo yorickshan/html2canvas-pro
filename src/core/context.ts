@@ -7,6 +7,8 @@ import { Html2CanvasConfig } from '../config';
 export type ContextOptions = {
     logging: boolean;
     cache?: Cache;
+    /** Called when a resource fails to load. */
+    onError?: (error: Error) => void;
 } & ResourceOptions;
 
 export class Context {
