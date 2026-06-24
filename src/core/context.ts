@@ -17,6 +17,7 @@ export class Context {
     readonly cache: Cache;
     readonly originChecker: OriginChecker;
     readonly config: Html2CanvasConfig;
+    readonly onError?: (error: Error) => void;
 
     private static instanceCount = 1;
 
@@ -29,5 +30,6 @@ export class Context {
         this.logger = new Logger({ id: this.instanceName, enabled: options.logging });
         this.originChecker = new OriginChecker(config.window);
         this.cache = options.cache ?? config.cache ?? new Cache(this, options);
+        this.onError = options.onError;
     }
 }

@@ -128,6 +128,7 @@ export class BackgroundRenderer {
             image = await this.context.cache.match(url);
         } catch (e) {
             this.context.logger.error(`Error loading background-image ${url}`);
+            this.context.onError?.(e instanceof Error ? e : new Error(String(e)));
         }
 
         if (image) {

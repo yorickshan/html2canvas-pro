@@ -78,6 +78,7 @@ export async function renderReplacedElements(
             ctx.imageSmoothingEnabled = prevSmoothing;
         } catch (e) {
             context.logger.error(`Error loading image ${container.src}`);
+            context.onError?.(e instanceof Error ? e : new Error(String(e)));
         }
     }
 
@@ -91,6 +92,7 @@ export async function renderReplacedElements(
             renderReplacedElementFn(container, curves, image!);
         } catch (e) {
             context.logger.error(`Error loading svg ${container.svg.substring(0, 255)}`);
+            context.onError?.(e instanceof Error ? e : new Error(String(e)));
         }
     }
 
@@ -233,6 +235,7 @@ export async function renderListMarker(
                 ctx.drawImage(image!, container.bounds.left - (image!.width + 10), container.bounds.top);
             } catch (e) {
                 context.logger.error(`Error loading list-style-image ${url}`);
+                context.onError?.(e instanceof Error ? e : new Error(String(e)));
             }
         }
     } else if (paint.listValue && container.styles.listStyleType !== LIST_STYLE_TYPE.NONE) {
