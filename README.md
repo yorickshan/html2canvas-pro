@@ -6,7 +6,7 @@ html2canvas-pro
 </h1>
 <p align="center">
 Next generation JavaScript screenshots tool.
-<p>
+</p>
 <p align="center">
   <a href="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml"><img src="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml/badge.svg?branch=main" alt="build status"></a>
   <a href=https://npm.im/html2canvas-pro><img src="https://badgen.net/npm/v/html2canvas-pro" alt="npm version"></a>

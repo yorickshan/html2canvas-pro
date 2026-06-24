@@ -117,7 +117,7 @@ Tests are colocated with source in `__tests__/` directories:
 
 ## Code Style
 
-- TypeScript `strict: true`
+- TypeScript strict mode (noUncheckedIndexedAccess excluded)
 - No `any` in production code (use proper types or `unknown` with narrowing)
 - Prefer `const enum` for enum values that appear at runtime
 - Use `import type` for type-only imports to avoid circular dependencies
