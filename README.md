@@ -5,15 +5,15 @@
 html2canvas-pro
 </h1>
 <p align="center">
-Next generation JavaScript screenshots tool.
+Next generation JavaScript screenshot tool.
 </p>
 <p align="center">
   <a href="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml"><img src="https://github.com/yorickshan/html2canvas-pro/actions/workflows/ci.yml/badge.svg?branch=main" alt="build status"></a>
-  <a href=https://npm.im/html2canvas-pro><img src="https://badgen.net/npm/v/html2canvas-pro" alt="npm version"></a>
-  <a href=http://npm.im/html2canvas-pro><img src="https://badgen.net/npm/dm/html2canvas-pro" alt="npm downloads"></a>
+	  <a href="https://npm.im/html2canvas-pro"><img src="https://badgen.net/npm/v/html2canvas-pro" alt="npm version"></a>
+	  <a href="http://npm.im/html2canvas-pro"><img src="https://badgen.net/npm/dm/html2canvas-pro" alt="npm downloads"></a>
   <a href="https://www.jsdelivr.com/package/npm/html2canvas-pro"><img src="https://data.jsdelivr.com/v1/package/npm/html2canvas-pro/badge" /></a>
   <a href="https://deepwiki.com/yorickshan/html2canvas-pro"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-<p>
+</p>
 <p align="center">
   <a href="https://yorickshan.github.io/html2canvas-pro/getting-started.html">Getting Started</a>
 </p>
@@ -78,10 +78,10 @@ See the [Configuration Guide](/docs/configuration.md#canvas-dimensions) for more
 
 ## Contribution
 
-If you want to add some features, feel free to submit PR.
+If you want to add a feature, feel free to submit a PR.
 
-If you want to become a maintainer on it, please contact me.
+If you want to become a maintainer, please contact me.
 
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE)

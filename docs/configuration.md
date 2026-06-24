@@ -170,7 +170,7 @@ html2canvas(element, {
 
 ### Force All Images to Use CORS
 
-You can use it to force all images to use CORS mode:
+To force all images to use CORS:
 
 ```typescript
 html2canvas(element, {
@@ -257,8 +257,8 @@ html2canvas(document.getElementById('capture'), {
 
 html2canvas-pro keeps existing usage working where possible:
 
-- **Element input**: Besides real `HTMLElement` instances, any object with `ownerDocument` and `ownerDocument.defaultView` is accepted (e.g. element-like mocks or cross-realm references). Validation still requires the element to be attached to a document and window.
+- **Element input**: In addition to real `HTMLElement` instances, any object with `ownerDocument` and `ownerDocument.defaultView` is accepted (e.g. element-like mocks or cross-realm references). Validation still requires the element to be attached to a document and window.
 - **Numeric options**: Options that expect numbers (`scale`, `width`, `height`, `imageTimeout`, `x`, `y`, `windowWidth`, `windowHeight`, `scrollX`, `scrollY`) accept string numbers and are coerced before validation.
 - **Minimal window**: If the element’s `defaultView` does not provide `innerWidth`, `innerHeight`, `pageXOffset`, or `pageYOffset`, sensible defaults (e.g. 800×600, scroll 0) are used.
-- **Deprecated but supported**: `html2canvas.setCspNonce(nonce)` and the global `setDefaultConfig` / `getDefaultConfig` are deprecated since 2.0.0. Use the `cspNonce` option and per-call config instead.
+- **Runtime config**: `html2canvas.setCspNonce(nonce)` and the global `setDefaultConfig` / `getDefaultConfig` functions were removed in v2.1.0. Pass `cspNonce` via the Options object and create a `Html2CanvasConfig` instance per call instead.
 - **DOM normalization**: The default remains `normalizeDom: true` (disable animations / reset transforms during capture). Set `normalizeDom: false` only if you need to preserve the original DOM state.
