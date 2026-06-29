@@ -103,6 +103,7 @@
   "scripts": {
     "prebuild": "rimraf dist/ && rimraf build/ && mkdir -p dist && mkdir -p build",
     "build": "tsc --module commonjs -p tsconfig.build.json && rolldown -c rolldown.config.ts && pnpm build:create-reftest-list && rolldown -c tests/rolldown.testrunner.config.ts && pnpm build:minify",
+    "prepublishOnly": "pnpm build",
     "build:testrunner": "rolldown -c tests/rolldown.testrunner.config.ts",
     "build:minify": "uglifyjs --compress --comments /^!/ -o dist/html2canvas-pro.min.js --mangle -- dist/html2canvas-pro.js",
     "build:reftest-result-list": "tsx scripts/create-reftest-result-list.ts",
