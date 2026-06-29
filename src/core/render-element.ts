@@ -78,7 +78,8 @@ export const renderElement = async (
         imageTimeout: opts.imageTimeout ?? 15000,
         proxy: opts.proxy,
         useCORS: opts.useCORS ?? false,
-        customIsSameOrigin: opts.customIsSameOrigin
+        customIsSameOrigin: opts.customIsSameOrigin,
+        maxCacheSize: opts.maxCacheSize
     };
 
     const contextOptions = {
