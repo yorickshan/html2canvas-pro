@@ -1,3 +1,11 @@
+## [2.2.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.0...v2.2.1) (2026-06-29)
+
+### Bug Fixes
+
+* **#216:** strip drop-shadow() from ctx.filter to avoid canvas taint ([89ba4fa](https://github.com/yorickshan/html2canvas-pro/commit/89ba4fadabc963fe07b944b6108a1cb3cb09e768)), closes [#216](https://github.com/yorickshan/html2canvas-pro/issues/216)
+* **docs:** update DeepWiki link in README for consistency ([af3eeed](https://github.com/yorickshan/html2canvas-pro/commit/af3eeed1253db547b9e63106897ae92580ae6f02))
+* parseCache skips image descriptors + forward maxCacheSize to Cache ([f6f6fe7](https://github.com/yorickshan/html2canvas-pro/commit/f6f6fe77d932b9b30ba1b6152b42f44442165339))
+
 ## [2.2.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.1.1...v2.2.0) (2026-06-24)
 
 ### Features
