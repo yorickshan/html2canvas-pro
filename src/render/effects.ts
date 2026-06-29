@@ -99,7 +99,29 @@ export class FilterEffect implements IElementEffect {
     readonly type: EffectType = EffectType.FILTER;
     readonly target: number = EffectTarget.BACKGROUND_BORDERS | EffectTarget.CONTENT;
 
-    constructor(readonly filterString: string) {}
+    /** CSS filter string with drop-shadow() stripped (safe for ctx.filter). */
+    readonly safeFilterString: string;
+    /** Shadow params for drop-shadow(), if present. */
+    readonly shadow?: { offsetX: number; offsetY: number; blur: number; color: string };
+
+    constructor(filterString: string) {
+        // Parse drop-shadow(...) out of the filter string so we can render it
+        // via ctx.shadow* instead of ctx.filter (which taints the canvas).
+        const dropShadowMatch = filterString.match(
+            /drop-shadow\(\s*([\d.-]+)(px)?\s+([\d.-]+)(px)?\s+([\d.-]+)(px)?\s+(.+?)\s*\)/
+        );
+        if (dropShadowMatch) {
+            this.shadow = {
+                offsetX: parseFloat(dropShadowMatch[1]),
+                offsetY: parseFloat(dropShadowMatch[3]),
+                blur: parseFloat(dropShadowMatch[5]),
+                color: dropShadowMatch[7].trim()
+            };
+            this.safeFilterString = filterString.replace(/drop-shadow\([^)]+\)\s*/g, '').trim();
+        } else {
+            this.safeFilterString = filterString;
+        }
+    }
 }
 
 export const isTransformEffect = (effect: IElementEffect): effect is TransformEffect =>
