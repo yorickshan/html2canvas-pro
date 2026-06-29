@@ -98,7 +98,14 @@ export class EffectsRenderer {
         } else if (isBlendEffect(effect)) {
             this.ctx.globalCompositeOperation = effect.compositeOperation;
         } else if (isFilterEffect(effect)) {
-            this.ctx.filter = effect.filterString;
+            // Canvas 2D `ctx.filter` accepts CSS filter strings including
+            // drop-shadow(). However, using drop-shadow() on the canvas context
+            // can taint the canvas in some browsers (Chrome, Firefox) even for
+            // same-origin content.  Our filter parser wraps shadows with
+            // drop-shadow(...) — strip that single function so we never set
+            // a filter that could taint the canvas.
+            const safe = effect.filterString.replace(/drop-shadow\([^)]+\)\s*/g, '').trim();
+            this.ctx.filter = safe || 'none';
         }
 
         this.activeEffects.push(effect);
