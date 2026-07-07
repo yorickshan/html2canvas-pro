@@ -1,3 +1,10 @@
+## [2.2.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.2...v2.2.3) (2026-07-07)
+
+### Features
+
+* enhance skipCache logic for image descriptors to ensure proper caching behavior ([76224e4](https://github.com/yorickshan/html2canvas-pro/commit/76224e4418bdd4ea3742b66b2cdc9029d1dd9a99))
+* implement skipCache flag for image descriptors to ensure side effects run on every render ([5aa7e8c](https://github.com/yorickshan/html2canvas-pro/commit/5aa7e8c72bc2eae7fbb703ddefbce3a1a61b1e88))
+
 ## [2.2.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.1...v2.2.2) (2026-07-07)
 
 ### Bug Fixes
