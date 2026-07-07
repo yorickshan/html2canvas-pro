@@ -15,6 +15,10 @@ export interface IPropertyDescriptor {
     type: PropertyDescriptorParsingType;
     initialValue: string;
     prefix: boolean;
+    /** When true, the parse result is never stored in parseCache.
+     *  Set this for descriptors whose parse() has side effects (e.g.,
+     *  calling context.cache.addImage) that must run on every render pass. */
+    skipCache?: boolean;
 }
 
 export interface IPropertyIdentValueDescriptor<T> extends IPropertyDescriptor {

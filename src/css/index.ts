@@ -461,10 +461,9 @@ const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?:
         valueCache = new Map();
         parseCache.set(descriptor, valueCache);
     }
-    // Skip caching for image descriptors — their parse() has the critical
-    // side effect of calling context.cache.addImage(url) which must run
-    // on every render pass (different cache instances per html2canvas call).
-    const skipCache = descriptor.type === PropertyDescriptorParsingType.TYPE_VALUE && descriptor.format === 'image';
+    // Honor per-descriptor skipCache flag (e.g. image-bearing descriptors whose
+    // parse() calls context.cache.addImage() must re-run on every render pass).
+    const skipCache = descriptor.skipCache === true;
     if (!skipCache) {
         if (valueCache.size >= PARSE_CACHE_MAX_PER_DESCRIPTOR) {
             const oldestKey = valueCache.keys().next().value;

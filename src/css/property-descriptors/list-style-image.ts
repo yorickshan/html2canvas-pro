@@ -9,6 +9,7 @@ export const listStyleImage: IPropertyValueDescriptor<ICSSImage | null> = {
     initialValue: 'none',
     type: PropertyDescriptorParsingType.VALUE,
     prefix: false,
+    skipCache: true,
     parse: (context: Context, token: CSSValue) => {
         if (token.type === TokenType.IDENT_TOKEN && token.value === 'none') {
             return null;

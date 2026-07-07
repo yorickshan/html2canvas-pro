@@ -9,6 +9,7 @@ export const backgroundImage: IPropertyListDescriptor<ICSSImage[]> = {
     initialValue: 'none',
     type: PropertyDescriptorParsingType.LIST,
     prefix: false,
+    skipCache: true,
     parse: (context: Context, tokens: CSSValue[]) => {
         if (tokens.length === 0) {
             return [];

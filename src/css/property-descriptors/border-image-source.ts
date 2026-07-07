@@ -10,6 +10,7 @@ export const borderImageSource: IPropertyListDescriptor<BorderImageSource> = {
     initialValue: 'none',
     prefix: false,
     type: PropertyDescriptorParsingType.LIST,
+    skipCache: true,
     parse: (context: Context, tokens: CSSValue[]): BorderImageSource => {
         if (tokens.length === 0) {
             return null;
