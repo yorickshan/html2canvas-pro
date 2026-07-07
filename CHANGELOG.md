@@ -1,3 +1,9 @@
+## [2.2.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.1...v2.2.2) (2026-07-07)
+
+### Bug Fixes
+
+* **#216:** render drop-shadow() via ctx.shadow instead of stripping it ([110b343](https://github.com/yorickshan/html2canvas-pro/commit/110b343dcdcbc591711048a822fbdde5e45d5a1e)), closes [#216](https://github.com/yorickshan/html2canvas-pro/issues/216)
+
 ## [2.2.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.0...v2.2.1) (2026-06-29)
 
 ### Bug Fixes
