@@ -1,3 +1,9 @@
+## [2.2.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.3...v2.2.4) (2026-07-13)
+
+### Features
+
+* implement comprehensive drop-shadow parsing in FilterEffect class ([c8ef6e7](https://github.com/yorickshan/html2canvas-pro/commit/c8ef6e74048536cdfcbfe70ef18492c5bfc09b63))
+
 ## [2.2.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.2...v2.2.3) (2026-07-07)
 
 ### Features
