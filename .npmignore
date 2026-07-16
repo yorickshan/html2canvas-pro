@@ -1,6 +1,4 @@
 .github/
-.idea/
-.rpt2_cache
 build/
 configs/
 docs/
@@ -9,20 +7,13 @@ scripts/
 src/
 tests/
 tmp/
-*.iml
 .editorconfig
-.eslintrc
 .npmignore
 .prettierignore
 .prettierrc
-jest.config.js
-karma.conf.js
-karma.js
 rolldown.config.ts
-rolldown.testrunner.config.ts
 .history
 .husky
 .commitlintrc.json
-.versionrc.json
 CHANGELOG.md
 tsconfig.json

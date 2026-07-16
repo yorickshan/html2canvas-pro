@@ -36,11 +36,7 @@ const coerceNumberOptions = (opts: Partial<Options>): void => {
     });
 };
 
-const assertNotAborted = (signal?: AbortSignal): void => {
-    if (signal?.aborted) {
-        throw new DOMException('The operation was aborted.', 'AbortError');
-    }
-};
+import { throwIfAborted } from './abort-helper';
 
 export const renderElement = async (
     element: HTMLElement,
@@ -129,7 +125,7 @@ export const renderElement = async (
 
     const signal = opts.signal;
 
-    assertNotAborted(signal);
+    throwIfAborted(signal);
 
     const foreignObjectRendering = opts.foreignObjectRendering ?? false;
 
@@ -163,7 +159,7 @@ export const renderElement = async (
         if (opts.removeContainer ?? true) {
             DocumentCloner.destroy(container);
         }
-        assertNotAborted(signal);
+        throwIfAborted(signal);
     }
 
     const { width, height, left, top } =
@@ -204,7 +200,7 @@ export const renderElement = async (
 
             context.logger.debug(`Starting DOM parsing`);
             perfMonitor.start('parse');
-            assertNotAborted(signal);
+            throwIfAborted(signal);
             root = parseTree(context, clonedElement);
             perfMonitor.end('parse');
 
@@ -217,7 +213,7 @@ export const renderElement = async (
             );
 
             perfMonitor.start('render');
-            assertNotAborted(signal);
+            throwIfAborted(signal);
             const renderer = new CanvasRenderer(context, renderOptions);
             canvas = await renderer.render(root);
             perfMonitor.end('render');
