@@ -36,6 +36,12 @@ const coerceNumberOptions = (opts: Partial<Options>): void => {
     });
 };
 
+const assertNotAborted = (signal?: AbortSignal): void => {
+    if (signal?.aborted) {
+        throw new DOMException('The operation was aborted.', 'AbortError');
+    }
+};
+
 export const renderElement = async (
     element: HTMLElement,
     opts: Partial<Options>,
@@ -123,9 +129,7 @@ export const renderElement = async (
 
     const signal = opts.signal;
 
-    if (signal?.aborted) {
-        throw new DOMException('The operation was aborted.', 'AbortError');
-    }
+    assertNotAborted(signal);
 
     const foreignObjectRendering = opts.foreignObjectRendering ?? false;
 
@@ -159,7 +163,7 @@ export const renderElement = async (
         if (opts.removeContainer ?? true) {
             DocumentCloner.destroy(container);
         }
-        throw new DOMException('The operation was aborted.', 'AbortError');
+        assertNotAborted(signal);
     }
 
     const { width, height, left, top } =
@@ -200,9 +204,7 @@ export const renderElement = async (
 
             context.logger.debug(`Starting DOM parsing`);
             perfMonitor.start('parse');
-            if (signal?.aborted) {
-                throw new DOMException('The operation was aborted.', 'AbortError');
-            }
+            assertNotAborted(signal);
             root = parseTree(context, clonedElement);
             perfMonitor.end('parse');
 
@@ -215,9 +217,7 @@ export const renderElement = async (
             );
 
             perfMonitor.start('render');
-            if (signal?.aborted) {
-                throw new DOMException('The operation was aborted.', 'AbortError');
-            }
+            assertNotAborted(signal);
             const renderer = new CanvasRenderer(context, renderOptions);
             canvas = await renderer.render(root);
             perfMonitor.end('render');
