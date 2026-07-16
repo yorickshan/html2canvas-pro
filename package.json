@@ -88,7 +88,7 @@
     "puppeteer": "^24.34.0",
     "replace-in-file": "^8.4.0",
     "rimraf": "^6.0.1",
-    "rolldown": "^1.1.2",
+    "rolldown": "^1.1.5",
     "serve-index": "^1.9.1",
     "slash": "5.1.0",
     "ts-node": "^10.9.2",
