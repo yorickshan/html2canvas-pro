@@ -45,6 +45,18 @@ jobs:
                       fi
                     fi
                   done
+            - name: Report bundle sizes
+              if: always()
+              run: |
+                echo "### 📦 Bundle Sizes" >> $GITHUB_STEP_SUMMARY
+                echo "| Format | Size |" >> $GITHUB_STEP_SUMMARY
+                echo "|--------|------|" >> $GITHUB_STEP_SUMMARY
+                UMD_SIZE=$(stat -f%z dist/html2canvas-pro.js 2>/dev/null || stat -c%s dist/html2canvas-pro.js 2>/dev/null)
+                MIN_SIZE=$(stat -f%z dist/html2canvas-pro.min.js 2>/dev/null || stat -c%s dist/html2canvas-pro.min.js 2>/dev/null)
+                ESM_SIZE=$(stat -f%z dist/html2canvas-pro.esm.js 2>/dev/null || stat -c%s dist/html2canvas-pro.esm.js 2>/dev/null)
+                echo "| UMD | $UMD_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
+                echo "| UMD (minified) | $MIN_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
+                echo "| ESM | $ESM_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
             - name: Pack
               run: |
                   pnpm pack
