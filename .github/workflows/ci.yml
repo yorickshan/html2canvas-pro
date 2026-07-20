@@ -26,14 +26,18 @@ jobs:
             - name: Check bundle size
               run: |
                   echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
-                  for file in dist/html2canvas-pro.js dist/html2canvas-pro.min.js dist/html2canvas-pro.esm.js; do
+                  for file in dist/html2canvas-pro.cjs dist/html2canvas-pro.js dist/html2canvas-pro.min.js dist/html2canvas-pro.esm.js; do
                     if [ -f "$file" ]; then
                       size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
                       size_kb=$(echo "scale=1; $size / 1024" | bc)
                       echo "- \`$file\`: **${size_kb} KB** ($size bytes)" >> $GITHUB_STEP_SUMMARY
-                      # Alert if full bundle exceeds 600 KB
+                      # Alert if CJS bundle exceeds 560 KB
+                      if [ "$file" = "dist/html2canvas-pro.cjs" ] && [ "$size" -gt 573440 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::CJS bundle exceeds 560 KB (${size_kb} KB)"
+                      fi
+                      # Alert if UMD bundle exceeds 600 KB
                       if [ "$file" = "dist/html2canvas-pro.js" ] && [ "$size" -gt 614400 ]; then
-                        echo "::warning file=$file,title=Bundle size warning::Full bundle exceeds 600 KB (${size_kb} KB)"
+                        echo "::warning file=$file,title=Bundle size warning::UMD bundle exceeds 600 KB (${size_kb} KB)"
                       fi
                       # Alert if minified bundle exceeds 250 KB
                       if [ "$file" = "dist/html2canvas-pro.min.js" ] && [ "$size" -gt 256000 ]; then
@@ -51,9 +55,11 @@ jobs:
                 echo "### 📦 Bundle Sizes" >> $GITHUB_STEP_SUMMARY
                 echo "| Format | Size |" >> $GITHUB_STEP_SUMMARY
                 echo "|--------|------|" >> $GITHUB_STEP_SUMMARY
+                CJS_SIZE=$(stat -f%z dist/html2canvas-pro.cjs 2>/dev/null || stat -c%s dist/html2canvas-pro.cjs 2>/dev/null)
                 UMD_SIZE=$(stat -f%z dist/html2canvas-pro.js 2>/dev/null || stat -c%s dist/html2canvas-pro.js 2>/dev/null)
                 MIN_SIZE=$(stat -f%z dist/html2canvas-pro.min.js 2>/dev/null || stat -c%s dist/html2canvas-pro.min.js 2>/dev/null)
                 ESM_SIZE=$(stat -f%z dist/html2canvas-pro.esm.js 2>/dev/null || stat -c%s dist/html2canvas-pro.esm.js 2>/dev/null)
+                echo "| CJS | $CJS_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
                 echo "| UMD | $UMD_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
                 echo "| UMD (minified) | $MIN_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
                 echo "| ESM | $ESM_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
@@ -191,6 +197,7 @@ jobs:
                   draft: false
                   prerelease: ${{ contains(github.ref, '-rc.') || contains(github.ref, '-alpha.') }}
                   files: |
+                    dist/html2canvas-pro.cjs
                     dist/html2canvas-pro.js
                     dist/html2canvas-pro.min.js
                     dist/html2canvas-pro.esm.js

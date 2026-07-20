@@ -21,16 +21,14 @@ const baseInput = {
 };
 
 export default defineConfig([
-    // UMD bundle
+    // CJS bundle (for Node.js require())
     {
         ...baseInput,
         output: {
-            file: pkg.main,
-            format: 'umd',
-            name: 'html2canvas',
+            file: 'dist/html2canvas-pro.cjs',
+            format: 'cjs',
             exports: 'named',
             banner,
-            footer: umdFooter,
             sourcemap: true
         }
     },
@@ -43,6 +41,38 @@ export default defineConfig([
             exports: 'named',
             banner,
             sourcemap: true
+        }
+    },
+    // UMD bundle (for browser <script> tag)
+    {
+        ...baseInput,
+        output: {
+            file: 'dist/html2canvas-pro.js',
+            format: 'umd',
+            name: 'html2canvas',
+            exports: 'named',
+            banner,
+            footer: umdFooter,
+            sourcemap: true
+        }
+    },
+    // Minified UMD bundle
+    {
+        ...baseInput,
+        output: {
+            file: 'dist/html2canvas-pro.min.js',
+            format: 'umd',
+            name: 'html2canvas',
+            exports: 'named',
+            banner,
+            footer: umdFooter,
+            minify: {
+                compress: true,
+                mangle: true,
+                codegen: {
+                    legalComments: 'inline'
+                }
+            }
         }
     }
 ]);

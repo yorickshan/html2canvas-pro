@@ -126,8 +126,10 @@ Tests are colocated with source in `__tests__/` directories:
 ## Build System
 
 ```
-Rolldown → UMD bundle (dist/html2canvas-pro.js)
+Rolldown → CJS bundle (dist/html2canvas-pro.cjs)
         → ESM bundle (dist/html2canvas-pro.esm.js)
+        → UMD bundle (dist/html2canvas-pro.js)
+        → UMD minified bundle (dist/html2canvas-pro.min.js)
         → Test runner bundle (build/testrunner.js)
 ```
 
