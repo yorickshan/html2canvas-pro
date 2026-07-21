@@ -1,5 +1,6 @@
+import { describe, it, expect, beforeEach } from 'vitest';
 import { strictEqual } from 'assert';
-import { DOMNormalizer } from '../dom-normalizer';
+import { DOMNormalizer, OriginalStyles } from '../dom-normalizer';
 import { CSSParsedDeclaration } from '../../css';
 import { Context } from '../../core/context';
 import { Bounds } from '../../css/layout/bounds';
@@ -129,5 +130,38 @@ describe('DOMNormalizer', () => {
 
         // Should not throw and should not try to access style
         DOMNormalizer.normalizeElement(svgElement, styles);
+    });
+
+    it('normalizeElement returns OriginalStyles object', () => {
+        const styles = new CSSParsedDeclaration(context, {
+            animationDuration: '1s',
+            transform: 'rotate(45deg)',
+            rotate: '45deg'
+        } as any);
+
+        const result = DOMNormalizer.normalizeElement(mockElement, styles);
+        expect(result).toBeDefined();
+        expect(typeof result).toBe('object');
+        expect(result).toBeInstanceOf(Object);
+    });
+
+    it('restoreElement restores original styles', () => {
+        mockElement.style.transform = 'rotate(45deg)';
+        const originalTransform = mockElement.style.transform;
+
+        const styles = new CSSParsedDeclaration(context, {
+            animationDuration: '0s',
+            transform: 'rotate(45deg)',
+            rotate: '45deg'
+        } as any);
+
+        const originalStyles = DOMNormalizer.normalizeElement(mockElement, styles);
+        DOMNormalizer.restoreElement(mockElement as Element, originalStyles);
+        expect(mockElement.style.transform).toBe(originalTransform);
+    });
+
+    it('restoreElement handles empty OriginalStyles without throwing', () => {
+        const emptyStyles: OriginalStyles = {};
+        expect(() => DOMNormalizer.restoreElement(mockElement as Element, emptyStyles)).not.toThrow();
     });
 });
