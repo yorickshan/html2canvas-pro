@@ -1,3 +1,9 @@
+## [2.3.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.4...v2.3.0) (2026-07-21)
+
+### Features
+
+* enhance length-percentage handling and add tests for document cloning ([e4bb0ae](https://github.com/yorickshan/html2canvas-pro/commit/e4bb0ae1cf71ca2eb6c9cfb210deed680386dcb0))
+
 ## [2.2.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.3...v2.2.4) (2026-07-13)
 
 ### Features
