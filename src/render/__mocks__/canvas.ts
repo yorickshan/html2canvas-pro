@@ -80,6 +80,6 @@ export function createMockContext(): CanvasRenderingContext2D {
         createImageBitmap: undefined,
         addHitRegion: vi.fn(),
         removeHitRegion: vi.fn(),
-        clearHitRegions: vi.fn(),
+        clearHitRegions: vi.fn()
     } as unknown as CanvasRenderingContext2D;
 }
