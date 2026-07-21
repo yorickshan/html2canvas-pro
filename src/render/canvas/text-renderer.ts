@@ -134,11 +134,37 @@ export class TextRenderer {
     private readonly ctx: CanvasRenderingContext2D;
     private readonly options: { scale: number };
     private readonly decorationRenderer: TextDecorationRenderer;
+    /**
+     * Per-render glyph width cache. Keyed by glyph + font string,
+     * avoids redundant `measureText` calls when letter-spacing is non-zero.
+     * Cleared at the start of each renderTextNode call.
+     */
+    private glyphWidthCache: Map<string, number> | null = null;
 
     constructor(deps: TextRendererDependencies) {
         this.ctx = deps.ctx;
         this.options = deps.options;
         this.decorationRenderer = new TextDecorationRenderer(deps.ctx);
+    }
+
+    /**
+     * Returns the cached width for a glyph+font pair, measuring via
+     * measureText if not yet cached. Only used when letterSpacing !== 0
+     * (the `canRenderWholeText` fast path handles the zero-spacing case).
+     */
+    private cachedMeasureText(glyph: string, fontString: string): number {
+        let cache = this.glyphWidthCache;
+        if (!cache) {
+            cache = new Map();
+            this.glyphWidthCache = cache;
+        }
+        const key = glyph + fontString;
+        let w = cache.get(key);
+        if (w === undefined) {
+            w = this.ctx.measureText(glyph).width;
+            cache.set(key, w);
+        }
+        return w;
     }
 
     /**
@@ -170,6 +196,7 @@ export class TextRenderer {
 
         const letters = segmentGraphemes(text.text);
         const y = text.bounds.top + baseline;
+        const fontString = this.ctx.font;
         let left = text.bounds.left;
         for (const letter of letters) {
             if (hasCJKCharacters(letter)) {
@@ -180,7 +207,7 @@ export class TextRenderer {
             } else {
                 renderFn(letter, left, y);
             }
-            left += this.ctx.measureText(letter).width + letterSpacing;
+            left += this.cachedMeasureText(letter, fontString) + letterSpacing;
         }
     }
 
@@ -192,24 +219,51 @@ export class TextRenderer {
         renderFn: (letter: string, x: number, y: number) => void
     ): void {
         const letters = segmentGraphemes(text.text);
+        const fontString = this.ctx.font;
+        const rotationAngle = writingMode === WRITING_MODE.SIDEWAYS_LR ? -Math.PI / 2 : Math.PI / 2;
         let top = text.bounds.top;
 
-        for (const letter of letters) {
-            if (isSidewaysWritingMode(writingMode) || (!hasCJKCharacters(letter) && letter.trim().length > 0)) {
-                this.ctx.save();
-                this.ctx.translate(text.bounds.left + baseline, top);
-                this.ctx.rotate(writingMode === WRITING_MODE.SIDEWAYS_LR ? -Math.PI / 2 : Math.PI / 2);
-                renderFn(letter, 0, 0);
-                this.ctx.restore();
-            } else {
+        for (let i = 0; i < letters.length; ) {
+            const letter = letters[i];
+            const isSideways =
+                isSidewaysWritingMode(writingMode) || (!hasCJKCharacters(letter) && letter.trim().length > 0);
+
+            if (!isSideways) {
+                // CJK glyph in vertical writing mode — render upright
                 const savedBaseline = this.ctx.textBaseline;
                 if (hasCJKCharacters(letter)) {
                     this.ctx.textBaseline = 'ideographic';
                 }
                 renderFn(letter, text.bounds.left, top + baseline);
                 this.ctx.textBaseline = savedBaseline;
+                top += this.cachedMeasureText(letter, fontString) + letterSpacing;
+                i++;
+                continue;
             }
-            top += this.ctx.measureText(letter).width + letterSpacing;
+
+            // ── Batch consecutive sideways glyphs into one save/restore ──
+            const runStart = i;
+            while (i < letters.length) {
+                const ch = letters[i];
+                if (!isSidewaysWritingMode(writingMode) && !hasCJKCharacters(ch) && ch.trim().length === 0) break;
+                if (isSidewaysWritingMode(writingMode) || (!hasCJKCharacters(ch) && ch.trim().length > 0)) {
+                    i++;
+                } else {
+                    break;
+                }
+            }
+
+            // Render entire sideways run in one save/restore
+            this.ctx.save();
+            this.ctx.translate(text.bounds.left + baseline, top);
+            this.ctx.rotate(rotationAngle);
+            let runOffset = 0;
+            for (let j = runStart; j < i; j++) {
+                renderFn(letters[j], 0, runOffset);
+                runOffset += this.cachedMeasureText(letters[j], fontString) + letterSpacing;
+            }
+            this.ctx.restore();
+            top += runOffset;
         }
     }
 
@@ -346,6 +400,8 @@ export class TextRenderer {
             // kerning and ligatures when rendering multiple glyphs together, so
             // measuring them as one string is more precise than summing individual widths.
             // Binary search reduces measurements from O(n) to O(log n).
+            // NOTE: can't use cachedMeasureText here — the binary search measures
+            // concatenated substrings, and kerning/ligatures depend on the full string.
             const fits = (n: number) =>
                 this.ctx.measureText(graphemes.slice(0, n).join('')).width + ellipsisWidth <= maxWidth;
             let lo = 0;
@@ -360,11 +416,12 @@ export class TextRenderer {
             }
             return graphemes.slice(0, lo).join('') + ellipsis;
         } else {
+            const fontString = this.ctx.font;
             let width = ellipsisWidth;
             const result: string[] = [];
 
             for (const letter of graphemes) {
-                const glyphWidth = this.ctx.measureText(letter).width;
+                const glyphWidth = this.cachedMeasureText(letter, fontString);
                 // Check against glyph width only (no trailing spacing): letter-spacing
                 // is applied *between* characters, not after the final glyph. Using
                 // `glyphWidth + letterSpacing` would incorrectly discard letters that
@@ -494,6 +551,9 @@ export class TextRenderer {
     }
 
     async renderTextNode(text: TextContainer, styles: CSSParsedDeclaration, containerBounds?: Bounds): Promise<void> {
+        // Reset glyph width cache at the start of each text node render —
+        // the font may change between nodes.
+        this.glyphWidthCache = null;
         this.ctx.font = this.createFontStyle(styles)[0];
         this.ctx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
         this.ctx.textAlign = 'left';

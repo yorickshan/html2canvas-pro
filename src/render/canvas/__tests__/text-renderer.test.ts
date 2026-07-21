@@ -453,19 +453,12 @@ describe('renderTextWithLetterSpacing', () => {
 
         renderer.renderTextWithLetterSpacing(text, 2, 16, WRITING_MODE.VERTICAL_RL);
 
+        // Consecutive Latin glyphs are now batched into one save/restore pair.
+        // 'A' renders at offset 0, 'B' at offset 14 (width 12 + letterSpacing 2).
         deepStrictEqual(fillCalls, [
             { text: 'A', x: 0, y: 0 },
-            { text: 'B', x: 0, y: 0 }
+            { text: 'B', x: 0, y: 14 }
         ]);
-        deepStrictEqual(operations, [
-            'save',
-            'translate:56,10',
-            `rotate:${Math.PI / 2}`,
-            'restore',
-            'save',
-            'translate:56,24',
-            `rotate:${Math.PI / 2}`,
-            'restore'
-        ]);
+        deepStrictEqual(operations, ['save', 'translate:56,10', `rotate:${Math.PI / 2}`, 'restore']);
     });
 });

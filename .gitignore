@@ -24,3 +24,4 @@ docs/.vitepress/cache
 dev/docs/api/
 .claude/
 coverage/
+.zcode

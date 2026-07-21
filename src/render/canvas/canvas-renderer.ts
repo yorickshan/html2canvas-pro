@@ -21,6 +21,7 @@ import { EffectsRenderer } from './effects-renderer';
 import { createCanvasPath, formatCanvasPath } from './canvas-path';
 import { calculateObjectFitRendering } from '../object-fit';
 import { renderReplacedElements, renderFormElements, renderListMarker } from './content-renderer';
+import { SHADOW_MASK_OFFSET } from '../../core/constants';
 
 export type RenderConfigurations = RenderOptions & {
     backgroundColor: Color | null;
@@ -50,8 +51,6 @@ export interface RenderOptions {
     width: number;
     height: number;
 }
-
-const MASK_OFFSET = 10000;
 
 export class CanvasRenderer {
     canvas: HTMLCanvasElement;
@@ -329,7 +328,7 @@ export class CanvasRenderer {
                 .forEach((shadow) => {
                     this.ctx.save();
                     const borderBoxArea = calculateBorderBoxPath(paint.curves);
-                    const maskOffset = shadow.inset ? 0 : MASK_OFFSET;
+                    const maskOffset = shadow.inset ? 0 : SHADOW_MASK_OFFSET;
                     const shadowPaintingArea = transformPath(
                         borderBoxArea,
                         -maskOffset + (shadow.inset ? 1 : -1) * shadow.spread.number,

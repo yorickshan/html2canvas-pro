@@ -1,8 +1,8 @@
 import { Bounds, parseBounds, parseDocumentSize } from '../css/layout/bounds';
-import { COLORS, parseColor } from '../css/types/color';
-import { isTransparent } from '../css/types/color-utilities';
+import { COLORS } from '../css/types/color';
 import { CloneConfigurations, DocumentCloner } from '../dom/document-cloner';
-import { isBodyElement, isHTMLElement, parseTree } from '../dom/node-parser';
+import { isBodyElement, isHTMLElement } from '../dom/node-type-guards';
+import { parseTree } from '../dom/node-parser';
 import { ElementContainer } from '../dom/element-container';
 import { CanvasRenderer, RenderConfigurations } from '../render/canvas/canvas-renderer';
 import { ForeignObjectRenderer } from '../render/canvas/foreignobject-renderer';
@@ -11,32 +11,16 @@ import { Html2CanvasConfig } from '../config';
 import { createDefaultValidator } from './validator';
 import { PerformanceMonitor } from './performance-monitor';
 import type { Options } from '../options';
-
-const coerceNumberOptions = (opts: Partial<Options>): void => {
-    const numKeys: (keyof Options)[] = [
-        'scale',
-        'width',
-        'height',
-        'imageTimeout',
-        'x',
-        'y',
-        'windowWidth',
-        'windowHeight',
-        'scrollX',
-        'scrollY'
-    ];
-    numKeys.forEach((key) => {
-        const v = opts[key];
-        if (v !== undefined && v !== null && typeof v !== 'number') {
-            const n = Number(v);
-            if (!Number.isNaN(n)) {
-                (opts as Record<string, unknown>)[key] = n;
-            }
-        }
-    });
-};
-
 import { throwIfAborted } from './abort-helper';
+import {
+    coerceNumberOptions,
+    assembleResourceOptions,
+    assembleContextOptions,
+    assembleWindowOptions,
+    assembleCloneOptions,
+    assembleRenderOptions
+} from './config-assembler';
+import { parseBackgroundColor } from './background-parser';
 
 export const renderElement = async (
     element: HTMLElement,
@@ -75,36 +59,9 @@ export const renderElement = async (
         throw new Error(`Document is not attached to a Window`);
     }
 
-    const resourceOptions = {
-        allowTaint: opts.allowTaint ?? false,
-        imageTimeout: opts.imageTimeout ?? 15000,
-        proxy: opts.proxy,
-        useCORS: opts.useCORS ?? false,
-        customIsSameOrigin: opts.customIsSameOrigin,
-        maxCacheSize: opts.maxCacheSize
-    };
-
-    const contextOptions = {
-        logging: opts.logging ?? true,
-        cache: opts.cache ?? config.cache,
-        ...resourceOptions
-    };
-
-    const DEFAULT_WINDOW_WIDTH = 800;
-    const DEFAULT_WINDOW_HEIGHT = 600;
-    const DEFAULT_SCROLL = 0;
-    const win = defaultView as Window & {
-        innerWidth?: number;
-        innerHeight?: number;
-        pageXOffset?: number;
-        pageYOffset?: number;
-    };
-    const windowOptions = {
-        windowWidth: opts.windowWidth ?? win.innerWidth ?? DEFAULT_WINDOW_WIDTH,
-        windowHeight: opts.windowHeight ?? win.innerHeight ?? DEFAULT_WINDOW_HEIGHT,
-        scrollX: opts.scrollX ?? win.pageXOffset ?? DEFAULT_SCROLL,
-        scrollY: opts.scrollY ?? win.pageYOffset ?? DEFAULT_SCROLL
-    };
+    const resourceOptions = assembleResourceOptions(opts);
+    const contextOptions = assembleContextOptions(opts, config, resourceOptions);
+    const windowOptions = assembleWindowOptions(opts, defaultView);
 
     const windowBounds = new Bounds(
         windowOptions.scrollX,
@@ -128,16 +85,7 @@ export const renderElement = async (
     throwIfAborted(signal);
 
     const foreignObjectRendering = opts.foreignObjectRendering ?? false;
-
-    const cloneOptions: CloneConfigurations = {
-        allowTaint: opts.allowTaint ?? false,
-        onclone: opts.onclone,
-        ignoreElements: opts.ignoreElements,
-        iframeContainer: opts.iframeContainer,
-        inlineImages: foreignObjectRendering,
-        copyStyles: foreignObjectRendering,
-        cspNonce: opts.cspNonce ?? config.cspNonce
-    };
+    const cloneOptions: CloneConfigurations = assembleCloneOptions(opts, config, foreignObjectRendering);
 
     context.logger.debug(
         `Starting document clone with size ${windowBounds.width}x${
@@ -169,18 +117,15 @@ export const renderElement = async (
 
     const backgroundColor = parseBackgroundColor(context, clonedElement, opts.backgroundColor);
 
-    const renderOptions: RenderConfigurations = {
-        canvas: opts.canvas,
+    const renderOptions: RenderConfigurations = assembleRenderOptions(
+        opts,
         backgroundColor,
-        signal,
-        scale: opts.scale ?? defaultView.devicePixelRatio ?? 1,
-        x: (opts.x ?? 0) + left,
-        y: (opts.y ?? 0) + top,
-        width: opts.width ?? Math.ceil(width),
-        height: opts.height ?? Math.ceil(height),
-        imageSmoothing: opts.imageSmoothing,
-        imageSmoothingQuality: opts.imageSmoothingQuality
-    };
+        left,
+        top,
+        width,
+        height,
+        defaultView.devicePixelRatio ?? 1
+    );
 
     let canvas;
 
@@ -201,8 +146,17 @@ export const renderElement = async (
             context.logger.debug(`Starting DOM parsing`);
             perfMonitor.start('parse');
             throwIfAborted(signal);
+            // Enter defer mode: collect all image URLs during parse without
+            // starting individual loads. This avoids serialised loading in
+            // DOM-traversal order.
+            context.cache.startDefer();
             root = parseTree(context, clonedElement);
             perfMonitor.end('parse');
+
+            // Batch-preload all collected images in parallel before rendering.
+            perfMonitor.start('preload');
+            await context.cache.preloadAll();
+            perfMonitor.end('preload');
 
             if (backgroundColor === root.styles.backgroundColor) {
                 root.styles.backgroundColor = COLORS.TRANSPARENT;
@@ -240,30 +194,4 @@ export const renderElement = async (
             root.restoreTree();
         }
     }
-};
-
-const parseBackgroundColor = (context: Context, element: HTMLElement, backgroundColorOverride?: string | null) => {
-    const ownerDocument = element.ownerDocument;
-    // http://www.w3.org/TR/css3-background/#special-backgrounds
-    const documentBackgroundColor = ownerDocument.documentElement
-        ? parseColor(context, getComputedStyle(ownerDocument.documentElement).backgroundColor as string)
-        : COLORS.TRANSPARENT;
-    const bodyBackgroundColor = ownerDocument.body
-        ? parseColor(context, getComputedStyle(ownerDocument.body).backgroundColor as string)
-        : COLORS.TRANSPARENT;
-
-    const defaultBackgroundColor =
-        typeof backgroundColorOverride === 'string'
-            ? parseColor(context, backgroundColorOverride)
-            : backgroundColorOverride === null
-              ? COLORS.TRANSPARENT
-              : 0xffffffff;
-
-    return element === ownerDocument.documentElement
-        ? isTransparent(documentBackgroundColor)
-            ? isTransparent(bodyBackgroundColor)
-                ? defaultBackgroundColor
-                : bodyBackgroundColor
-            : documentBackgroundColor
-        : defaultBackgroundColor;
 };

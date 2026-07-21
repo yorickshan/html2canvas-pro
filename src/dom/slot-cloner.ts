@@ -1,4 +1,4 @@
-import { isElementNode, isScriptElement, isSlotElement, isStyleElement } from './node-parser';
+import { isElementNode, isScriptElement, isSlotElement, isStyleElement } from './node-type-guards';
 import { Context } from '../core/context';
 
 /** Options subset needed by SlotCloner */

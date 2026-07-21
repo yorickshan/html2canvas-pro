@@ -148,7 +148,8 @@ export class ElementPaint {
     }
 }
 
-const hasOverflowClip = (styles: ElementContainer['styles']): boolean =>
+/** @internal – exported for testing only. */
+export const hasOverflowClip = (styles: ElementContainer['styles']): boolean =>
     styles.overflowX !== OVERFLOW.VISIBLE || styles.overflowY !== OVERFLOW.VISIBLE;
 
 /**
@@ -160,8 +161,15 @@ const hasOverflowClip = (styles: ElementContainer['styles']): boolean =>
  * @param start   - Absolute start of the reference box on this axis.
  * @param end     - Absolute end of the reference box on this axis.
  * @param dimRef  - Reference dimension for resolving a length-percentage value.
+ * @internal – exported for testing only.
  */
-const resolveAxisRadius = (r: ShapeRadius, center: number, start: number, end: number, dimRef: number): number => {
+export const resolveAxisRadius = (
+    r: ShapeRadius,
+    center: number,
+    start: number,
+    end: number,
+    dimRef: number
+): number => {
     if (r === 'closest-side') return Math.min(center - start, end - center);
     if (r === 'farthest-side') return Math.max(center - start, end - center);
     return getAbsoluteValue(r, dimRef);
@@ -173,8 +181,9 @@ const resolveAxisRadius = (r: ShapeRadius, center: number, start: number, end: n
  *
  * All coordinates are computed in page-absolute space at construction time so
  * the callback itself is allocation-free and executes synchronously.
+ * @internal – exported for testing only.
  */
-const buildClipPathEffect = (clipPath: ClipPathValue, bounds: Bounds): ClipPathEffect | null => {
+export const buildClipPathEffect = (clipPath: ClipPathValue, bounds: Bounds): ClipPathEffect | null => {
     const { left: bLeft, top: bTop, width: bWidth, height: bHeight } = bounds;
 
     switch (clipPath.type) {

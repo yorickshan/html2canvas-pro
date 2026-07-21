@@ -28,6 +28,7 @@ import { asString } from '../../css/types/color-utilities';
 import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering';
 import { BACKGROUND_REPEAT } from '../../css/property-descriptors/background-repeat';
 import { createCanvasPath } from './canvas-path';
+import { LRUMap } from '../../core/lru-map';
 
 /**
  * Dependencies required for BackgroundRenderer
@@ -59,12 +60,8 @@ export class BackgroundRenderer {
      * CanvasPatterns are tied to the rendering context and must not be
      * shared across different render passes. This cache lives for the
      * duration of one html2canvas() call.
-     *
-     * Also reused for linear-gradient and repeating-linear-gradient
-     * pattern canvases to avoid redundant offscreen canvas allocation.
      */
-    private readonly patternCache = new Map<string, CanvasPattern>();
-    private static readonly PATTERN_CACHE_MAX = 50;
+    private readonly patternCache = new LRUMap<string, CanvasPattern>(50);
 
     constructor(deps: BackgroundRendererDependencies) {
         this.ctx = deps.ctx;
@@ -154,7 +151,7 @@ export class BackgroundRenderer {
 
             // Cache key: URL + resized dimensions + imageRendering + repeat mode (pattern is dependent on all four)
             const cacheKey = `${url}|${Math.round(width)}x${Math.round(height)}|${container.styles.imageRendering}|${repeatMode}`;
-            let pattern = this.lruGet(this.patternCache, cacheKey);
+            let pattern = this.patternCache.get(cacheKey);
 
             if (!pattern) {
                 const resized = this.resizeImage(
@@ -165,7 +162,7 @@ export class BackgroundRenderer {
                 );
                 pattern = this.ctx.createPattern(resized, repeatMode) as CanvasPattern;
 
-                this.lruSet(this.patternCache, cacheKey, pattern);
+                this.patternCache.set(cacheKey, pattern);
             }
 
             this.renderRepeat(path, pattern, x, y);
@@ -212,7 +209,7 @@ export class BackgroundRenderer {
         // Cache key for this repeating gradient pattern
         const cacheKey = `rlg|${backgroundImage.angle}|${Math.round(patternLength)}|${JSON.stringify(backgroundImage.stops)}`;
 
-        let pattern = this.lruGet(this.patternCache, cacheKey);
+        let pattern = this.patternCache.get(cacheKey);
         if (!pattern) {
             const canvas = ownerDocument.createElement('canvas');
             // Create a canvas large enough to hold one full repeating unit
@@ -236,7 +233,7 @@ export class BackgroundRenderer {
 
             if (canvasSize > 0) {
                 pattern = this.ctx.createPattern(canvas, 'repeat') as CanvasPattern;
-                this.lruSet(this.patternCache, cacheKey, pattern);
+                this.patternCache.set(cacheKey, pattern);
             }
         }
 
@@ -259,7 +256,7 @@ export class BackgroundRenderer {
         // Cache key: angle + dimensions + serialised colour stops
         const cacheKey = `lg|${backgroundImage.angle}|${Math.round(width)}x${Math.round(height)}|${JSON.stringify(backgroundImage.stops)}`;
 
-        let pattern = this.lruGet(this.patternCache, cacheKey);
+        let pattern = this.patternCache.get(cacheKey);
         if (!pattern) {
             const ownerDocument = this.canvas.ownerDocument ?? document;
             const canvas = ownerDocument.createElement('canvas');
@@ -279,7 +276,7 @@ export class BackgroundRenderer {
             ctx.fillRect(0, 0, width, height);
             if (width > 0 && height > 0) {
                 pattern = this.ctx.createPattern(canvas, 'repeat') as CanvasPattern;
-                this.lruSet(this.patternCache, cacheKey, pattern);
+                this.patternCache.set(cacheKey, pattern);
             }
         }
 
@@ -312,7 +309,7 @@ export class BackgroundRenderer {
             // Cache key for radial gradient: position + radii + colour stops
             const cacheKey = `rg|${Math.round(x)}x${Math.round(y)}|${Math.round(rx)}x${Math.round(ry)}|${JSON.stringify(backgroundImage.stops)}`;
 
-            let pattern = this.lruGet(this.patternCache, cacheKey);
+            let pattern = this.patternCache.get(cacheKey);
             if (!pattern) {
                 const ownerDocument = this.canvas.ownerDocument ?? document;
                 const size = Math.ceil(Math.max(rx, ry) * 2);
@@ -337,7 +334,7 @@ export class BackgroundRenderer {
                     if (rx !== ry) offCtx.scale(1, ry / rx);
                     offCtx.fillRect(0, 0, offRadius * 2, offRadius * 2);
                     pattern = this.ctx.createPattern(offscreen, 'no-repeat') as CanvasPattern;
-                    this.lruSet(this.patternCache, cacheKey, pattern);
+                    this.patternCache.set(cacheKey, pattern);
                 }
             }
 
@@ -389,10 +386,11 @@ export class BackgroundRenderer {
         height: number,
         imageRendering: IMAGE_RENDERING
     ): HTMLCanvasElement | HTMLImageElement {
-        // https://github.com/niklasvh/html2canvas/pull/2911
-        // if (image.width === width && image.height === height) {
-        //     return image;
-        // }
+        // NOTE: Early-return optimisation disabled per upstream investigation
+        // (https://github.com/niklasvh/html2canvas/pull/2911).
+        // Returning the original image when dimensions match caused subtle
+        // rendering issues — a resized copy through a fresh offscreen canvas
+        // is always safer, even when width/height are unchanged.
 
         const ownerDocument = this.canvas.ownerDocument ?? document;
         const canvas = ownerDocument.createElement('canvas');
@@ -433,26 +431,5 @@ export class BackgroundRenderer {
      */
     private path(paths: Path[]): void {
         createCanvasPath(this.ctx, paths);
-    }
-
-    /**
-     * LRU-aware get: returns value and promotes the entry to end of Map.
-     */
-    private lruGet(cache: Map<string, CanvasPattern>, key: string): CanvasPattern | undefined {
-        const value = cache.get(key);
-        if (value !== undefined) {
-            cache.delete(key);
-            cache.set(key, value);
-        }
-        return value;
-    }
-
-    /** LRU-aware set for CanvasPattern caches. Evicts oldest entry on overflow. */
-    private lruSet(cache: Map<string, CanvasPattern>, key: string, value: CanvasPattern): void {
-        if (cache.size >= BackgroundRenderer.PATTERN_CACHE_MAX) {
-            const oldestKey = cache.keys().next().value;
-            cache.delete(oldestKey);
-        }
-        cache.set(key, value);
     }
 }

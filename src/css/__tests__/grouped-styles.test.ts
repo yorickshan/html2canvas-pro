@@ -3,18 +3,23 @@ import { BorderStyles } from '../grouped/border-styles';
 import { BackgroundStyles } from '../grouped/background-styles';
 import { FontStyles } from '../grouped/font-styles';
 import { LayoutStyles } from '../grouped/layout-styles';
+import type { CSSParsedDeclaration } from '../index';
 
 /**
  * For the purpose of testing facade delegation, we construct a plain object
  * that has the same property shape as a CSSParsedDeclaration (without the
  * constructor complexity). Facade classes only read from target properties,
  * so a structural substitute is sufficient.
+ *
+ * The explicit `as unknown as CSSParsedDeclaration` cast signals intent:
+ * this is a simplified mock that satisfies the *runtime* interface of
+ * CSSParsedDeclaration (the import is type-only, erased at compile time).
  */
-const baseProps = {
-    borderTopColor: [0, 0, 0, 1] as number[],
-    borderRightColor: [0, 0, 0, 1] as number[],
-    borderBottomColor: [0, 0, 0, 1] as number[],
-    borderLeftColor: [255, 0, 0, 1] as number[],
+const baseProps: CSSParsedDeclaration = {
+    borderTopColor: [0, 0, 0, 1],
+    borderRightColor: [0, 0, 0, 1],
+    borderBottomColor: [0, 0, 0, 1],
+    borderLeftColor: [255, 0, 0, 1],
     borderTopStyle: 1,
     borderRightStyle: 1,
     borderBottomStyle: 1,
@@ -23,48 +28,48 @@ const baseProps = {
     borderRightWidth: 3,
     borderBottomWidth: 2,
     borderLeftWidth: 1,
-    borderTopLeftRadius: [[{ type: 0, number: 10, flags: 4 }]] as any,
-    borderTopRightRadius: [[{ type: 0, number: 10, flags: 4 }]] as any,
-    borderBottomRightRadius: [[{ type: 0, number: 10, flags: 4 }]] as any,
-    borderBottomLeftRadius: [[{ type: 0, number: 10, flags: 4 }]] as any,
+    borderTopLeftRadius: [[{ type: 0, number: 10, flags: 4 }]],
+    borderTopRightRadius: [[{ type: 0, number: 10, flags: 4 }]],
+    borderBottomRightRadius: [[{ type: 0, number: 10, flags: 4 }]],
+    borderBottomLeftRadius: [[{ type: 0, number: 10, flags: 4 }]],
     borderImageSource: null,
     borderImageSlice: { top: 100, right: 100, bottom: 100, left: 100, fill: false },
     borderImageRepeat: [{ h: 0, v: 0 }],
     boxShadow: [],
 
-    backgroundColor: [255, 0, 0, 1] as number[],
+    backgroundColor: [255, 0, 0, 1],
     backgroundImage: [],
     backgroundClip: [0],
     backgroundOrigin: [0],
     backgroundPosition: [[{ type: 14, number: 50, flags: 4 }]],
     backgroundRepeat: [[0, 0]],
-    backgroundSize: { type: 19, value: 'auto' } as any,
+    backgroundSize: { type: 19, value: 'auto' },
     backgroundBlendMode: ['normal'],
 
     fontFamily: ['Arial'],
-    fontSize: { number: 16, unit: 'px' },
+    fontSize: { type: 0, number: 16, unit: 'px', flags: 0 },
     fontStyle: 0,
     fontVariant: 0,
     fontWeight: 400,
     fontVariantLigatures: 0,
-    color: [0, 0, 0, 1] as number[],
+    color: [0, 0, 0, 1],
     letterSpacing: 0,
-    lineHeight: 'normal',
+    lineHeight: 'normal' as unknown as CSSParsedDeclaration['lineHeight'],
     textAlign: 0,
     textTransform: 0,
     textOverflow: 0,
     textShadow: [],
-    textDecorationColor: [0, 0, 0, 1] as number[],
+    textDecorationColor: [0, 0, 0, 1],
     textDecorationLine: 0,
     textDecorationStyle: 0,
-    textDecorationThickness: { number: 1, unit: 'px' },
-    textUnderlineOffset: { number: 0, unit: 'px' },
+    textDecorationThickness: { type: 0, number: 1, unit: 'px', flags: 0 },
+    textUnderlineOffset: { type: 0, number: 0, unit: 'px', flags: 0 },
     wordBreak: 0,
     lineBreak: 'auto',
     overflowWrap: 0,
     writingMode: 0,
     direction: 0,
-    webkitTextStrokeColor: [0, 0, 0, 1] as number[],
+    webkitTextStrokeColor: [0, 0, 0, 1],
     webkitTextStrokeWidth: 0,
     webkitLineClamp: 0,
     paintOrder: 0,
@@ -73,14 +78,14 @@ const baseProps = {
     position: 0,
     float: 0,
     zIndex: { auto: true },
-    marginTop: { type: 0, number: 0, flags: 4 },
-    marginRight: { type: 0, number: 0, flags: 4 },
-    marginBottom: { type: 0, number: 0, flags: 4 },
-    marginLeft: { type: 0, number: 0, flags: 4 },
-    paddingTop: { number: 0, unit: 'px' },
-    paddingRight: { number: 0, unit: 'px' },
-    paddingBottom: { number: 0, unit: 'px' },
-    paddingLeft: { number: 0, unit: 'px' },
+    marginTop: { type: 0, number: 0, flags: 4 } as CSSParsedDeclaration['marginTop'],
+    marginRight: { type: 0, number: 0, flags: 4 } as CSSParsedDeclaration['marginRight'],
+    marginBottom: { type: 0, number: 0, flags: 4 } as CSSParsedDeclaration['marginBottom'],
+    marginLeft: { type: 0, number: 0, flags: 4 } as CSSParsedDeclaration['marginLeft'],
+    paddingTop: { type: 0, number: 0, unit: 'px', flags: 0 },
+    paddingRight: { type: 0, number: 0, unit: 'px', flags: 0 },
+    paddingBottom: { type: 0, number: 0, unit: 'px', flags: 0 },
+    paddingLeft: { type: 0, number: 0, unit: 'px', flags: 0 },
     overflowX: 0,
     overflowY: 0,
     opacity: 1,
@@ -89,8 +94,8 @@ const baseProps = {
     transformOrigin: [],
     rotate: null,
     zoom: 1,
-    clipPath: { type: 0 },
-    mixBlendMode: 'normal' as string,
+    clipPath: { type: 0 } as CSSParsedDeclaration['clipPath'],
+    mixBlendMode: 'normal' as CSSParsedDeclaration['mixBlendMode'],
     filter: null,
     imageRendering: 0,
     objectFit: 0,
@@ -108,7 +113,7 @@ const baseProps = {
     isPositionedWithZIndex: () => false,
     isFloating: () => false,
     isInlineLevel: () => false
-};
+} as unknown as CSSParsedDeclaration;
 
 describe('CSSParsedDeclaration grouped facades', () => {
     describe('BorderStyles', () => {

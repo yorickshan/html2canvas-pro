@@ -19,6 +19,11 @@ export class Cache {
     private readonly maxSize: number;
     private readonly _pendingOperations: Map<string, Promise<void>> = new Map();
 
+    /** When true, addImage() collects URLs without starting loads. */
+    private _deferMode = false;
+    /** URLs collected during defer mode, pending batch preload. */
+    private _collectedUrls: Set<string> = new Set();
+
     constructor(
         private readonly context: Context,
         private readonly _options: ResourceOptions
@@ -38,7 +43,54 @@ export class Cache {
         }
     }
 
+    /**
+     * Enter defer mode: subsequent addImage() calls only collect URLs.
+     * Call preloadAll() to exit defer mode and batch-load all URLs.
+     */
+    startDefer(): void {
+        this._deferMode = true;
+    }
+
+    /**
+     * Exit defer mode and load all collected URLs in parallel, respecting
+     * an optional concurrency cap to avoid overwhelming the browser's network
+     * stack (default: 10 concurrent loads).
+     * After this call returns, all images are either loaded (cache hit) or
+     * failed (logged). Subsequent cache.match() calls return immediately.
+     *
+     * @param concurrency - Max concurrent image loads (1–100, default 10).
+     */
+    async preloadAll(concurrency = 10): Promise<void> {
+        this._deferMode = false;
+        const urls = Array.from(this._collectedUrls);
+        this._collectedUrls.clear();
+
+        if (urls.length === 0) {
+            return;
+        }
+
+        const limit = Math.max(1, Math.min(concurrency, 100));
+        this.context.logger.debug(`Preloading ${urls.length} image(s) with concurrency ${limit}`);
+
+        // Load in batches to respect the concurrency cap while maximising
+        // parallelism within each batch.
+        for (let i = 0; i < urls.length; i += limit) {
+            const batch = urls.slice(i, i + limit);
+            const operations = batch.map((url) => this._addImageWithPending(url));
+            await Promise.allSettled(operations);
+        }
+    }
+
     addImage(src: string): Promise<void> {
+        // ── Defer mode: collect only ──────────────────────────────
+        if (this._deferMode) {
+            if (!this.has(src) && (isBlobImage(src) || isRenderable(src))) {
+                this._collectedUrls.add(src);
+            }
+            return Promise.resolve();
+        }
+
+        // ── Normal mode: immediate load ───────────────────────────
         // Wait for any pending operations on this key
         const pending = this._pendingOperations.get(src);
         if (pending) {
@@ -54,17 +106,30 @@ export class Cache {
         }
 
         if (isBlobImage(src) || isRenderable(src)) {
-            // Create a pending operation to ensure atomicity
-            const operation = this._addImageInternal(src);
-            this._pendingOperations.set(src, operation);
-            operation.finally(() => {
-                this._pendingOperations.delete(src);
-            });
-
-            return operation;
+            return this._addImageWithPending(src);
         }
 
         return Promise.resolve();
+    }
+
+    /**
+     * Shared helper: enqueues loading for a single URL with pending-operation
+     * deduplication and error swallowing. Used by both addImage() (normal mode)
+     * and preloadAll() (batch mode).
+     */
+    private _addImageWithPending(src: string): Promise<void> {
+        const pending = this._pendingOperations.get(src);
+        if (pending) {
+            return pending;
+        }
+
+        const operation = this._addImageInternal(src);
+        this._pendingOperations.set(src, operation);
+        operation.finally(() => {
+            this._pendingOperations.delete(src);
+        });
+
+        return operation;
     }
 
     private async _addImageInternal(src: string): Promise<void> {

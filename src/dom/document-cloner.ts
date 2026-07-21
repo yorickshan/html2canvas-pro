@@ -12,9 +12,9 @@ import {
     isSVGElementNode,
     isTextareaElement,
     isTextNode,
-    isVideoElement
-} from './node-parser';
-import { canHavePseudoElements } from './node-type-guards';
+    isVideoElement,
+    canHavePseudoElements
+} from './node-type-guards';
 import { isIdentToken, nonFunctionArgSeparator } from '../css/syntax/parser';
 import { TokenType } from '../css/syntax/tokenizer';
 import { CounterState, createCounterText } from '../css/types/functions/counter';
@@ -543,8 +543,6 @@ export class DocumentCloner {
 
                         anonymousReplacedElement.appendChild(document.createTextNode(text));
                     }
-                } else {
-                    //   console.log('FUNCTION_TOKEN', token);
                 }
             } else if (token.type === TokenType.IDENT_TOKEN) {
                 switch (token.value) {
@@ -691,7 +689,11 @@ export const copyCSSStyles = <T extends HTMLElement | SVGElement>(style: CSSStyl
     return target;
 };
 
-const serializeDoctype = (doctype?: DocumentType | null): string => {
+/**
+ * Serialise a document type declaration to an HTML string.
+ * @internal – exported for testing only, not part of the public API.
+ */
+export const serializeDoctype = (doctype?: DocumentType | null): string => {
     let str = '';
     if (doctype) {
         str += '<!DOCTYPE ';

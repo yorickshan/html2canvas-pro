@@ -14,49 +14,19 @@ import { Context } from '../core/context';
 import {
     isBodyElement,
     isCanvasElement,
-    isCustomElement,
     isElementNode,
-    isHTMLElement,
-    isHTMLElementNode,
     isIFrameElement,
     isImageElement,
     isInputElement,
     isLIElement,
     isOLElement,
-    isScriptElement,
     isSelectElement,
     isSlotElement,
-    isStyleElement,
     isSVGElement,
-    isSVGElementNode,
     isTextareaElement,
-    isTextNode,
-    isVideoElement
+    isTextNode
 } from './node-type-guards';
 
-// Re-export all type guards for backward compatibility
-export {
-    isBodyElement,
-    isCanvasElement,
-    isCustomElement,
-    isElementNode,
-    isHTMLElement,
-    isHTMLElementNode,
-    isIFrameElement,
-    isImageElement,
-    isInputElement,
-    isLIElement,
-    isOLElement,
-    isScriptElement,
-    isSelectElement,
-    isSlotElement,
-    isStyleElement,
-    isSVGElement,
-    isSVGElementNode,
-    isTextareaElement,
-    isTextNode,
-    isVideoElement
-};
 import { contains } from '../core/bitwise';
 import { DISPLAY } from '../css/property-descriptors/display';
 

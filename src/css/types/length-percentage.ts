@@ -204,7 +204,11 @@ export const getAbsoluteValue = (token: LengthPercentage, parent: number): numbe
         switch (token.unit) {
             case 'rem':
             case 'em':
-                return 16 * token.number; // TODO use correct font-size
+                // NOTE: Assumes a 16px root font-size for rem/em units. A fully
+                // accurate implementation would require access to the element's
+                // computed font-size (em) or the root element's font-size (rem),
+                // which are not available in this pure-resolution function.
+                return 16 * token.number;
             case 'px':
             default:
                 return token.number;

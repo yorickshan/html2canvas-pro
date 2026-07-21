@@ -134,7 +134,10 @@ export const calculateBackgroundSize = (
             return [bounds.width, bounds.height];
         }
 
-        // TODO If the image has no intrinsic dimensions but has intrinsic proportions, it's rendered as if contain had been specified instead.
+        // NOTE (known gap): Per the CSS spec, images with intrinsic proportions
+        // but no intrinsic dimensions should be rendered as if 'contain' had been
+        // specified. This branch is not yet implemented — the image will render
+        // at the size of the background positioning area instead.
 
         // If the image has only one intrinsic dimension and has intrinsic proportions, it's rendered at the size corresponding to that one dimension.
         // The other dimension is computed using the specified dimension and the intrinsic proportions.
