@@ -1,5 +1,51 @@
 import { describe, it, expect } from 'vitest';
-import { copyCSSStyles, serializeDoctype, DocumentCloner } from '../document-cloner';
+import { copyCSSStyles, serializeDoctype, DocumentCloner, CloneOptions } from '../document-cloner';
+import { IGNORE_ATTRIBUTE } from '../slot-cloner';
+import { Context } from '../../core/context';
+import { Html2CanvasConfig } from '../../config';
+import { Bounds } from '../../css/layout/bounds';
+
+function createMockWindow(): Window {
+    return {
+        document: {
+            createElement: (_name: string) => {
+                let _href = '';
+                return {
+                    set href(value: string) {
+                        _href = value;
+                    },
+                    get href() {
+                        return _href;
+                    },
+                    get protocol() {
+                        return 'http:';
+                    },
+                    get hostname() {
+                        return 'localhost';
+                    },
+                    get port() {
+                        return '';
+                    }
+                };
+            },
+            createDocumentType: document.implementation.createDocumentType.bind(document.implementation)
+        },
+        location: { href: 'http://localhost/' },
+        getComputedStyle: () => ({}),
+        pageXOffset: 0,
+        pageYOffset: 0
+    } as unknown as Window;
+}
+
+function createMockContext(): Context {
+    const mockWindow = createMockWindow();
+    const config = new Html2CanvasConfig({ window: mockWindow });
+    return new Context(
+        { logging: false, imageTimeout: 15000, useCORS: false, allowTaint: false },
+        new Bounds(0, 0, 800, 600),
+        config
+    );
+}
 
 describe('copyCSSStyles', () => {
     it('copies basic style properties', () => {
@@ -92,5 +138,58 @@ describe('DocumentCloner.destroy', () => {
     it('returns false when container has no parent', () => {
         const iframe = document.createElement('iframe');
         expect(DocumentCloner.destroy(iframe)).toBe(false);
+    });
+});
+
+describe('DocumentCloner construction', () => {
+    const defaultCloneOptions: CloneOptions = {
+        ignoreElements: undefined,
+        onclone: undefined,
+        allowTaint: false
+    };
+
+    it('constructs without throwing', () => {
+        const el = document.createElement('div');
+        document.body.appendChild(el);
+        expect(() => {
+            new DocumentCloner(createMockContext(), el, {
+                ...defaultCloneOptions,
+                inlineImages: false,
+                copyStyles: true
+            });
+        }).not.toThrow();
+        document.body.removeChild(el);
+    });
+
+    it('clonedReferenceElement is set after construction', () => {
+        const el = document.createElement('div');
+        document.body.appendChild(el);
+        const cloner = new DocumentCloner(createMockContext(), el, {
+            ...defaultCloneOptions,
+            inlineImages: false,
+            copyStyles: true
+        });
+        expect(cloner.clonedReferenceElement).toBeDefined();
+        document.body.removeChild(el);
+    });
+
+    it('toIFrame returns a Promise', () => {
+        const el = document.createElement('div');
+        document.body.appendChild(el);
+        const cloner = new DocumentCloner(createMockContext(), el, {
+            ...defaultCloneOptions,
+            inlineImages: false,
+            copyStyles: true
+        });
+        const result = cloner.toIFrame(document, new Bounds(0, 0, 800, 600));
+        expect(result).toBeInstanceOf(Promise);
+        document.body.removeChild(el);
+    });
+});
+
+describe('IGNORE_ATTRIBUTE', () => {
+    it('is a defined string constant', () => {
+        expect(typeof IGNORE_ATTRIBUTE).toBe('string');
+        expect(IGNORE_ATTRIBUTE.length).toBeGreaterThan(0);
     });
 });
