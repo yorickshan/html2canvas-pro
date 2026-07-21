@@ -21,11 +21,12 @@ import {
     isRadialGradient,
     isRepeatingLinearGradient
 } from '../../css/types/image';
-import { calculateBackgroundRendering } from '../background';
+import { calculateBackgroundRendering, getBackgroundValueForIndex } from '../background';
 import { calculateGradientDirection, calculateRadius, processColorStops } from '../../css/types/functions/gradient';
 import { FIFTY_PERCENT, getAbsoluteValue } from '../../css/types/length-percentage';
 import { asString } from '../../css/types/color-utilities';
 import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering';
+import { BACKGROUND_REPEAT } from '../../css/property-descriptors/background-repeat';
 import { createCanvasPath } from './canvas-path';
 
 /**
@@ -140,8 +141,19 @@ export class BackgroundRenderer {
                 imageWidth / imageHeight
             ]);
 
-            // Cache key: URL + resized dimensions + imageRendering (pattern is dependent on all three)
-            const cacheKey = `${url}|${Math.round(width)}x${Math.round(height)}|${container.styles.imageRendering}`;
+            // Determine repetition mode based on CSS background-repeat
+            const repeat = getBackgroundValueForIndex(container.styles.backgroundRepeat, index);
+            const repeatMode =
+                repeat === BACKGROUND_REPEAT.NO_REPEAT
+                    ? 'no-repeat'
+                    : repeat === BACKGROUND_REPEAT.REPEAT_X
+                      ? 'repeat-x'
+                      : repeat === BACKGROUND_REPEAT.REPEAT_Y
+                        ? 'repeat-y'
+                        : 'repeat';
+
+            // Cache key: URL + resized dimensions + imageRendering + repeat mode (pattern is dependent on all four)
+            const cacheKey = `${url}|${Math.round(width)}x${Math.round(height)}|${container.styles.imageRendering}|${repeatMode}`;
             let pattern = this.lruGet(this.patternCache, cacheKey);
 
             if (!pattern) {
@@ -151,7 +163,7 @@ export class BackgroundRenderer {
                     height,
                     container.styles.imageRendering
                 );
-                pattern = this.ctx.createPattern(resized, 'repeat') as CanvasPattern;
+                pattern = this.ctx.createPattern(resized, repeatMode) as CanvasPattern;
 
                 this.lruSet(this.patternCache, cacheKey, pattern);
             }

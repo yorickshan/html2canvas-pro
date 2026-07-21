@@ -1,6 +1,6 @@
 import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
 import { CSSValue, isIdentToken, parseFunctionArgs } from '../syntax/parser';
-import { isLengthPercentage, LengthPercentage } from '../types/length-percentage';
+import { isLengthPercentage, parseOptionalCalcOrLength, LengthPercentage } from '../types/length-percentage';
 import { StringValueToken } from '../syntax/tokenizer';
 import { Context } from '../../core/context';
 
@@ -19,7 +19,11 @@ export const backgroundSize: IPropertyListDescriptor<BackgroundSize> = {
     prefix: false,
     type: PropertyDescriptorParsingType.LIST,
     parse: (_context: Context, tokens: CSSValue[]): BackgroundSize => {
-        return parseFunctionArgs(tokens).map((values) => values.filter(isBackgroundSizeInfoToken));
+        return parseFunctionArgs(tokens).map((values) =>
+            values
+                .map((value) => (isBackgroundSizeInfoToken(value) ? value : parseOptionalCalcOrLength(value)))
+                .filter((v): v is NonNullable<typeof v> => v !== null)
+        );
     }
 };
 

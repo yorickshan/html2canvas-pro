@@ -1,9 +1,7 @@
 import { PropertyDescriptorParsingType, IPropertyListDescriptor } from '../property-descriptor';
 import { CSSValue, parseFunctionArgs } from '../syntax/parser';
 import {
-    isLengthPercentage,
-    isCalcFunction,
-    evaluateCalcToLengthPercentage,
+    parseOptionalCalcOrLength,
     LengthPercentageTuple,
     parseLengthPercentageTuple
 } from '../types/length-percentage';
@@ -21,17 +19,7 @@ export const backgroundPosition: IPropertyListDescriptor<BackgroundPosition> = {
         return parseFunctionArgs(tokens)
             .map((values: CSSValue[]) => {
                 // Convert calc() to length-percentage tokens, keep other length-percentage as is
-                return values
-                    .map((value) => {
-                        if (isCalcFunction(value)) {
-                            // For calc() at parse time, we can't know the container size
-                            // So we evaluate with 0 context which will work for px-only calc()
-                            // Percentage-based calc() will need special handling
-                            return evaluateCalcToLengthPercentage(value, 0);
-                        }
-                        return isLengthPercentage(value) ? value : null;
-                    })
-                    .filter((v): v is NonNullable<typeof v> => v !== null);
+                return values.map(parseOptionalCalcOrLength).filter((v): v is NonNullable<typeof v> => v !== null);
             })
             .map(parseLengthPercentageTuple);
     }
