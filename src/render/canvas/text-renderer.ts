@@ -11,7 +11,6 @@
  * - Font styles
  */
 
-import { Context } from '../../core/context';
 import { TextContainer } from '../../dom/text-container';
 import { CSSParsedDeclaration } from '../../css';
 import { Bounds } from '../../css/layout/bounds';
@@ -29,6 +28,7 @@ import {
     isVerticalWritingMode,
     WRITING_MODE
 } from '../../css/property-descriptors/writing-mode';
+import { FontMetrics } from '../font-metrics';
 import { TextDecorationRenderer } from './text/text-decoration-renderer';
 
 /**
@@ -36,7 +36,7 @@ import { TextDecorationRenderer } from './text/text-decoration-renderer';
  */
 export interface TextRendererDependencies {
     ctx: CanvasRenderingContext2D;
-    context: Context;
+    fontMetrics: FontMetrics;
     options: {
         scale: number;
     };
@@ -132,6 +132,7 @@ const getTextStrokeLineJoin = (): CanvasLineJoin => {
  */
 export class TextRenderer {
     private readonly ctx: CanvasRenderingContext2D;
+    private readonly fontMetrics: FontMetrics;
     private readonly options: { scale: number };
     private readonly decorationRenderer: TextDecorationRenderer;
     /**
@@ -143,6 +144,7 @@ export class TextRenderer {
 
     constructor(deps: TextRendererDependencies) {
         this.ctx = deps.ctx;
+        this.fontMetrics = deps.fontMetrics;
         this.options = deps.options;
         this.decorationRenderer = new TextDecorationRenderer(deps.ctx);
     }
@@ -310,7 +312,7 @@ export class TextRenderer {
         }
     }
 
-    private renderTextStrokeWithStyle(text: TextBounds, styles: CSSParsedDeclaration): void {
+    private renderTextStrokeWithStyle(text: TextBounds, styles: CSSParsedDeclaration, baseline: number): void {
         if (!styles.webkitTextStrokeWidth || !text.text.trim().length) {
             return;
         }
@@ -318,15 +320,15 @@ export class TextRenderer {
         this.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
         this.ctx.lineWidth = styles.webkitTextStrokeWidth;
         this.ctx.lineJoin = getTextStrokeLineJoin();
-        this.renderStrokeText(text, styles.letterSpacing, styles.fontSize.number, styles.writingMode);
+        this.renderStrokeText(text, styles.letterSpacing, baseline, styles.writingMode);
         this.ctx.strokeStyle = '';
         this.ctx.lineWidth = 0;
         this.ctx.lineJoin = 'miter';
     }
 
-    private renderTextFillWithShadows(text: TextBounds, styles: CSSParsedDeclaration): void {
+    private renderTextFillWithShadows(text: TextBounds, styles: CSSParsedDeclaration, baseline: number): void {
         this.ctx.fillStyle = asString(styles.color);
-        this.renderTextWithLetterSpacing(text, styles.letterSpacing, styles.fontSize.number, styles.writingMode);
+        this.renderTextWithLetterSpacing(text, styles.letterSpacing, baseline, styles.writingMode);
 
         const textShadows: TextShadow = styles.textShadow;
         if (textShadows.length && text.text.trim().length) {
@@ -339,12 +341,7 @@ export class TextRenderer {
                     this.ctx.shadowOffsetY = textShadow.offsetY.number * this.options.scale;
                     this.ctx.shadowBlur = textShadow.blur.number;
 
-                    this.renderTextWithLetterSpacing(
-                        text,
-                        styles.letterSpacing,
-                        styles.fontSize.number,
-                        styles.writingMode
-                    );
+                    this.renderTextWithLetterSpacing(text, styles.letterSpacing, baseline, styles.writingMode);
                 });
 
             this.ctx.shadowColor = '';
@@ -361,21 +358,17 @@ export class TextRenderer {
     private renderTextBoundWithPaintOrder(
         textBound: TextBounds,
         styles: CSSParsedDeclaration,
-        paintOrderLayers: number[]
+        paintOrderLayers: number[],
+        baseline: number
     ): void {
         paintOrderLayers.forEach((paintOrderLayer: number) => {
             switch (paintOrderLayer) {
                 case PAINT_ORDER_LAYER.FILL:
                     this.ctx.fillStyle = asString(styles.color);
-                    this.renderTextWithLetterSpacing(
-                        textBound,
-                        styles.letterSpacing,
-                        styles.fontSize.number,
-                        styles.writingMode
-                    );
+                    this.renderTextWithLetterSpacing(textBound, styles.letterSpacing, baseline, styles.writingMode);
                     break;
                 case PAINT_ORDER_LAYER.STROKE:
-                    this.renderTextStrokeWithStyle(textBound, styles);
+                    this.renderTextStrokeWithStyle(textBound, styles, baseline);
                     break;
             }
         });
@@ -467,6 +460,7 @@ export class TextRenderer {
         text: TextContainer,
         styles: CSSParsedDeclaration,
         paintOrder: number[],
+        baseline: number,
         containerBounds?: Bounds
     ): boolean {
         const lineHeight = styles.fontSize.number * 1.5;
@@ -490,7 +484,7 @@ export class TextRenderer {
 
         // Render full lines (0..N-2)
         for (let i = 0; i < maxLines - 1; i++) {
-            lines[i].forEach((tb) => this.renderTextBoundWithPaintOrder(tb, styles, paintOrder));
+            lines[i].forEach((tb) => this.renderTextBoundWithPaintOrder(tb, styles, paintOrder, baseline));
         }
 
         // Nth line: truncated with ellipsis
@@ -504,14 +498,9 @@ export class TextRenderer {
             for (const layer of paintOrder) {
                 if (layer === PAINT_ORDER_LAYER.FILL) {
                     this.ctx.fillStyle = asString(styles.color);
-                    this.renderTextWithLetterSpacing(
-                        bounds,
-                        styles.letterSpacing,
-                        styles.fontSize.number,
-                        styles.writingMode
-                    );
+                    this.renderTextWithLetterSpacing(bounds, styles.letterSpacing, baseline, styles.writingMode);
                 } else if (layer === PAINT_ORDER_LAYER.STROKE) {
-                    this.renderTextStrokeWithStyle(bounds, styles);
+                    this.renderTextStrokeWithStyle(bounds, styles, baseline);
                 }
             }
         }
@@ -526,6 +515,7 @@ export class TextRenderer {
         text: TextContainer,
         styles: CSSParsedDeclaration,
         paintOrder: number[],
+        baseline: number,
         containerBounds: Bounds
     ): boolean {
         const lineHeight = styles.fontSize.number * 1.5;
@@ -544,8 +534,8 @@ export class TextRenderer {
         const truncated = this.truncateTextWithEllipsis(fullText, containerBounds.width, styles.letterSpacing);
         const bounds = new TextBounds(truncated, text.textBounds[0].bounds);
         for (const layer of paintOrder) {
-            if (layer === PAINT_ORDER_LAYER.FILL) this.renderTextFillWithShadows(bounds, styles);
-            else if (layer === PAINT_ORDER_LAYER.STROKE) this.renderTextStrokeWithStyle(bounds, styles);
+            if (layer === PAINT_ORDER_LAYER.FILL) this.renderTextFillWithShadows(bounds, styles, baseline);
+            else if (layer === PAINT_ORDER_LAYER.STROKE) this.renderTextStrokeWithStyle(bounds, styles, baseline);
         }
         return true;
     }
@@ -554,11 +544,17 @@ export class TextRenderer {
         // Reset glyph width cache at the start of each text node render —
         // the font may change between nodes.
         this.glyphWidthCache = null;
-        this.ctx.font = this.createFontStyle(styles)[0];
+        const [fontString, fontFamily, fontSize] = this.createFontStyle(styles);
+        this.ctx.font = fontString;
         this.ctx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'alphabetic';
         const paintOrder = styles.paintOrder;
+
+        // Use the measured baseline from FontMetrics instead of fontSize,
+        // which correctly accounts for fonts with large descenders (e.g. Paul)
+        // where the alphabetic baseline is closer to the top of the em-square.
+        const { baseline } = this.fontMetrics.getMetrics(fontFamily, fontSize);
 
         // -webkit-line-clamp
         const clamp =
@@ -567,7 +563,7 @@ export class TextRenderer {
             styles.overflowY === OVERFLOW.HIDDEN &&
             text.textBounds.length > 0;
         if (clamp) {
-            if (this.renderLineClampedText(text, styles, paintOrder, containerBounds)) return;
+            if (this.renderLineClampedText(text, styles, paintOrder, baseline, containerBounds)) return;
         }
 
         // text-overflow: ellipsis (single-line only)
@@ -576,16 +572,16 @@ export class TextRenderer {
             containerBounds &&
             styles.overflowX === OVERFLOW.HIDDEN &&
             text.textBounds.length > 0;
-        if (ellipsis && this.renderEllipsisText(text, styles, paintOrder, containerBounds)) return;
+        if (ellipsis && this.renderEllipsisText(text, styles, paintOrder, baseline, containerBounds)) return;
 
         // Normal rendering: fill + stroke + decorations per text bound
         text.textBounds.forEach((tb) => {
             paintOrder.forEach((layer) => {
                 if (layer === PAINT_ORDER_LAYER.FILL) {
-                    this.renderTextFillWithShadows(tb, styles);
+                    this.renderTextFillWithShadows(tb, styles, baseline);
                     if (styles.textDecorationLine.length) this.renderTextDecoration(tb.bounds, styles);
                 } else if (layer === PAINT_ORDER_LAYER.STROKE) {
-                    this.renderTextStrokeWithStyle(tb, styles);
+                    this.renderTextStrokeWithStyle(tb, styles, baseline);
                 }
             });
         });

@@ -118,7 +118,7 @@ export class CanvasRenderer {
 
         this.textRenderer = new TextRenderer({
             ctx: this.ctx,
-            context: this.context,
+            fontMetrics: this.fontMetrics,
             options: { scale: options.scale }
         });
 

@@ -1,49 +1,14 @@
 import { ok, strictEqual, deepStrictEqual } from 'assert';
 import { TextRenderer, TextRendererDependencies, hasCJKCharacters } from '../text-renderer';
-import { Context } from '../../../core/context';
 import { Bounds } from '../../../css/layout/bounds';
 import { TextBounds } from '../../../css/layout/text';
-import { Html2CanvasConfig } from '../../../config';
 import { WRITING_MODE } from '../../../css/property-descriptors/writing-mode';
+import { FontMetrics } from '../../font-metrics';
 
-const createMockContext = (): Context => {
-    const mockWindow = {
-        document: {
-            createElement: (_name: string) => {
-                let _href = '';
-                return {
-                    set href(value: string) {
-                        _href = value;
-                    },
-                    get href() {
-                        return _href;
-                    },
-                    get protocol() {
-                        return 'http:';
-                    },
-                    get hostname() {
-                        return 'localhost';
-                    },
-                    get port() {
-                        return '';
-                    }
-                };
-            }
-        },
-        location: { href: 'http://localhost/' }
-    } as unknown as Window;
-
-    const config = new Html2CanvasConfig({ window: mockWindow });
-    return new Context(
-        {
-            logging: false,
-            imageTimeout: 15000,
-            useCORS: false,
-            allowTaint: false
-        },
-        new Bounds(0, 0, 800, 600),
-        config
-    );
+const createMockFontMetrics = (): FontMetrics => {
+    return {
+        getMetrics: (_fontFamily: string, _fontSize: string) => ({ baseline: 14, middle: 8 })
+    } as unknown as FontMetrics;
 };
 
 describe('TextRenderer', () => {
@@ -57,7 +22,7 @@ describe('TextRenderer', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -134,7 +99,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -184,7 +149,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -224,7 +189,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -255,7 +220,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -285,7 +250,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -323,7 +288,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -352,7 +317,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -394,7 +359,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -443,7 +408,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            context: createMockContext(),
+            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -460,5 +425,96 @@ describe('renderTextWithLetterSpacing', () => {
             { text: 'B', x: 0, y: 14 }
         ]);
         deepStrictEqual(operations, ['save', 'translate:56,10', `rotate:${Math.PI / 2}`, 'restore']);
+    });
+});
+
+describe('renderTextNode', () => {
+    it('should use FontMetrics baseline instead of fontSize.number for vertical positioning', async () => {
+        const getMetricsCalls: Array<{ fontFamily: string; fontSize: string }> = [];
+        const spyFontMetrics = {
+            getMetrics: (fontFamily: string, fontSize: string) => {
+                getMetricsCalls.push({ fontFamily, fontSize });
+                // Return a baseline that is distinctly different from the fontSize
+                // so we can verify it's used instead of fontSize.number
+                return { baseline: 14, middle: 8 };
+            }
+        } as unknown as FontMetrics;
+
+        const fillCalls: Array<{ text: string; x: number; y: number }> = [];
+        const ctx = {
+            fillStyle: '',
+            font: '',
+            textBaseline: 'alphabetic' as CanvasTextBaseline,
+            direction: 'ltr' as CanvasDirection,
+            textAlign: 'left' as CanvasTextAlign,
+            fillText(text: string, x: number, y: number) {
+                fillCalls.push({ text, x, y });
+            },
+            measureText(_text: string) {
+                return { width: 30 };
+            },
+            strokeStyle: '',
+            lineWidth: 0,
+            lineJoin: 'miter' as CanvasLineJoin,
+            strokeText() {},
+            shadowColor: '',
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowBlur: 0,
+            save() {},
+            restore() {}
+        } as unknown as CanvasRenderingContext2D;
+
+        const deps: TextRendererDependencies = {
+            ctx,
+            fontMetrics: spyFontMetrics,
+            options: { scale: 1 }
+        };
+
+        const renderer = new TextRenderer(deps);
+
+        const bounds = new Bounds(10, 50, 100, 25);
+        const textContainer = {
+            textBounds: [new TextBounds('gjqy', bounds)],
+            parse: () => {}
+        } as unknown as Parameters<typeof renderer.renderTextNode>[0];
+
+        // Mock createFontStyle to return values matching our spy expectations
+        renderer.createFontStyle = () => ['16px Arial', 'Arial', '16px'];
+
+        const mockStyles = {
+            fontFamily: ['Arial'],
+            fontSize: { number: 16, unit: 'px' },
+            fontStyle: 'normal',
+            fontVariant: [],
+            fontWeight: 'normal',
+            color: { r: 0, g: 0, b: 0, a: 1 },
+            letterSpacing: 0,
+            webkitTextStrokeWidth: 0,
+            textShadow: [],
+            textDecorationLine: [],
+            paintOrder: [0], // FILL only
+            direction: 0,
+            writingMode: WRITING_MODE.HORIZONTAL_TB,
+            display: 0,
+            webkitLineClamp: 0,
+            textOverflow: 0,
+            overflowX: 0,
+            overflowY: 0
+        } as unknown as Parameters<typeof renderer.renderTextNode>[1];
+
+        await renderer.renderTextNode(textContainer, mockStyles);
+
+        // Verify FontMetrics.getMetrics was called with correct args
+        strictEqual(getMetricsCalls.length, 1, 'should call getMetrics exactly once');
+        strictEqual(getMetricsCalls[0].fontFamily, 'Arial', 'should pass fontFamily');
+        strictEqual(getMetricsCalls[0].fontSize, '16px', 'should pass fontSize string');
+
+        // Verify text was positioned using the measured baseline (14),
+        // NOT fontSize.number (16)
+        strictEqual(fillCalls.length, 1);
+        // Y should be: bounds.top(50) + measured baseline(14) = 64
+        // NOT: bounds.top(50) + fontSize.number(16) = 66
+        strictEqual(fillCalls[0].y, 64, 'should use measured baseline (64), not fontSize.number (66)');
     });
 });
