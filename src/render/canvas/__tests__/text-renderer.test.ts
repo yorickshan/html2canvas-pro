@@ -3,13 +3,6 @@ import { TextRenderer, TextRendererDependencies, hasCJKCharacters } from '../tex
 import { Bounds } from '../../../css/layout/bounds';
 import { TextBounds } from '../../../css/layout/text';
 import { WRITING_MODE } from '../../../css/property-descriptors/writing-mode';
-import { FontMetrics } from '../../font-metrics';
-
-const createMockFontMetrics = (): FontMetrics => {
-    return {
-        getMetrics: (_fontFamily: string, _fontSize: string) => ({ baseline: 14, middle: 8 })
-    } as unknown as FontMetrics;
-};
 
 describe('TextRenderer', () => {
     it('should be instantiated', () => {
@@ -22,7 +15,6 @@ describe('TextRenderer', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -99,7 +91,6 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -149,7 +140,6 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -189,7 +179,6 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -220,7 +209,6 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -250,7 +238,6 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -288,7 +275,6 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -317,7 +303,6 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -359,7 +344,6 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -408,7 +392,6 @@ describe('renderTextWithLetterSpacing', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: createMockFontMetrics(),
             options: { scale: 1 }
         };
 
@@ -429,18 +412,9 @@ describe('renderTextWithLetterSpacing', () => {
 });
 
 describe('renderTextNode', () => {
-    it('should use FontMetrics baseline instead of fontSize.number for vertical positioning', async () => {
-        const getMetricsCalls: Array<{ fontFamily: string; fontSize: string }> = [];
-        const spyFontMetrics = {
-            getMetrics: (fontFamily: string, fontSize: string) => {
-                getMetricsCalls.push({ fontFamily, fontSize });
-                // Return a baseline that is distinctly different from the fontSize
-                // so we can verify it's used instead of fontSize.number
-                return { baseline: 14, middle: 8 };
-            }
-        } as unknown as FontMetrics;
-
+    it('should use Canvas measureText actualBoundingBoxAscent for baseline', async () => {
         const fillCalls: Array<{ text: string; x: number; y: number }> = [];
+        const measureTextCalls: string[] = [];
         const ctx = {
             fillStyle: '',
             font: '',
@@ -450,8 +424,11 @@ describe('renderTextNode', () => {
             fillText(text: string, x: number, y: number) {
                 fillCalls.push({ text, x, y });
             },
-            measureText(_text: string) {
-                return { width: 30 };
+            measureText(text: string) {
+                measureTextCalls.push(text);
+                // Return actualBoundingBoxAscent similar to real canvas metrics
+                // Use a value distinctly different from fontSize (16) to verify it's used
+                return { width: 30, actualBoundingBoxAscent: 14 };
             },
             strokeStyle: '',
             lineWidth: 0,
@@ -467,7 +444,6 @@ describe('renderTextNode', () => {
 
         const deps: TextRendererDependencies = {
             ctx,
-            fontMetrics: spyFontMetrics,
             options: { scale: 1 }
         };
 
@@ -479,7 +455,7 @@ describe('renderTextNode', () => {
             parse: () => {}
         } as unknown as Parameters<typeof renderer.renderTextNode>[0];
 
-        // Mock createFontStyle to return values matching our spy expectations
+        // Mock createFontStyle
         renderer.createFontStyle = () => ['16px Arial', 'Arial', '16px'];
 
         const mockStyles = {
@@ -505,16 +481,86 @@ describe('renderTextNode', () => {
 
         await renderer.renderTextNode(textContainer, mockStyles);
 
-        // Verify FontMetrics.getMetrics was called with correct args
-        strictEqual(getMetricsCalls.length, 1, 'should call getMetrics exactly once');
-        strictEqual(getMetricsCalls[0].fontFamily, 'Arial', 'should pass fontFamily');
-        strictEqual(getMetricsCalls[0].fontSize, '16px', 'should pass fontSize string');
+        // Verify measureText was called with 'Mg' (characters with ascender and descender)
+        strictEqual(measureTextCalls.length, 1, 'should call measureText once');
+        strictEqual(measureTextCalls[0], 'Mg', 'should measure text with ascender and descender');
 
-        // Verify text was positioned using the measured baseline (14),
+        // Verify text was positioned using actualBoundingBoxAscent (14),
         // NOT fontSize.number (16)
         strictEqual(fillCalls.length, 1);
-        // Y should be: bounds.top(50) + measured baseline(14) = 64
+        // Y should be: bounds.top(50) + actualBoundingBoxAscent(14) = 64
         // NOT: bounds.top(50) + fontSize.number(16) = 66
-        strictEqual(fillCalls[0].y, 64, 'should use measured baseline (64), not fontSize.number (66)');
+        strictEqual(fillCalls[0].y, 64, 'should use actualBoundingBoxAscent (64), not fontSize.number (66)');
+    });
+
+    it('should fallback to fontSize.number when actualBoundingBoxAscent is not available', async () => {
+        const fillCalls: Array<{ text: string; x: number; y: number }> = [];
+        const ctx = {
+            fillStyle: '',
+            font: '',
+            textBaseline: 'alphabetic' as CanvasTextBaseline,
+            direction: 'ltr' as CanvasDirection,
+            textAlign: 'left' as CanvasTextAlign,
+            fillText(text: string, x: number, y: number) {
+                fillCalls.push({ text, x, y });
+            },
+            measureText() {
+                // Return metrics without actualBoundingBoxAscent (older browsers)
+                return { width: 30 };
+            },
+            strokeStyle: '',
+            lineWidth: 0,
+            lineJoin: 'miter' as CanvasLineJoin,
+            strokeText() {},
+            shadowColor: '',
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowBlur: 0,
+            save() {},
+            restore() {}
+        } as unknown as CanvasRenderingContext2D;
+
+        const deps: TextRendererDependencies = {
+            ctx,
+            options: { scale: 1 }
+        };
+
+        const renderer = new TextRenderer(deps);
+
+        const bounds = new Bounds(10, 50, 100, 25);
+        const textContainer = {
+            textBounds: [new TextBounds('test', bounds)],
+            parse: () => {}
+        } as unknown as Parameters<typeof renderer.renderTextNode>[0];
+
+        renderer.createFontStyle = () => ['16px Arial', 'Arial', '16px'];
+
+        const mockStyles = {
+            fontFamily: ['Arial'],
+            fontSize: { number: 16, unit: 'px' },
+            fontStyle: 'normal',
+            fontVariant: [],
+            fontWeight: 'normal',
+            color: { r: 0, g: 0, b: 0, a: 1 },
+            letterSpacing: 0,
+            webkitTextStrokeWidth: 0,
+            textShadow: [],
+            textDecorationLine: [],
+            paintOrder: [0],
+            direction: 0,
+            writingMode: WRITING_MODE.HORIZONTAL_TB,
+            display: 0,
+            webkitLineClamp: 0,
+            textOverflow: 0,
+            overflowX: 0,
+            overflowY: 0
+        } as unknown as Parameters<typeof renderer.renderTextNode>[1];
+
+        await renderer.renderTextNode(textContainer, mockStyles);
+
+        // Verify fallback to fontSize.number (16)
+        strictEqual(fillCalls.length, 1);
+        // Y should be: bounds.top(50) + fontSize.number(16) = 66
+        strictEqual(fillCalls[0].y, 66, 'should fallback to fontSize.number (66)');
     });
 });

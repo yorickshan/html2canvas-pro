@@ -11,7 +11,6 @@ import { getBackgroundValueForIndex } from '../background';
 import { contentBox } from '../box-sizing';
 import { ReplacedElementContainer } from '../../dom/replaced-elements';
 import { EffectTarget } from '../effects';
-import { FontMetrics } from '../font-metrics';
 import { TextRenderer } from './text-renderer';
 import { Context } from '../../core/context';
 import { BackgroundRenderer } from './background-renderer';
@@ -57,7 +56,6 @@ export class CanvasRenderer {
     ctx: CanvasRenderingContext2D;
     private readonly context: Context;
     private readonly options: RenderConfigurations;
-    private readonly fontMetrics: FontMetrics;
     private readonly backgroundRenderer: BackgroundRenderer;
     private readonly borderRenderer: BorderRenderer;
     private readonly borderImageRenderer: BorderImageRenderer;
@@ -79,7 +77,6 @@ export class CanvasRenderer {
             this.canvas.style.width = `${options.width}px`;
             this.canvas.style.height = `${options.height}px`;
         }
-        this.fontMetrics = new FontMetrics(document);
         this.ctx.scale(this.options.scale, this.options.scale);
         this.ctx.translate(-options.x, -options.y);
         this.ctx.textBaseline = 'bottom';
@@ -118,7 +115,6 @@ export class CanvasRenderer {
 
         this.textRenderer = new TextRenderer({
             ctx: this.ctx,
-            fontMetrics: this.fontMetrics,
             options: { scale: options.scale }
         });
 
@@ -206,7 +202,7 @@ export class CanvasRenderer {
             (c, cv, img) => this.renderReplacedElement(c, cv, img)
         );
 
-        renderFormElements(this.ctx, this.fontMetrics, this.textRenderer, this.path.bind(this), container, styles);
+        renderFormElements(this.ctx, this.textRenderer, this.path.bind(this), container, styles);
 
         await renderListMarker(this.ctx, this.context, this.textRenderer, paint, container, styles);
     }

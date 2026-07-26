@@ -28,7 +28,6 @@ import {
     isVerticalWritingMode,
     WRITING_MODE
 } from '../../css/property-descriptors/writing-mode';
-import { FontMetrics } from '../font-metrics';
 import { TextDecorationRenderer } from './text/text-decoration-renderer';
 
 /**
@@ -36,7 +35,6 @@ import { TextDecorationRenderer } from './text/text-decoration-renderer';
  */
 export interface TextRendererDependencies {
     ctx: CanvasRenderingContext2D;
-    fontMetrics: FontMetrics;
     options: {
         scale: number;
     };
@@ -132,7 +130,6 @@ const getTextStrokeLineJoin = (): CanvasLineJoin => {
  */
 export class TextRenderer {
     private readonly ctx: CanvasRenderingContext2D;
-    private readonly fontMetrics: FontMetrics;
     private readonly options: { scale: number };
     private readonly decorationRenderer: TextDecorationRenderer;
     /**
@@ -144,7 +141,6 @@ export class TextRenderer {
 
     constructor(deps: TextRendererDependencies) {
         this.ctx = deps.ctx;
-        this.fontMetrics = deps.fontMetrics;
         this.options = deps.options;
         this.decorationRenderer = new TextDecorationRenderer(deps.ctx);
     }
@@ -544,17 +540,25 @@ export class TextRenderer {
         // Reset glyph width cache at the start of each text node render —
         // the font may change between nodes.
         this.glyphWidthCache = null;
-        const [fontString, fontFamily, fontSize] = this.createFontStyle(styles);
+        const [fontString] = this.createFontStyle(styles);
         this.ctx.font = fontString;
         this.ctx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'alphabetic';
         const paintOrder = styles.paintOrder;
 
-        // Use the measured baseline from FontMetrics instead of fontSize,
-        // which correctly accounts for fonts with large descenders (e.g. Paul)
-        // where the alphabetic baseline is closer to the top of the em-square.
-        const { baseline } = this.fontMetrics.getMetrics(fontFamily, fontSize);
+        // Compute baseline using the actual rendered font via Canvas API.
+        // This ensures correct positioning whether using webfonts (which may not
+        // be loaded in the original document but are active in the Canvas) or
+        // system fonts.  Fallback chain:
+        //   1. fontBoundingBoxAscent — font-level metric (Chrome 99+, FF 116+, Safari 17.4+)
+        //   2. actualBoundingBoxAscent — glyph-level metric (widely supported)
+        //   3. fontSize.number             — coarse CSS fallback
+        const tm = this.ctx.measureText('Mg');
+        const baseline =
+            (tm as { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
+            tm.actualBoundingBoxAscent ??
+            styles.fontSize.number;
 
         // -webkit-line-clamp
         const clamp =
