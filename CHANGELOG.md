@@ -1,3 +1,9 @@
+## [2.3.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.1...v2.3.2) (2026-07-27)
+
+### Bug Fixes
+
+* text baseline shifts down for webfonts, pushing labels out of their box [#222](https://github.com/yorickshan/html2canvas-pro/issues/222) ([54dd84c](https://github.com/yorickshan/html2canvas-pro/commit/54dd84cee15efc104d76e7d70fcdcaab393adcb2))
+
 ## [2.3.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.0...v2.3.1) (2026-07-22)
 
 ## [2.3.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.2.4...v2.3.0) (2026-07-21)
