@@ -29,6 +29,7 @@ import {
     WRITING_MODE
 } from '../../css/property-descriptors/writing-mode';
 import { TextDecorationRenderer } from './text/text-decoration-renderer';
+import { measureBaseline } from './font-utils';
 
 /**
  * Dependencies required for TextRenderer
@@ -550,15 +551,8 @@ export class TextRenderer {
         // Compute baseline using the actual rendered font via Canvas API.
         // This ensures correct positioning whether using webfonts (which may not
         // be loaded in the original document but are active in the Canvas) or
-        // system fonts.  Fallback chain:
-        //   1. fontBoundingBoxAscent — font-level metric (Chrome 99+, FF 116+, Safari 17.4+)
-        //   2. actualBoundingBoxAscent — glyph-level metric (widely supported)
-        //   3. fontSize.number             — coarse CSS fallback
-        const tm = this.ctx.measureText('Mg');
-        const baseline =
-            (tm as { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
-            tm.actualBoundingBoxAscent ??
-            styles.fontSize.number;
+        // system fonts.
+        const baseline = measureBaseline(this.ctx, styles.fontSize.number);
 
         // -webkit-line-clamp
         const clamp =

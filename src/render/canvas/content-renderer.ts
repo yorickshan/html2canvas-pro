@@ -22,6 +22,7 @@ import { Vector } from '../vector';
 import { contentBox } from '../box-sizing';
 import { Context } from '../../core/context';
 import { TextRenderer } from './text-renderer';
+import { measureBaseline } from './font-utils';
 import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering';
 import { TEXT_ALIGN } from '../../css/property-descriptors/text-align';
 import { DISPLAY } from '../../css/property-descriptors/display';
@@ -163,11 +164,7 @@ export function renderFormElements(
         const [font] = textRenderer.createFontStyle(styles);
         // Use Canvas API to measure baseline from the actual rendered font
         ctx.font = font;
-        const tm = ctx.measureText('Mg');
-        const baseline =
-            (tm as { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ??
-            tm.actualBoundingBoxAscent ??
-            getAbsoluteValue(styles.fontSize, 0);
+        const baseline = measureBaseline(ctx, getAbsoluteValue(styles.fontSize, 0));
         const isPlaceholder = container instanceof InputElementContainer && container.isPlaceholder;
         ctx.fillStyle = isPlaceholder ? asString(PLACEHOLDER_COLOR) : asString(styles.color);
         ctx.textBaseline = 'alphabetic';
