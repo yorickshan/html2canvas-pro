@@ -1,6 +1,7 @@
 import { deepStrictEqual } from 'assert';
 import { Parser } from '../../syntax/parser';
 import { backgroundImage } from '../background-image';
+import { backgroundClip, BACKGROUND_CLIP } from '../background-clip';
 import { CSSImageType } from '../../types/image';
 import { pack } from '../../types/color-utilities';
 import { deg } from '../../types/angle';
@@ -12,6 +13,9 @@ vi.mock('../../../core/features');
 
 const backgroundImageParse = (context: Context, value: string) =>
     backgroundImage.parse(context, Parser.parseValues(value));
+
+const backgroundClipParse = (context: Context, value: string) =>
+    backgroundClip.parse(context, Parser.parseValues(value));
 
 import { Html2CanvasConfig } from '../../../config';
 
@@ -61,5 +65,26 @@ describe('property-descriptors', () => {
                     { url: 'https://html2canvas.hertzen.com', type: CSSImageType.URL }
                 ]
             ));
+    });
+    describe('background-clip', () => {
+        it('border-box (default)', () => {
+            deepStrictEqual(backgroundClipParse(context, 'border-box'), [BACKGROUND_CLIP.BORDER_BOX]);
+        });
+
+        it('padding-box', () => {
+            deepStrictEqual(backgroundClipParse(context, 'padding-box'), [BACKGROUND_CLIP.PADDING_BOX]);
+        });
+
+        it('content-box', () => {
+            deepStrictEqual(backgroundClipParse(context, 'content-box'), [BACKGROUND_CLIP.CONTENT_BOX]);
+        });
+
+        it('text', () => {
+            deepStrictEqual(backgroundClipParse(context, 'text'), [BACKGROUND_CLIP.TEXT]);
+        });
+
+        it('unknown value falls back to border-box', () => {
+            deepStrictEqual(backgroundClipParse(context, 'invalid'), [BACKGROUND_CLIP.BORDER_BOX]);
+        });
     });
 });

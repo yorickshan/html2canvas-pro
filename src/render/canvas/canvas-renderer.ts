@@ -21,6 +21,11 @@ import { createCanvasPath, formatCanvasPath } from './canvas-path';
 import { calculateObjectFitRendering } from '../object-fit';
 import { renderReplacedElements, renderFormElements, renderListMarker } from './content-renderer';
 import { SHADOW_MASK_OFFSET } from '../../core/constants';
+import { DIRECTION } from '../../css/property-descriptors/direction';
+import { isVerticalWritingMode, WRITING_MODE } from '../../css/property-descriptors/writing-mode';
+import { measureBaseline } from './font-utils';
+import { CSSParsedDeclaration } from '../../css/index';
+import { segmentGraphemes, TextBounds } from '../../css/layout/text';
 
 export type RenderConfigurations = RenderOptions & {
     backgroundColor: Color | null;
@@ -291,6 +296,7 @@ export class CanvasRenderer {
         this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.BACKGROUND_BORDERS));
         const styles = paint.container.styles;
         const hasBackground = !isTransparent(styles.backgroundColor) || styles.backgroundImage.length;
+        const hasTextClip = hasTextBackgroundClip(styles);
 
         const borders = [
             { style: styles.borderTopStyle, color: styles.borderTopColor, width: styles.borderTopWidth },
@@ -299,24 +305,27 @@ export class CanvasRenderer {
             { style: styles.borderLeftStyle, color: styles.borderLeftColor, width: styles.borderLeftWidth }
         ];
 
-        const backgroundPaintingArea = calculateBackgroundCurvedPaintingArea(
-            getBackgroundValueForIndex(styles.backgroundClip, 0),
-            paint.curves
-        );
+        const backgroundClipValue = getBackgroundValueForIndex(styles.backgroundClip, 0);
+        const backgroundPaintingArea = calculateBackgroundCurvedPaintingArea(backgroundClipValue, paint.curves);
 
         if (hasBackground || styles.boxShadow.length) {
-            this.ctx.save();
-            this.path(backgroundPaintingArea);
-            this.ctx.clip();
+            // Handle background-clip: text
+            if (hasTextClip && paint.container.textNodes.length > 0) {
+                await this.renderTextClippedBackground(paint);
+            } else {
+                this.ctx.save();
+                this.path(backgroundPaintingArea);
+                this.ctx.clip();
 
-            if (!isTransparent(styles.backgroundColor)) {
-                this.ctx.fillStyle = asString(styles.backgroundColor);
-                this.ctx.fill();
+                if (!isTransparent(styles.backgroundColor)) {
+                    this.ctx.fillStyle = asString(styles.backgroundColor);
+                    this.ctx.fill();
+                }
+
+                await this.backgroundRenderer.renderBackgroundImage(paint.container);
+
+                this.ctx.restore();
             }
-
-            await this.backgroundRenderer.renderBackgroundImage(paint.container);
-
-            this.ctx.restore();
 
             styles.boxShadow
                 .slice(0)
@@ -423,6 +432,133 @@ export class CanvasRenderer {
         this.effectsRenderer.applyEffects([]);
         return this.canvas;
     }
+
+    /**
+     * Render background clipped to text shape using offscreen canvas with destination-in compositing.
+     * This implements background-clip: text support.
+     *
+     * Algorithm:
+     *   1. Draw background (color + images) onto an offscreen canvas
+     *   2. Use destination-in compositing to clip the background to the text glyph shapes
+     *   3. Composite the result back onto the main canvas
+     *
+     * The offscreen canvas uses CSS-pixel dimensions (not device-pixel) because the
+     * background renderer handles scaling internally via BackgroundRenderer options.
+     */
+    private async renderTextClippedBackground(paint: ElementPaint): Promise<void> {
+        const container = paint.container;
+        const styles = container.styles;
+        const bounds = container.bounds;
+
+        if (bounds.width <= 0 || bounds.height <= 0) {
+            return;
+        }
+
+        const ownerDocument = this.canvas.ownerDocument ?? document;
+        const offscreen = ownerDocument.createElement('canvas');
+        const width = Math.ceil(bounds.width);
+        const height = Math.ceil(bounds.height);
+        offscreen.width = width;
+        offscreen.height = height;
+
+        const offCtx = offscreen.getContext('2d');
+        if (!offCtx) {
+            return;
+        }
+
+        // ── Set up font matching the main context ──
+        const [fontString] = this.textRenderer.createFontStyle(styles);
+        offCtx.font = fontString;
+        offCtx.textBaseline = 'alphabetic';
+        offCtx.textAlign = 'left';
+        offCtx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
+
+        // Measure baseline from the actual rendered font
+        const baseline = measureBaseline(offCtx, styles.fontSize.number);
+
+        // ── Draw background onto offscreen canvas ──
+        const bgRenderer = new BackgroundRenderer({
+            ctx: offCtx,
+            context: this.context,
+            canvas: offscreen,
+            options: { width, height, scale: 1 }
+        });
+
+        if (!isTransparent(styles.backgroundColor)) {
+            offCtx.fillStyle = asString(styles.backgroundColor);
+            offCtx.fillRect(0, 0, width, height);
+        }
+
+        // Background images are positioned relative to the element bounds,
+        // so we need the BackgroundRenderer to compute offsets in the same
+        // coordinate space as the main renderer.  We do that by translating
+        // the offscreen context so that the element origin (bounds.left, bounds.top)
+        // falls at (0, 0).
+        offCtx.save();
+        offCtx.translate(-bounds.left, -bounds.top);
+        await bgRenderer.renderBackgroundImage(container);
+        offCtx.restore();
+
+        // ── Clip background to text glyphs ──
+        // destination-in: keep background pixels only where the source (text) is non-transparent.
+        offCtx.globalCompositeOperation = 'destination-in';
+        offCtx.fillStyle = '#000';
+
+        const writingMode = styles.writingMode;
+        const letterSpacing = styles.letterSpacing;
+
+        for (const textNode of container.textNodes) {
+            for (const textBound of textNode.textBounds) {
+                // Offset from element bounds to canvas-local coordinates
+                const localLeft = textBound.bounds.left - bounds.left;
+                const localTop = textBound.bounds.top - bounds.top + baseline;
+
+                if (letterSpacing > 0) {
+                    this.renderTextMaskWithLetterSpacing(
+                        offCtx,
+                        textBound,
+                        letterSpacing,
+                        localLeft,
+                        localTop,
+                        writingMode
+                    );
+                } else {
+                    offCtx.fillText(textBound.text, localLeft, localTop);
+                }
+            }
+        }
+
+        // ── Composite back to main canvas ──
+        this.ctx.drawImage(offscreen, bounds.left, bounds.top);
+    }
+
+    /**
+     * Render text glyphs one-by-one as a mask, applying letter-spacing between characters.
+     * This ensures the mask matches how the text renderer lays out the characters.
+     */
+    private renderTextMaskWithLetterSpacing(
+        ctx: CanvasRenderingContext2D,
+        text: TextBounds,
+        letterSpacing: number,
+        x: number,
+        y: number,
+        writingMode: WRITING_MODE
+    ): void {
+        const letters = segmentGraphemes(text.text);
+        let offset = x;
+
+        for (const letter of letters) {
+            if (isVerticalWritingMode(writingMode)) {
+                // Vertical writing mode: not yet supported for text-clip;
+                // fall back to single fillText call.
+                ctx.fillText(text.text, x, y);
+                return;
+            }
+
+            ctx.fillText(letter, offset, y);
+            offset += ctx.measureText(letter).width + letterSpacing;
+        }
+    }
 }
 
 const calculateBackgroundCurvedPaintingArea = (clip: BACKGROUND_CLIP, curves: BoundCurves): Path[] => {
@@ -435,4 +571,11 @@ const calculateBackgroundCurvedPaintingArea = (clip: BACKGROUND_CLIP, curves: Bo
         default:
             return calculatePaddingBoxPath(curves);
     }
+};
+
+/**
+ * Check if any background layer uses background-clip: text
+ */
+const hasTextBackgroundClip = (styles: CSSParsedDeclaration): boolean => {
+    return styles.backgroundClip.some((clip) => clip === BACKGROUND_CLIP.TEXT);
 };

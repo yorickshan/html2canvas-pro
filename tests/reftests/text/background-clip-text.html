@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>background-clip: text tests</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="../../test.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #fff; }
+        h2 { clear: both; margin: 20px 0 10px; }
+        .demo {
+            float: left;
+            margin: 10px;
+            padding: 10px;
+            border: 1px dashed #ccc;
+        }
+        .label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Gradient text (background-clip: text)</h2>
+
+<div class="demo">
+    <div class="label">Linear gradient</div>
+    <h1 style="font: 700 64px sans-serif; background-image: linear-gradient(90deg, #4b55d8, #262b7e); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Hello</h1>
+</div>
+
+<div class="demo">
+    <div class="label">Linear gradient (different direction)</div>
+    <h1 style="font: 700 48px sans-serif; background-image: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">World</h1>
+</div>
+
+<div class="demo">
+    <div class="label">Horizontal gradient with solid bg-color fallback</div>
+    <h1 style="font: 700 36px sans-serif; background-color: #f0f0f0; background-image: linear-gradient(to right, #e74c3c, #e67e22); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Gradient</h1>
+</div>
+
+<div class="demo" style="clear: left;">
+    <div class="label">Smaller text size</div>
+    <h2 style="font: 700 24px sans-serif; background-image: linear-gradient(90deg, #2ecc71, #3498db); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Small Gradient Text</h2>
+</div>
+
+</body>
+</html>
