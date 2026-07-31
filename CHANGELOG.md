@@ -1,3 +1,9 @@
+## [2.3.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.2...v2.3.3) (2026-07-31)
+
+### Features
+
+* implement background-clip: text support and add corresponding tests ([f2c3905](https://github.com/yorickshan/html2canvas-pro/commit/f2c390525784b097464b41934f3a0bdfb8fdcbd2))
+
 ## [2.3.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.1...v2.3.2) (2026-07-27)
 
 ### Bug Fixes
