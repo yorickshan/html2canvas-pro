@@ -3,7 +3,7 @@
 Below is a list of all the supported CSS properties and values.
 
  - background
-   - background-clip (**Does not support `text`**)
+   - background-clip (incl. `text`)
    - background-blend-mode
    - background-color
    - background-image
