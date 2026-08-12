@@ -35,38 +35,48 @@ const LIST_OWNERS = ['OL', 'UL', 'MENU'];
 const parseNodeTree = (context: Context, node: Node, parent: ElementContainer, root: ElementContainer) => {
     for (let childNode = node.firstChild, nextNode; childNode; childNode = nextNode) {
         nextNode = childNode.nextSibling;
+        parseChildNode(context, childNode, parent, root);
+    }
+};
 
-        // Fixes #2238 #1624 - Fix the issue of TextNode content being overlooked in rendering due to being perceived as blank by trim().
-        if (isTextNode(childNode) && childNode.data.length > 0) {
-            parent.textNodes.push(new TextContainer(context, childNode, parent.styles));
-        } else if (isElementNode(childNode)) {
-            if (isSlotElement(childNode) && childNode.assignedNodes) {
-                childNode
-                    .assignedNodes()
-                    .forEach((assignedNode: Node) => parseNodeTree(context, assignedNode, parent, root));
-            } else {
-                const container = createContainer(context, childNode);
-                if (container.styles.isVisible()) {
-                    if (createsRealStackingContext(childNode, container, root)) {
-                        container.createsRealStackingContext = true;
-                    } else if (createsStackingContext(container.styles)) {
-                        container.createsStackingContext = true;
-                    }
+/**
+ * Parse a single node as a child of `parent`.
+ *
+ * Separated from the tree walk so that nodes assigned to a `<slot>` (including
+ * bare text nodes, which have no child nodes) can be parsed directly. Without
+ * this, slotted shadow-DOM content such as web component labels was silently
+ * dropped because `parseNodeTree` only iterates `node.firstChild` (issue #226).
+ */
+const parseChildNode = (context: Context, childNode: Node, parent: ElementContainer, root: ElementContainer) => {
+    // Fixes #2238 #1624 - Fix the issue of TextNode content being overlooked in rendering due to being perceived as blank by trim().
+    if (isTextNode(childNode) && childNode.data.length > 0) {
+        parent.textNodes.push(new TextContainer(context, childNode, parent.styles));
+    } else if (isElementNode(childNode)) {
+        if (isSlotElement(childNode) && childNode.assignedNodes) {
+            // Slotted content is laid out at the slot's position: parse each
+            // assigned node (text or element) as a direct child of the slot's
+            // parent container.
+            childNode
+                .assignedNodes()
+                .forEach((assignedNode: Node) => parseChildNode(context, assignedNode, parent, root));
+        } else {
+            const container = createContainer(context, childNode);
+            if (container.styles.isVisible()) {
+                if (createsRealStackingContext(childNode, container, root)) {
+                    container.createsRealStackingContext = true;
+                } else if (createsStackingContext(container.styles)) {
+                    container.createsStackingContext = true;
+                }
 
-                    if (LIST_OWNERS.indexOf(childNode.tagName) !== -1) {
-                        container.isListOwner = true;
-                    }
+                if (LIST_OWNERS.indexOf(childNode.tagName) !== -1) {
+                    container.isListOwner = true;
+                }
 
-                    parent.elements.push(container);
-                    if (childNode.shadowRoot) {
-                        parseNodeTree(context, childNode.shadowRoot, container, root);
-                    } else if (
-                        !isTextareaElement(childNode) &&
-                        !isSVGElement(childNode) &&
-                        !isSelectElement(childNode)
-                    ) {
-                        parseNodeTree(context, childNode, container, root);
-                    }
+                parent.elements.push(container);
+                if (childNode.shadowRoot) {
+                    parseNodeTree(context, childNode.shadowRoot, container, root);
+                } else if (!isTextareaElement(childNode) && !isSVGElement(childNode) && !isSelectElement(childNode)) {
+                    parseNodeTree(context, childNode, container, root);
                 }
             }
         }
