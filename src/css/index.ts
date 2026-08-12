@@ -405,7 +405,15 @@ export class CSSParsedCounterDeclaration {
 const parseCache = new Map<CSSPropertyDescriptor<any>, Map<string, unknown>>();
 
 const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?: string | null) => {
-    const rawValue = style !== null && typeof style !== 'undefined' ? style.toString() : descriptor.initialValue;
+    let rawValue = style !== null && typeof style !== 'undefined' ? style.toString() : descriptor.initialValue;
+
+    // A whitespace-only (or empty) computed value makes the tokenizer emit only an
+    // EOF token, which parseComponentValue() turns into a "unexpected EOF" SyntaxError.
+    // Some browsers produce such values for web-component shadow styles (see #225);
+    // fall back to the descriptor's initialValue so capture never crashes on them.
+    if (rawValue.trim() === '') {
+        rawValue = descriptor.initialValue;
+    }
 
     let valueCache = parseCache.get(descriptor);
     if (valueCache) {

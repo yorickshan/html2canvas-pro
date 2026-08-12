@@ -156,11 +156,12 @@ export const parseFunctionArgs = (tokens: CSSValue[]): CSSValue[][] => {
     let arg: CSSValue[] = [];
     tokens.forEach((token) => {
         if (token.type === TokenType.COMMA_TOKEN) {
-            if (arg.length === 0) {
-                throw new Error(`Error parsing function args, zero tokens for arg`);
+            // Skip empty arguments (e.g. "1px,,2px") instead of throwing —
+            // real-world computed styles can produce them.
+            if (arg.length) {
+                args.push(arg);
+                arg = [];
             }
-            args.push(arg);
-            arg = [];
             return;
         }
 

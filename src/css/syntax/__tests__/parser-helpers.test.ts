@@ -125,6 +125,25 @@ describe('parseFunctionArgs', () => {
         expect(args).toHaveLength(1);
         expect(args[0]).toHaveLength(1);
     });
+
+    // Regression for issue #225: real-world computed styles can contain empty
+    // comma-separated slots (e.g. an invalid shadow list). They must be skipped,
+    // not treated as a fatal parse error.
+    it('skips empty argument groups between commas instead of throwing', () => {
+        const tokens = [
+            { type: TokenType.NUMBER_TOKEN, flags: 0, number: 1 },
+            { type: TokenType.COMMA_TOKEN },
+            { type: TokenType.COMMA_TOKEN },
+            { type: TokenType.NUMBER_TOKEN, flags: 0, number: 2 }
+        ];
+        expect(() => parseFunctionArgs(tokens)).not.toThrow();
+        expect(parseFunctionArgs(tokens)).toHaveLength(2);
+    });
+
+    it('returns empty array for whitespace-only tokens', () => {
+        const tokens = [{ type: TokenType.WHITESPACE_TOKEN }, { type: TokenType.WHITESPACE_TOKEN }];
+        expect(parseFunctionArgs(tokens)).toHaveLength(0);
+    });
 });
 
 describe('Parser static methods', () => {
