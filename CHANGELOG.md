@@ -1,3 +1,9 @@
+## [2.3.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.3...v2.3.4) (2026-08-12)
+
+### Features
+
+* add regression tests and handling for whitespace-only computed CSS values ([146f373](https://github.com/yorickshan/html2canvas-pro/commit/146f3732bf023c551cf1384955d46b47b823de0e))
+
 ## [2.3.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.2...v2.3.3) (2026-07-31)
 
 ### Features
