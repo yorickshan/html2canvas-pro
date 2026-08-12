@@ -1,3 +1,9 @@
+## [2.3.5](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.4...v2.3.5) (2026-08-12)
+
+### Features
+
+* add regression tests for slotted shadow DOM content and improve node parsing logic ([ae86ba9](https://github.com/yorickshan/html2canvas-pro/commit/ae86ba90a3ff151fe056a32ebe5ce24203ba411d))
+
 ## [2.3.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.3...v2.3.4) (2026-08-12)
 
 ### Features
