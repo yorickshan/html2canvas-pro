@@ -163,5 +163,32 @@ describe('ElementContainer', () => {
                 document.body.removeChild(div);
             }
         });
+
+        it('shifts the fieldset bounds so the top border sits at the legend center', () => {
+            // The legend overflows above the fieldset's top border, so Chrome's
+            // getBoundingClientRect() top is inflated. The container must shift
+            // its bounds down to the legend's vertical center (issue #227).
+            const legendMock = {
+                nodeType: 1,
+                tagName: 'LEGEND',
+                style: {},
+                getAttribute: () => null,
+                getBoundingClientRect: () => ({ left: 20, top: 5, width: 50, height: 20, right: 70, bottom: 25 })
+            } as unknown as HTMLElement;
+            const fsMock = {
+                nodeType: 1,
+                tagName: 'FIELDSET',
+                style: {},
+                getAttribute: () => null,
+                querySelector: (sel: string) => (sel === ':scope > legend' ? legendMock : null),
+                getBoundingClientRect: () => ({ left: 10, top: 0, width: 100, height: 100, right: 110, bottom: 100 })
+            } as unknown as HTMLElement;
+
+            const container = new ElementContainer(context, fsMock);
+            // borderTopWidth is 0 in the mock, so the border box top = legend top + half its height = 5 + 10
+            strictEqual(container.bounds.left, 10);
+            strictEqual(container.bounds.top, 15);
+            strictEqual(container.bounds.height, 85);
+        });
     });
 });

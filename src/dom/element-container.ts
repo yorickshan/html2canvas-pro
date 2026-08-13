@@ -53,7 +53,22 @@ export class ElementContainer {
         if (element.tagName === 'FIELDSET') {
             const legend = element.querySelector(':scope > legend');
             if (legend) {
-                this.legendBounds = parseBounds(this.context, legend);
+                const legendBounds = parseBounds(this.context, legend);
+                this.legendBounds = legendBounds;
+
+                // A <fieldset>'s legend is centered on its top border line and
+                // overflows ABOVE it. Chrome's getBoundingClientRect() for the
+                // fieldset includes that overflow, so bounds.top is too high and
+                // the border would be drawn above the legend. Shift the bounds so
+                // the top border sits at the legend's vertical center, matching
+                // how the browser renders fieldset + legend (issue #227).
+                const borderBoxTop = legendBounds.top + legendBounds.height / 2 - this.styles.borderTopWidth / 2;
+                this.bounds = new Bounds(
+                    this.bounds.left,
+                    borderBoxTop,
+                    this.bounds.width,
+                    this.bounds.height - (borderBoxTop - this.bounds.top)
+                );
             }
         }
 
