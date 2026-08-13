@@ -1,3 +1,9 @@
+## [2.3.7](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.6...v2.3.7) (2026-08-13)
+
+### Features
+
+* adjust fieldset bounds to center legend vertically in ElementContainer ([7f95068](https://github.com/yorickshan/html2canvas-pro/commit/7f95068a4cfb5dd2a21cbf2d1e57bcf40c88b723))
+
 ## [2.3.6](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.5...v2.3.6) (2026-08-13)
 
 ### Features
