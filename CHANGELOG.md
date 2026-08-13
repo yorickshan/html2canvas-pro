@@ -1,3 +1,14 @@
+## [2.3.6](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.5...v2.3.6) (2026-08-13)
+
+### Features
+
+* add legendBounds handling in ElementContainer and update CanvasRenderer for fieldset borders ([f8878d2](https://github.com/yorickshan/html2canvas-pro/commit/f8878d2c6efa54200c847debb77feb18f24677be))
+* enhance DocumentCloner to preserve shadow roots and attributes in custom element clones ([1e7a6db](https://github.com/yorickshan/html2canvas-pro/commit/1e7a6dbf916f9f9f8987f7020585330427462368))
+
+### Bug Fixes
+
+* iterate attributes by index in DocumentCloner ([904fb09](https://github.com/yorickshan/html2canvas-pro/commit/904fb09c85b6cedfa73096a1a8ac2ab62c452d69))
+
 ## [2.3.5](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.4...v2.3.5) (2026-08-12)
 
 ### Features
