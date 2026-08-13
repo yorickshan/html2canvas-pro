@@ -274,7 +274,11 @@ export class DocumentCloner {
         // handled above). Without this, attributes such as `slot="suffix"` are
         // dropped and slotted custom elements lose their slot assignment in the
         // cloned shadow DOM, so their content is never rendered (issue #226).
-        for (const attr of clonedNode.attributes) {
+        // Iterate by index: `NamedNodeMap` is not guaranteed to be iterable
+        // across TypeScript DOM lib versions (TS2488 on older libs).
+        const attributes = clonedNode.attributes;
+        for (let i = 0; i < attributes.length; i++) {
+            const attr = attributes[i];
             if (attr.name !== 'class' && attr.name !== 'style') {
                 clone.setAttribute(attr.name, attr.value);
             }
