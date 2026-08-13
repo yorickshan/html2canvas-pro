@@ -44,6 +44,11 @@ export interface TextRendererDependencies {
 // iOS font fix - see https://github.com/niklasvh/html2canvas/pull/2645
 const iOSBrokenFonts = ['-apple-system', 'system-ui'];
 
+// Tolerance (px) for text-overflow: ellipsis detection. Canvas measureText can
+// report a width a fraction of a pixel wider than the browser's layout box, so
+// text that fits exactly must not be truncated (issue #226).
+const TEXT_OVERFLOW_EPSILON = 1;
+
 /**
  * Detect CJK (Chinese, Japanese, Korean) characters in a string.
  * CJK characters use the ideographic baseline in browsers, which differs
@@ -526,7 +531,10 @@ export class TextRenderer {
             .replace(/\s+/g, ' ')
             .trim();
         const fullWidth = this.ctx.measureText(fullText).width;
-        if (fullWidth <= containerBounds.width) return false;
+        // Small tolerance: canvas measurement can differ from the browser's text
+        // layout by a fraction of a pixel (kerning/font rounding), so text that
+        // exactly fits the container must not be falsely truncated (issue #226).
+        if (fullWidth <= containerBounds.width + TEXT_OVERFLOW_EPSILON) return false;
 
         const truncated = this.truncateTextWithEllipsis(fullText, containerBounds.width, styles.letterSpacing);
         const bounds = new TextBounds(truncated, text.textBounds[0].bounds);

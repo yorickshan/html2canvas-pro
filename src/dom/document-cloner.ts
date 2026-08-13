@@ -259,20 +259,36 @@ export class DocumentCloner {
         }
 
         if (isCustomElement(clone) && !isSVGElementNode(clone)) {
-            return this.createCustomElementClone(clone as HTMLElement);
+            return this.createCustomElementClone(node as HTMLElement, clone as HTMLElement);
         }
 
         return clone;
     }
 
-    createCustomElementClone(node: HTMLElement): HTMLElement {
+    createCustomElementClone(originalNode: HTMLElement, clonedNode: HTMLElement): HTMLElement {
         const clone = document.createElement('div');
-        clone.className = node.className;
-        copyCSSStyles(node.style, clone);
+        clone.className = clonedNode.className;
+        copyCSSStyles(clonedNode.style, clone);
 
-        // Clone shadow DOM if it exists
+        // Copy all attributes onto the fresh <div> (except class/style which are
+        // handled above). Without this, attributes such as `slot="suffix"` are
+        // dropped and slotted custom elements lose their slot assignment in the
+        // cloned shadow DOM, so their content is never rendered (issue #226).
+        for (const attr of clonedNode.attributes) {
+            if (attr.name !== 'class' && attr.name !== 'style') {
+                clone.setAttribute(attr.name, attr.value);
+            }
+        }
+
+        // Clone shadow DOM if it exists. The shadow root must be detected on the
+        // ORIGINAL element: `clonedNode` comes from `cloneNode(false)`, which only
+        // preserves the shadow root when it was created with `clonable: true` (or
+        // by frameworks that set it). For other components (e.g. Shoelace / Web
+        // Awesome) the clone has no shadow root, so without this check the clone
+        // falls back to flattening the shadow content and the slotted light-DOM
+        // label content is lost.
         // Fix for Issue #108: This is critical for Web Components with slots to work correctly
-        if (node.shadowRoot) {
+        if (originalNode.shadowRoot) {
             try {
                 clone.attachShadow({ mode: 'open' });
                 // The actual shadow DOM content will be cloned in cloneChildNodes

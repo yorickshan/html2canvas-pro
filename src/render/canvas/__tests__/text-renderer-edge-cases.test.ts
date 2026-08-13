@@ -217,6 +217,71 @@ describe('TextRenderer Edge Cases', () => {
         });
     });
 
+    describe('text-overflow ellipsis tolerance (issue #226)', () => {
+        const widthPerChar = 7.83; // "html2canvas" (11 chars) ≈ 86.1px
+
+        const runEllipsisTest = async (containerWidth: number): Promise<string[]> => {
+            const fillCalls: Array<{ text: string }> = [];
+            const ctx = {
+                fillStyle: '',
+                font: '',
+                textBaseline: 'alphabetic' as CanvasTextBaseline,
+                direction: 'ltr' as CanvasDirection,
+                textAlign: 'left' as CanvasTextAlign,
+                fillText(text: string) {
+                    fillCalls.push({ text });
+                },
+                measureText(text: string) {
+                    return { width: text.length * widthPerChar } as TextMetrics;
+                },
+                strokeStyle: '',
+                lineWidth: 0,
+                lineJoin: 'miter' as CanvasLineJoin,
+                strokeText() {},
+                shadowColor: '',
+                shadowOffsetX: 0,
+                shadowOffsetY: 0,
+                shadowBlur: 0,
+                save() {},
+                restore() {}
+            } as unknown as CanvasRenderingContext2D;
+
+            const renderer = createRenderer(ctx);
+            renderer.createFontStyle = () => ['16px Arial', 'Arial', '16px'];
+            const bounds = new Bounds(10, 50, containerWidth, 25);
+            const textContainer = {
+                textBounds: [new TextBounds('html2canvas', bounds)],
+                parse: () => {}
+            } as unknown as Parameters<typeof renderer.renderTextNode>[0];
+
+            await renderer.renderTextNode(
+                textContainer,
+                createMockStyles({
+                    textOverflow: TEXT_OVERFLOW.ELLIPSIS,
+                    overflowX: OVERFLOW.HIDDEN
+                }),
+                new Bounds(10, 50, containerWidth, 25)
+            );
+            return fillCalls.map((c) => c.text);
+        };
+
+        it('does not truncate text that fits within the container width plus tolerance', async () => {
+            // Canvas measures "html2canvas" ≈ 86.1px; the container is 86px. The
+            // 0.1px difference must not trigger ellipsis (the browser lays the
+            // text out without overflow).
+            const rendered = await runEllipsisTest(86);
+            ok(
+                rendered.some((t) => t === 'html2canvas'),
+                'full text should be rendered, got: ' + JSON.stringify(rendered)
+            );
+        });
+
+        it('still truncates text that genuinely overflows the container', async () => {
+            const rendered = await runEllipsisTest(60);
+            ok(!rendered.some((t) => t === 'html2canvas'), 'overflowing text should be truncated');
+        });
+    });
+
     describe('Empty and Whitespace Text', () => {
         it('should handle empty text gracefully', async () => {
             const fillCalls: Array<{ text: string }> = [];

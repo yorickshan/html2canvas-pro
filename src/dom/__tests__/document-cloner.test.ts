@@ -187,6 +187,60 @@ describe('DocumentCloner construction', () => {
     });
 });
 
+describe('DocumentCloner.createCustomElementClone (issue #226)', () => {
+    const defaultCloneOptions: CloneOptions = {
+        ignoreElements: undefined,
+        onclone: undefined,
+        allowTaint: false
+    };
+
+    const makeCloner = (el: HTMLElement): DocumentCloner =>
+        new DocumentCloner(createMockContext(), el, {
+            ...defaultCloneOptions,
+            inlineImages: false,
+            copyStyles: true
+        });
+
+    it('attaches a shadow root when the original element has one, even if cloneNode drops it', () => {
+        // `node.cloneNode(false)` does not preserve a shadow root unless it was
+        // created with `clonable: true` (Shoelace / Web Awesome shadow roots are
+        // not clonable, and neither is jsdom's). The cloner must therefore detect
+        // the shadow root on the ORIGINAL element, or the clone falls back to
+        // flattening shadow content and the slotted light-DOM label is lost.
+        const el = document.createElement('my-widget');
+        el.attachShadow({ mode: 'open' });
+        document.body.appendChild(el);
+        try {
+            const cloner = makeCloner(el);
+            const clone = cloner.createElementClone(el) as HTMLElement;
+            expect(clone.tagName.toLowerCase()).toBe('div');
+            expect(clone.shadowRoot).not.toBeNull();
+        } finally {
+            document.body.removeChild(el);
+        }
+    });
+
+    it('copies attributes such as slot onto the clone', () => {
+        // Custom element clones are fresh <div>s; attributes like `slot="suffix"`
+        // must be preserved or the clone loses its slot assignment in the cloned
+        // shadow DOM and its content is never rendered.
+        const el = document.createElement('my-widget');
+        el.setAttribute('slot', 'suffix');
+        el.setAttribute('id', 'widget-1');
+        el.setAttribute('aria-label', 'chevron');
+        document.body.appendChild(el);
+        try {
+            const cloner = makeCloner(el);
+            const clone = cloner.createElementClone(el) as HTMLElement;
+            expect(clone.getAttribute('slot')).toBe('suffix');
+            expect(clone.getAttribute('id')).toBe('widget-1');
+            expect(clone.getAttribute('aria-label')).toBe('chevron');
+        } finally {
+            document.body.removeChild(el);
+        }
+    });
+});
+
 describe('IGNORE_ATTRIBUTE', () => {
     it('is a defined string constant', () => {
         expect(typeof IGNORE_ATTRIBUTE).toBe('string');
