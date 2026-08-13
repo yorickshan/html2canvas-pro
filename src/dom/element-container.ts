@@ -16,6 +16,13 @@ export class ElementContainer {
     readonly elements: ElementContainer[] = [];
     bounds: Bounds;
 
+    /**
+     * Bounds of the <legend> child of a <fieldset>, when present. Browsers break
+     * the fieldset's top border where the legend sits; the renderer uses these
+     * bounds to leave a matching gap (issue #227).
+     */
+    readonly legendBounds?: Bounds;
+
     createsStackingContext = false;
     createsRealStackingContext = false;
     isListOwner = false;
@@ -42,6 +49,13 @@ export class ElementContainer {
         }
 
         this.bounds = parseBounds(this.context, element);
+
+        if (element.tagName === 'FIELDSET') {
+            const legend = element.querySelector(':scope > legend');
+            if (legend) {
+                this.legendBounds = parseBounds(this.context, legend);
+            }
+        }
 
         if (isDebugging(element, DebuggerType.RENDER)) {
             this.debugRender = true;

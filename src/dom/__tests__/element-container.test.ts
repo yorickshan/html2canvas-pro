@@ -126,4 +126,42 @@ describe('ElementContainer', () => {
         strictEqual(container.createsRealStackingContext, false);
         strictEqual(container.isListOwner, false);
     });
+
+    describe('legendBounds (issue #227)', () => {
+        it('exposes legend bounds for a fieldset with a legend child', () => {
+            const fs = document.createElement('fieldset');
+            const legend = document.createElement('legend');
+            legend.textContent = 'Legend';
+            fs.appendChild(legend);
+            document.body.appendChild(fs);
+            try {
+                const container = new ElementContainer(context, fs);
+                ok(container.legendBounds, 'legendBounds should be defined for fieldset with legend');
+            } finally {
+                document.body.removeChild(fs);
+            }
+        });
+
+        it('does not expose legend bounds for a fieldset without a legend', () => {
+            const fs = document.createElement('fieldset');
+            document.body.appendChild(fs);
+            try {
+                const container = new ElementContainer(context, fs);
+                strictEqual(container.legendBounds, undefined);
+            } finally {
+                document.body.removeChild(fs);
+            }
+        });
+
+        it('does not expose legend bounds for non-fieldset elements', () => {
+            const div = document.createElement('div');
+            document.body.appendChild(div);
+            try {
+                const container = new ElementContainer(context, div);
+                strictEqual(container.legendBounds, undefined);
+            } finally {
+                document.body.removeChild(div);
+            }
+        });
+    });
 });

@@ -394,26 +394,59 @@ export class CanvasRenderer {
         let side = 0;
         for (const border of borders) {
             if (border.style !== BORDER_STYLE.NONE && !isTransparent(border.color) && border.width > 0) {
-                if (border.style === BORDER_STYLE.DASHED) {
-                    await this.borderRenderer.renderDashedDottedBorder(
-                        border.color,
-                        border.width,
-                        side,
-                        paint.curves,
-                        BORDER_STYLE.DASHED
-                    );
-                } else if (border.style === BORDER_STYLE.DOTTED) {
-                    await this.borderRenderer.renderDashedDottedBorder(
-                        border.color,
-                        border.width,
-                        side,
-                        paint.curves,
-                        BORDER_STYLE.DOTTED
-                    );
-                } else if (border.style === BORDER_STYLE.DOUBLE) {
-                    await this.borderRenderer.renderDoubleBorder(border.color, border.width, side, paint.curves);
+                const renderBorderSide = async (): Promise<void> => {
+                    if (border.style === BORDER_STYLE.DASHED) {
+                        await this.borderRenderer.renderDashedDottedBorder(
+                            border.color,
+                            border.width,
+                            side,
+                            paint.curves,
+                            BORDER_STYLE.DASHED
+                        );
+                    } else if (border.style === BORDER_STYLE.DOTTED) {
+                        await this.borderRenderer.renderDashedDottedBorder(
+                            border.color,
+                            border.width,
+                            side,
+                            paint.curves,
+                            BORDER_STYLE.DOTTED
+                        );
+                    } else if (border.style === BORDER_STYLE.DOUBLE) {
+                        await this.borderRenderer.renderDoubleBorder(border.color, border.width, side, paint.curves);
+                    } else {
+                        await this.borderRenderer.renderSolidBorder(border.color, side, paint.curves);
+                    }
+                };
+
+                // Browsers break a <fieldset>'s top border where its <legend>
+                // sits, instead of drawing the border through the legend (issue
+                // #227). Render the top border in two clipped segments around
+                // the legend's horizontal span.
+                const legend = paint.container.legendBounds;
+                if (side === 0 && legend) {
+                    const bounds = paint.container.bounds;
+                    const legendLeft = legend.left - bounds.left;
+                    const legendRight = legend.left + legend.width - bounds.left;
+                    if (legendLeft > 0) {
+                        this.ctx.save();
+                        this.ctx.beginPath();
+                        this.ctx.rect(bounds.left, bounds.top, legendLeft, bounds.height);
+                        this.ctx.clip();
+                        await renderBorderSide();
+                        this.ctx.restore();
+                    }
+                    const rightStart = bounds.left + legendRight;
+                    const rightWidth = bounds.width - legendRight;
+                    if (rightWidth > 0) {
+                        this.ctx.save();
+                        this.ctx.beginPath();
+                        this.ctx.rect(rightStart, bounds.top, rightWidth, bounds.height);
+                        this.ctx.clip();
+                        await renderBorderSide();
+                        this.ctx.restore();
+                    }
                 } else {
-                    await this.borderRenderer.renderSolidBorder(border.color, side, paint.curves);
+                    await renderBorderSide();
                 }
             }
             side++;
