@@ -167,12 +167,18 @@ describe('cache-storage', () => {
     });
 
     describe('cross-origin', () => {
-        it('addImage should not add images it cannot load/render', async () => {
+        it('addImage should attempt a CORS load for cross-origin images by default (issue #229)', async () => {
+            // With allowTaint disabled (the default), cross-origin images used to
+            // be skipped outright. They are now loaded with crossOrigin='anonymous',
+            // which is safe (never taints the canvas) and succeeds for
+            // CORS-enabled hosts (issue #229).
             const { cache } = createMockContext('http://example.com', {
                 proxy: undefined
             });
             await cache.addImage('http://html2canvas.hertzen.com/test.jpg');
-            deepStrictEqual(images.length, 0);
+            deepStrictEqual(images.length, 1);
+            deepStrictEqual(images[0].src, 'http://html2canvas.hertzen.com/test.jpg');
+            deepStrictEqual(images[0].crossOrigin, 'anonymous');
         });
 
         it('addImage should add images if tainting enabled', async () => {

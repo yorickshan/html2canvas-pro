@@ -1,4 +1,5 @@
 import { strictEqual, ok, deepStrictEqual } from 'assert';
+import { vi } from 'vitest';
 import { Cache, ResourceOptions } from '../cache-storage';
 import { Context } from '../context';
 import { Bounds } from '../../css/layout/bounds';
@@ -201,5 +202,66 @@ describe('Cache LRU', () => {
 
         const cacheWithDefault = new Cache(context, options);
         strictEqual(cacheWithDefault.getMaxSize(), 100); // Default
+    });
+});
+
+describe('Cache cross-origin image loading (issue #229)', () => {
+    let context: Context;
+    let cache: Cache;
+
+    beforeEach(() => {
+        // Use the real jsdom window so URL origins are parsed correctly.
+        const config = new Html2CanvasConfig({ window: window });
+        context = new Context(
+            { logging: false, imageTimeout: 15000, useCORS: false, allowTaint: false },
+            new Bounds(0, 0, 800, 600),
+            config
+        );
+
+        cache = new Cache(context, {
+            imageTimeout: 15000,
+            useCORS: false,
+            allowTaint: false
+        });
+    });
+
+    it('attempts a CORS load for cross-origin images when allowTaint is disabled', async () => {
+        // With allowTaint disabled, cross-origin images used to be skipped
+        // entirely. They are now loaded with crossOrigin='anonymous', which is
+        // safe (never taints the canvas) and succeeds for CORS-enabled hosts.
+        const instances: Array<{ crossOrigin: string | null; src: string | null }> = [];
+        class MockImage {
+            crossOrigin: string | null = null;
+            complete = false;
+            onload: (() => void) | null = null;
+            onerror: (() => void) | null = null;
+            private _src = '';
+            constructor() {
+                instances.push(this);
+            }
+            set src(v: string) {
+                this._src = v;
+                setTimeout(() => {
+                    this.complete = true;
+                    this.onload?.();
+                }, 0);
+            }
+            get src() {
+                return this._src;
+            }
+        }
+        vi.stubGlobal('Image', MockImage);
+        try {
+            const url = 'https://example.com/image.png';
+            await cache.addImage(url);
+            const image = await cache.match(url);
+            ok(image, 'cross-origin image should be loaded (CORS attempt)');
+            const loaderImage = instances.find((i) => i.src === url);
+            ok(loaderImage, 'the image load should have been attempted');
+            // the loader sets crossOrigin='anonymous' so the canvas stays clean
+            strictEqual(loaderImage?.crossOrigin, 'anonymous');
+        } finally {
+            vi.unstubAllGlobals();
+        }
     });
 });

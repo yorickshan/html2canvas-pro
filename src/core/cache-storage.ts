@@ -229,8 +229,24 @@ export class Cache {
             typeof this._options.customIsSameOrigin === 'function'
                 ? await this._options.customIsSameOrigin(key, defaultIsSameOrigin)
                 : defaultIsSameOrigin(key);
+        // With allowTaint disabled (the default), a cross-origin image is safe to
+        // draw only when the server sends CORS headers. Instead of skipping such
+        // images outright, still ATTEMPT a CORS load: it succeeds for CORS-enabled
+        // hosts (CDNs, avatar services, picsum, ...) and fails cleanly for hosts
+        // without CORS headers, where the image is skipped exactly as before
+        // (issue #229). An explicit proxy takes precedence so existing setups
+        // that rely on proxying keep working.
+        const canAttemptCors =
+            !isSameOrigin &&
+            this._options.allowTaint === false &&
+            !isInlineImage(key) &&
+            !isBlobImage(key) &&
+            typeof this._options.proxy !== 'string';
         const useCORS =
-            !isInlineImage(key) && this._options.useCORS === true && FEATURES.SUPPORT_CORS_IMAGES && !isSameOrigin;
+            !isInlineImage(key) &&
+            (this._options.useCORS === true || canAttemptCors) &&
+            FEATURES.SUPPORT_CORS_IMAGES &&
+            !isSameOrigin;
         const useProxy =
             !isInlineImage(key) &&
             !isSameOrigin &&
