@@ -1,3 +1,10 @@
+## [2.3.8](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.7...v2.3.8) (2026-08-14)
+
+### Features
+
+* add white-space property descriptor and implement text wrapping for textareas ([0463ea8](https://github.com/yorickshan/html2canvas-pro/commit/0463ea8f978a109be2e90a31e8c31d5ae65d0a99))
+* enable CORS loading for cross-origin images in Cache class ([79fb9c6](https://github.com/yorickshan/html2canvas-pro/commit/79fb9c64441b568d76ae8a678ba04f5ae83dab92))
+
 ## [2.3.7](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.6...v2.3.7) (2026-08-13)
 
 ### Features
