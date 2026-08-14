@@ -305,3 +305,18 @@ describe('remaining descriptor metadata', () => {
         expect(objectFit.initialValue).toBe('fill');
     });
 });
+
+// --- white-space (issue #228) ---
+import { whiteSpace, WHITE_SPACE } from '../white-space';
+describe('white-space descriptor', () => {
+    it('parses normal', () => expect(identParse(whiteSpace, 'normal')).toBe(WHITE_SPACE.NORMAL));
+    it('parses pre', () => expect(identParse(whiteSpace, 'pre')).toBe(WHITE_SPACE.PRE));
+    it('parses nowrap', () => expect(identParse(whiteSpace, 'nowrap')).toBe(WHITE_SPACE.NOWRAP));
+    it('parses pre-wrap', () => expect(identParse(whiteSpace, 'pre-wrap')).toBe(WHITE_SPACE.PRE_WRAP));
+    it('parses pre-line', () => expect(identParse(whiteSpace, 'pre-line')).toBe(WHITE_SPACE.PRE_LINE));
+    it('falls back to normal for unknown', () => expect(identParse(whiteSpace, 'xyz')).toBe(WHITE_SPACE.NORMAL));
+    it('has correct name and initialValue', () => {
+        expect(whiteSpace.name).toBe('white-space');
+        expect(whiteSpace.initialValue).toBe('normal');
+    });
+});

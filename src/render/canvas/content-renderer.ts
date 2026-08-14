@@ -30,6 +30,7 @@ import { LIST_STYLE_TYPE } from '../../css/property-descriptors/list-style-type'
 import { CSSImageType, CSSURLImage } from '../../css/types/image';
 import { getAbsoluteValue } from '../../css/types/length-percentage';
 import { computeLineHeight } from '../../css/property-descriptors/line-height';
+import { WHITE_SPACE } from '../../css/property-descriptors/white-space';
 import { contains } from '../../core/bitwise';
 import { Color } from '../../css/types/color';
 import { CSSParsedDeclaration } from '../../css/index';
@@ -198,17 +199,78 @@ export function renderFormElements(
         ]);
         ctx.clip();
 
-        textRenderer.renderTextWithLetterSpacing(
-            new TextBounds(container.value, textBounds),
-            styles.letterSpacing,
-            baseline,
-            styles.writingMode
+        // A <textarea> soft-wraps its value at the element width (unless
+        // white-space is `pre`/`nowrap`, e.g. wrap="off"); text inputs are
+        // single-line. Render textareas line-by-line so long values wrap
+        // instead of being clipped on one line (issue #228).
+        const lines = wrapTextToWidth(
+            ctx,
+            container.value,
+            bounds.width,
+            styles.whiteSpace === WHITE_SPACE.PRE || styles.whiteSpace === WHITE_SPACE.NOWRAP
         );
+        const fontSizeValue = getAbsoluteValue(styles.fontSize, 0);
+        const lineHeight = computeLineHeight(styles.lineHeight, fontSizeValue);
+
+        lines.forEach((line, index) => {
+            let lineX = textBounds.left;
+            const lineWidth = ctx.measureText(line).width;
+            switch (styles.textAlign) {
+                case TEXT_ALIGN.CENTER:
+                    lineX += (bounds.width - lineWidth) / 2;
+                    break;
+                case TEXT_ALIGN.RIGHT:
+                    lineX += bounds.width - lineWidth;
+                    break;
+            }
+            const lineBounds = new Bounds(lineX, textBounds.top + index * lineHeight, 0, 0);
+            textRenderer.renderTextWithLetterSpacing(
+                new TextBounds(line, lineBounds),
+                styles.letterSpacing,
+                baseline,
+                styles.writingMode
+            );
+        });
         ctx.restore();
         ctx.textBaseline = 'alphabetic';
         ctx.textAlign = 'left';
     }
 }
+
+/**
+ * Split text into lines that fit the given pixel width, preserving hard line
+ * breaks and (when wrapping is enabled) breaking at word boundaries — mirroring
+ * how a <textarea> lays out its value.
+ * @internal exported for testing
+ */
+export const wrapTextToWidth = (
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    maxWidth: number,
+    noWrap: boolean
+): string[] => {
+    const lines: string[] = [];
+    const paragraphs = text.split('\n');
+    for (const paragraph of paragraphs) {
+        if (noWrap) {
+            lines.push(paragraph);
+            continue;
+        }
+        const words = paragraph.split(/(\s+)/);
+        let line = '';
+        for (const word of words) {
+            const candidate = line + word;
+            if (ctx.measureText(candidate).width <= maxWidth || line === '') {
+                line = candidate;
+            } else {
+                lines.push(line);
+                line = word;
+            }
+        }
+        lines.push(line);
+    }
+    return lines;
+};
 
 /**
  * Render list-item marker (image or text).

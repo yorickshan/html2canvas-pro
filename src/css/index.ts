@@ -54,6 +54,7 @@ import { transformOrigin } from './property-descriptors/transform-origin';
 import { rotate } from './property-descriptors/rotate';
 import { visibility, VISIBILITY } from './property-descriptors/visibility';
 import { wordBreak } from './property-descriptors/word-break';
+import { whiteSpace } from './property-descriptors/white-space';
 import { writingMode } from './property-descriptors/writing-mode';
 import { zIndex } from './property-descriptors/z-index';
 import { CSSValue, isIdentToken, Parser } from './syntax/parser';
@@ -180,6 +181,7 @@ export class CSSParsedDeclaration {
     webkitTextStrokeWidth!: ReturnType<typeof webkitTextStrokeWidth.parse>;
     webkitLineClamp!: ReturnType<typeof webkitLineClamp.parse>;
     wordBreak!: ReturnType<typeof wordBreak.parse>;
+    whiteSpace!: ReturnType<typeof whiteSpace.parse>;
     writingMode!: ReturnType<typeof writingMode.parse>;
     zIndex!: ReturnType<typeof zIndex.parse>;
     objectFit!: ReturnType<typeof objectFit.parse>;
@@ -282,6 +284,7 @@ export class CSSParsedDeclaration {
         ['webkitTextStrokeWidth', webkitTextStrokeWidth, 'webkitTextStrokeWidth'],
         ['webkitLineClamp', webkitLineClamp, 'webkitLineClamp'],
         ['wordBreak', wordBreak, 'wordBreak'],
+        ['whiteSpace', whiteSpace, 'whiteSpace'],
         ['writingMode', writingMode, 'writingMode'],
         ['zIndex', zIndex, 'zIndex'],
         ['objectFit', objectFit, 'objectFit'],
