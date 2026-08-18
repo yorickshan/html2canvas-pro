@@ -1,3 +1,9 @@
+## [2.3.9](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.8...v2.3.9) (2026-08-18)
+
+### Bug Fixes
+
+* adjust mask rectangle anchoring to prevent inverted inset box-shadow rendering ([67d21ac](https://github.com/yorickshan/html2canvas-pro/commit/67d21ac69d691c0ee78f007bbe218d4f03a3231d))
+
 ## [2.3.8](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.7...v2.3.8) (2026-08-14)
 
 ### Features
