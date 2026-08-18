@@ -272,14 +272,17 @@ export class CanvasRenderer {
 
     mask(paths: Path[]): void {
         this.ctx.beginPath();
-        this.ctx.moveTo(0, 0);
-        // Use logical dimensions (options.width/height) instead of canvas pixel dimensions
-        // because context has already been scaled by this.options.scale
-        // Fix for Issue #126: Using canvas pixel dimensions causes broken output
-        this.ctx.lineTo(this.options.width, 0);
-        this.ctx.lineTo(this.options.width, this.options.height);
-        this.ctx.lineTo(0, this.options.height);
-        this.ctx.lineTo(0, 0);
+        // Anchor the mask rectangle to (options.x, options.y) instead of (0, 0)
+        // because ctx.translate(-options.x, -options.y) shifts the coordinate system.
+        // Fix for Issue #230: inset box-shadow rendering was inverted for elements
+        // not at document origin due to the mask covering the wrong region.
+        const x = this.options.x;
+        const y = this.options.y;
+        this.ctx.moveTo(x, y);
+        this.ctx.lineTo(x + this.options.width, y);
+        this.ctx.lineTo(x + this.options.width, y + this.options.height);
+        this.ctx.lineTo(x, y + this.options.height);
+        this.ctx.lineTo(x, y);
         this.formatPath(paths.slice(0).reverse());
         this.ctx.closePath();
     }
