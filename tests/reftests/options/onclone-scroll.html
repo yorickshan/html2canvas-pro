@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>onclone scroll position test</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script>
+        h2cOptions = {
+            x: 0,
+            y: 600,
+            width: 800,
+            height: 600,
+            scrollX: 0,
+            scrollY: 600,
+            onclone: function(document) {
+                var spacer = document.createElement('div');
+                spacer.id = 'clone-spacer';
+                spacer.style.background = 'rgb(255, 215, 0)';
+                spacer.style.height = '300px';
+                spacer.style.overflowAnchor = 'none';
+
+                var content = document.querySelector('#content');
+                content.parentNode.insertBefore(spacer, content);
+            }
+        };
+    </script>
+    <script type="text/javascript" src="../../test.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            scroll-behavior: auto;
+        }
+
+        #before {
+            background: rgb(200, 30, 30);
+            height: 500px;
+            overflow-anchor: none;
+        }
+
+        #content {
+            background: rgb(20, 160, 90);
+            box-sizing: border-box;
+            height: 600px;
+            padding-top: 120px;
+        }
+
+        #anchor {
+            color: white;
+            font: 32px sans-serif;
+            margin: 0;
+            padding: 0 30px;
+        }
+
+        #after {
+            background: rgb(210, 30, 160);
+            height: 700px;
+        }
+    </style>
+</head>
+<body>
+    <div id="before"></div>
+    <main id="content">
+        <h1 id="anchor">Visible scroll anchor</h1>
+    </main>
+    <div id="after"></div>
+</body>
+</html>

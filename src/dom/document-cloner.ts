@@ -139,18 +139,6 @@ export class DocumentCloner {
             this.scrolledElements.forEach(restoreNodeScroll);
             if (cloneWindow) {
                 cloneWindow.scrollTo(windowSize.left, windowSize.top);
-                if (
-                    /AppleWebKit/g.test(navigator.userAgent) &&
-                    (cloneWindow.scrollY !== windowSize.top || cloneWindow.scrollX !== windowSize.left)
-                ) {
-                    this.context.logger.warn('Unable to restore scroll position for cloned document');
-                    this.context.windowBounds = this.context.windowBounds.add(
-                        cloneWindow.scrollX - windowSize.left,
-                        cloneWindow.scrollY - windowSize.top,
-                        0,
-                        0
-                    );
-                }
             }
 
             const onclone = this.options.onclone;
@@ -170,9 +158,24 @@ export class DocumentCloner {
             }
 
             if (typeof onclone === 'function') {
-                return Promise.resolve()
-                    .then(() => onclone(documentClone, referenceElement))
-                    .then(() => iframe);
+                await Promise.resolve().then(() => onclone(documentClone, referenceElement));
+            }
+
+            // onclone can change layout above the viewport and trigger browser scroll
+            // anchoring. Reapply the requested offset after the callback so element
+            // bounds stay aligned with the window bounds used by the renderer.
+            cloneWindow.scrollTo(windowSize.left, windowSize.top);
+            if (
+                /AppleWebKit/g.test(navigator.userAgent) &&
+                (cloneWindow.scrollY !== windowSize.top || cloneWindow.scrollX !== windowSize.left)
+            ) {
+                this.context.logger.warn('Unable to restore scroll position for cloned document');
+                this.context.windowBounds = this.context.windowBounds.add(
+                    cloneWindow.scrollX - windowSize.left,
+                    cloneWindow.scrollY - windowSize.top,
+                    0,
+                    0
+                );
             }
 
             return iframe;
