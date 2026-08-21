@@ -19,10 +19,10 @@ import { Bounds } from '../../css/layout/bounds';
 import { BoundCurves } from '../bound-curves';
 import { TextBounds } from '../../css/layout/text';
 import { Vector } from '../vector';
-import { contentBox } from '../box-sizing';
+import { contentBox, paddingBox } from '../box-sizing';
 import { Context } from '../../core/context';
 import { TextRenderer } from './text-renderer';
-import { measureBaseline } from './font-utils';
+import { measureFontMetrics } from './font-utils';
 import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering';
 import { TEXT_ALIGN } from '../../css/property-descriptors/text-align';
 import { DISPLAY } from '../../css/property-descriptors/display';
@@ -165,13 +165,18 @@ export function renderFormElements(
         const [font] = textRenderer.createFontStyle(styles);
         // Use Canvas API to measure baseline from the actual rendered font
         ctx.font = font;
-        const baseline = measureBaseline(ctx, getAbsoluteValue(styles.fontSize, 0));
+        const fontSizeValue = getAbsoluteValue(styles.fontSize, 0);
+        const { baseline, height: fontHeight } = measureFontMetrics(ctx, fontSizeValue);
         const isPlaceholder = container instanceof InputElementContainer && container.isPlaceholder;
         ctx.fillStyle = isPlaceholder ? asString(PLACEHOLDER_COLOR) : asString(styles.color);
         ctx.textBaseline = 'alphabetic';
         ctx.textAlign = canvasTextAlign(container.styles.textAlign);
 
         const bounds = contentBox(container);
+        const clipBounds =
+            container instanceof InputElementContainer
+                ? inputTextClipBounds(bounds, paddingBox(container), fontHeight)
+                : bounds;
         let x = 0;
         switch (container.styles.textAlign) {
             case TEXT_ALIGN.CENTER:
@@ -184,18 +189,17 @@ export function renderFormElements(
 
         let verticalOffset = 0;
         if (container instanceof InputElementContainer) {
-            const fontSizeValue = getAbsoluteValue(styles.fontSize, 0);
-            verticalOffset = (bounds.height - fontSizeValue) / 2;
+            verticalOffset = (bounds.height - fontHeight) / 2;
         }
 
         const textBounds = bounds.add(x, verticalOffset, 0, 0);
 
         ctx.save();
         pathFn([
-            new Vector(bounds.left, bounds.top),
-            new Vector(bounds.left + bounds.width, bounds.top),
-            new Vector(bounds.left + bounds.width, bounds.top + bounds.height),
-            new Vector(bounds.left, bounds.top + bounds.height)
+            new Vector(clipBounds.left, clipBounds.top),
+            new Vector(clipBounds.left + clipBounds.width, clipBounds.top),
+            new Vector(clipBounds.left + clipBounds.width, clipBounds.top + clipBounds.height),
+            new Vector(clipBounds.left, clipBounds.top + clipBounds.height)
         ]);
         ctx.clip();
 
@@ -209,7 +213,6 @@ export function renderFormElements(
             bounds.width,
             styles.whiteSpace === WHITE_SPACE.PRE || styles.whiteSpace === WHITE_SPACE.NOWRAP
         );
-        const fontSizeValue = getAbsoluteValue(styles.fontSize, 0);
         const lineHeight = computeLineHeight(styles.lineHeight, fontSizeValue);
 
         lines.forEach((line, index) => {
@@ -236,6 +239,18 @@ export function renderFormElements(
         ctx.textAlign = 'left';
     }
 }
+
+/**
+ * Native single-line inputs may paint value text into their padding area when
+ * fixed height and vertical padding leave a content box shorter than the font.
+ * Preserve the content box horizontally, but avoid clipping those glyphs to the
+ * collapsed vertical content box.
+ * @internal exported for testing
+ */
+export const inputTextClipBounds = (contentBounds: Bounds, inputPaddingBox: Bounds, fontHeight: number): Bounds =>
+    contentBounds.height < fontHeight
+        ? new Bounds(contentBounds.left, inputPaddingBox.top, contentBounds.width, inputPaddingBox.height)
+        : contentBounds;
 
 /**
  * Split text into lines that fit the given pixel width, preserving hard line
