@@ -1,3 +1,10 @@
+## [2.4.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.9...v2.4.0) (2026-08-24)
+
+### Bug Fixes
+
+* **canvas-renderer:** preserve constrained input text ([d8c943a](https://github.com/yorickshan/html2canvas-pro/commit/d8c943a02fd35fdceece7dee4be1775fbc1cba66))
+* **document-cloner:** restore scroll after onclone ([ad66343](https://github.com/yorickshan/html2canvas-pro/commit/ad663432f39f0dee1c9be9b36ea0a9ff7443361d))
+
 ## [2.3.9](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.8...v2.3.9) (2026-08-18)
 
 ### Bug Fixes
