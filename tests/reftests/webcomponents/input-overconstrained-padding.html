@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Web component input with over-constrained vertical padding</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script>
+            class PaddedTextField extends HTMLElement {
+                constructor() {
+                    super();
+                    const shadow = this.attachShadow({ mode: 'open' });
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        input {
+                            box-sizing: border-box;
+                            width: 100%;
+                            height: 100%;
+                            padding: 8px;
+                            border: 1px solid #d4d5d8;
+                            border-radius: 8px;
+                            background: #eef0f5;
+                            color: #111;
+                            font: 600 14px/17.5px system-ui, sans-serif;
+                        }
+                    `;
+                    this.input = document.createElement('input');
+                    shadow.append(style, this.input);
+                }
+
+                connectedCallback() {
+                    this.input.value = this.getAttribute('value') || '';
+                }
+            }
+
+            customElements.define('padded-text-field', PaddedTextField);
+        </script>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            body,
+            html {
+                margin: 0;
+            }
+
+            padded-text-field {
+                display: block;
+                width: 400px;
+                margin-bottom: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <padded-text-field
+            style="height: 25px"
+            value="Web component field, outer height 25px"
+        ></padded-text-field>
+        <padded-text-field
+            style="height: 30px"
+            value="Web component field, outer height 30px"
+        ></padded-text-field>
+        <padded-text-field
+            style="height: 35px"
+            value="Web component field, outer height 35px"
+        ></padded-text-field>
+    </body>
+</html>

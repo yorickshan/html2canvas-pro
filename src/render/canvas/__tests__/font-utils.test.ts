@@ -1,5 +1,5 @@
 import { strictEqual } from 'assert';
-import { measureBaseline } from '../font-utils';
+import { measureBaseline, measureFontMetrics } from '../font-utils';
 
 describe('measureBaseline', () => {
     const createMockCtx = (overrides: Record<string, unknown> = {}) => {
@@ -9,7 +9,9 @@ describe('measureBaseline', () => {
                 return {
                     width: 30,
                     fontBoundingBoxAscent: 14,
+                    fontBoundingBoxDescent: 3,
                     actualBoundingBoxAscent: 14,
+                    actualBoundingBoxDescent: 2,
                     ...overrides
                 };
             }
@@ -50,5 +52,46 @@ describe('measureBaseline', () => {
         const ctx = createMockCtx({ fontBoundingBoxAscent: undefined, actualBoundingBoxAscent: undefined });
         const result = measureBaseline(ctx, undefined as unknown as number);
         strictEqual(result, undefined);
+    });
+});
+
+describe('measureFontMetrics', () => {
+    const createMockCtx = (overrides: Record<string, unknown> = {}) =>
+        ({
+            measureText: () => ({
+                fontBoundingBoxAscent: 14,
+                fontBoundingBoxDescent: 3,
+                actualBoundingBoxAscent: 12,
+                actualBoundingBoxDescent: 2,
+                ...overrides
+            })
+        }) as unknown as CanvasRenderingContext2D;
+
+    it('uses the font bounding box when both font metrics are available', () => {
+        const metrics = measureFontMetrics(createMockCtx(), 16);
+        strictEqual(metrics.baseline, 14);
+        strictEqual(metrics.height, 17);
+    });
+
+    it('uses the actual glyph box when font bounding metrics are unavailable', () => {
+        const metrics = measureFontMetrics(
+            createMockCtx({ fontBoundingBoxAscent: undefined, fontBoundingBoxDescent: undefined }),
+            16
+        );
+        strictEqual(metrics.baseline, 12);
+        strictEqual(metrics.height, 14);
+    });
+
+    it('uses the fallback height when neither complete metric pair is available', () => {
+        const metrics = measureFontMetrics(
+            createMockCtx({
+                fontBoundingBoxDescent: undefined,
+                actualBoundingBoxAscent: undefined,
+                actualBoundingBoxDescent: undefined
+            }),
+            16
+        );
+        strictEqual(metrics.baseline, 14);
+        strictEqual(metrics.height, 16);
     });
 });
