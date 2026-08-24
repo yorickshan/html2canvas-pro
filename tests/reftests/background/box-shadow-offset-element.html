@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Inset box-shadow on an offset capture target</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+                min-height: 700px;
+                min-width: 900px;
+            }
+
+            #target {
+                background: #fff;
+                height: 300px;
+                left: 300px;
+                position: absolute;
+                top: 200px;
+                width: 400px;
+            }
+
+            #child {
+                background: #0a0;
+                box-shadow: inset 0 0 0 4px #f00;
+                height: 200px;
+                left: 180px;
+                position: absolute;
+                top: 40px;
+                width: 200px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="target">
+            <div id="child"></div>
+        </div>
+        <script>
+            var forceElement = document.querySelector('#target');
+            h2cSelector = forceElement;
+        </script>
+    </body>
+</html>
