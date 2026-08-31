@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Offset inline svg tests</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="../../test.js"></script>
+    <style>
+        body {
+            font-family: Arial;
+        }
+
+        .frame {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 10px;
+            display: inline-block;
+            overflow: hidden;
+            background: #eeeeee;
+        }
+
+        .frame svg {
+            position: absolute;
+        }
+
+        .inset svg {
+            left: -40px;
+            top: -40px;
+        }
+
+        .inset-end svg {
+            right: -40px;
+            bottom: -40px;
+        }
+
+        .margin svg {
+            margin-left: -40px;
+            margin-top: -40px;
+        }
+
+        .logical svg {
+            margin-inline-start: -40px;
+            margin-block-start: -40px;
+        }
+    </style>
+</head>
+<body>
+<p>Every square below sits at the same place in its frame: the offset on the svg is cancelled by the translate inside it.</p>
+
+<div class="frame plain">
+    <svg width="240" height="240"><g transform="translate(40,40)"><rect x="35" y="35" width="30" height="30" fill="indianred"></rect></g></svg>
+</div>
+
+<div class="frame inset">
+    <svg width="240" height="240"><g transform="translate(80,80)"><rect x="35" y="35" width="30" height="30" fill="cadetblue"></rect></g></svg>
+</div>
+
+<div class="frame inset-end">
+    <svg width="240" height="240"><g transform="translate(40,40)"><rect x="35" y="35" width="30" height="30" fill="darkseagreen"></rect></g></svg>
+</div>
+
+<div class="frame margin">
+    <svg width="240" height="240"><g transform="translate(80,80)"><rect x="35" y="35" width="30" height="30" fill="rosybrown"></rect></g></svg>
+</div>
+
+<div class="frame logical">
+    <svg width="240" height="240"><g transform="translate(80,80)"><rect x="35" y="35" width="30" height="30" fill="darkkhaki"></rect></g></svg>
+</div>
+</body>
+</html>
