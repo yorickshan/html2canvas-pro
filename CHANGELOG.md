@@ -1,3 +1,9 @@
+## [2.4.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.0...v2.4.1) (2026-09-01)
+
+### Bug Fixes
+
+* prevent SVG offsets from serialization ([66362ea](https://github.com/yorickshan/html2canvas-pro/commit/66362ea30cfbef4a5980e0bd9f81d72465837067))
+
 ## [2.4.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.3.9...v2.4.0) (2026-08-24)
 
 ### Bug Fixes
