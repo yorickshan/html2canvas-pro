@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Radial gradient ellipse taller than wide</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="../../test.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .box {
+            width: 120px;
+            height: 220px;
+            border: 1px solid #000;
+        }
+        /* Vertical radius (52% of 220 = 114px) larger than horizontal radius (72% of 120 = 86px):
+           the glow must fade out smoothly instead of ending in a hard horizontal edge. */
+        .test1 {
+            background: radial-gradient(ellipse 72% 52% at 84% 0%, rgba(74, 214, 172, 0.9) 0%, rgba(74, 214, 172, 0) 100%), #0f1420;
+        }
+        /* Same shape with an opaque last stop: the area beyond the ellipse keeps the last colour. */
+        .test2 {
+            background: radial-gradient(ellipse 40% 60% at 50% 50%, #ff0000 0%, #0000ff 100%);
+        }
+        /* Explicit px radii, tall ellipse off-centre */
+        .test3 {
+            background: radial-gradient(30px 90px at 20% 30%, #ffd166 0%, #ef476f 60%, #073b4c 100%);
+        }
+        /* Control: wide ellipse (rx > ry) rendered by the same code path */
+        .test4 {
+            background: radial-gradient(ellipse 80% 30% at 50% 100%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 100%), #1d3557;
+        }
+        /* Multiple tall glows stacked over a linear base, like an "aurora" theme background */
+        .test5 {
+            background: radial-gradient(ellipse 72% 52% at 84% 0%, rgba(74, 214, 172, 0.3) 0%, rgba(74, 214, 172, 0) 100%),
+                radial-gradient(ellipse 48% 40% at 100% 46%, rgba(255, 122, 172, 0.2) 0%, rgba(255, 122, 172, 0) 100%),
+                radial-gradient(ellipse 60% 40% at 0% 100%, rgba(62, 172, 204, 0.3) 0%, rgba(62, 172, 204, 0) 100%),
+                linear-gradient(170deg, #0f1420 0%, #151a28 55%, #10141f 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="box test1"></div>
+        <div class="box test2"></div>
+        <div class="box test3"></div>
+        <div class="box test4"></div>
+        <div class="box test5"></div>
+    </div>
+</body>
+</html>

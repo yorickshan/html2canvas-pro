@@ -309,30 +309,27 @@ export class BackgroundRenderer {
             // Cache key for radial gradient: position + radii + colour stops
             const cacheKey = `rg|${Math.round(x)}x${Math.round(y)}|${Math.round(rx)}x${Math.round(ry)}|${JSON.stringify(backgroundImage.stops)}`;
 
+            // The ellipse is rasterised as a circle of radius rx that is scaled vertically by
+            // ry / rx, so the offscreen canvas must be the ellipse's full bounding box
+            // (2rx × 2ry). Sizing it as a max(rx, ry) square stretched the gradient past the
+            // canvas edge whenever ry > rx, clipping the ellipse before its last stop and
+            // leaving a hard horizontal seam on tall elements.
+            const stops = processColorStops(backgroundImage.stops, rx * 2);
+            const lastStop = stops[stops.length - 1];
+
             let pattern = this.patternCache.get(cacheKey);
             if (!pattern) {
                 const ownerDocument = this.canvas.ownerDocument ?? document;
-                const size = Math.ceil(Math.max(rx, ry) * 2);
                 const offscreen = ownerDocument.createElement('canvas');
-                offscreen.width = size;
-                offscreen.height = size;
+                offscreen.width = Math.ceil(rx * 2);
+                offscreen.height = Math.ceil(ry * 2);
                 const offCtx = offscreen.getContext('2d');
                 if (offCtx) {
-                    const offRadius = Math.max(rx, ry);
-                    const gradient = offCtx.createRadialGradient(
-                        offRadius,
-                        offRadius,
-                        0,
-                        offRadius,
-                        offRadius,
-                        offRadius
-                    );
-                    processColorStops(backgroundImage.stops, offRadius * 2).forEach((s) =>
-                        gradient.addColorStop(s.stop, asString(s.color))
-                    );
+                    const gradient = offCtx.createRadialGradient(rx, rx, 0, rx, rx, rx);
+                    stops.forEach((s) => gradient.addColorStop(s.stop, asString(s.color)));
                     offCtx.fillStyle = gradient;
                     if (rx !== ry) offCtx.scale(1, ry / rx);
-                    offCtx.fillRect(0, 0, offRadius * 2, offRadius * 2);
+                    offCtx.fillRect(0, 0, rx * 2, rx * 2);
                     pattern = this.ctx.createPattern(offscreen, 'no-repeat') as CanvasPattern;
                     this.patternCache.set(cacheKey, pattern);
                 }
@@ -342,9 +339,15 @@ export class BackgroundRenderer {
                 this.path(path);
                 this.ctx.save();
                 this.ctx.clip();
-                this.ctx.translate(left + x - Math.max(rx, ry), top + y - Math.max(rx, ry));
+                // Outside the ending shape a radial gradient continues with its last colour
+                // stop, so paint that first and lay the ellipse pattern on top.
+                if (lastStop) {
+                    this.ctx.fillStyle = asString(lastStop.color);
+                    this.ctx.fill();
+                }
+                this.ctx.translate(left + x - rx, top + y - ry);
                 this.ctx.fillStyle = pattern;
-                this.ctx.fillRect(0, 0, Math.max(rx, ry) * 2, Math.max(rx, ry) * 2);
+                this.ctx.fillRect(0, 0, rx * 2, ry * 2);
                 this.ctx.restore();
             }
         }
