@@ -1,3 +1,9 @@
+## [2.4.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.1...v2.4.2) (2026-09-07)
+
+### Bug Fixes
+
+* remove horizontal seam on radial gradients whose vertical radius exceeds the horizontal one ([a21be92](https://github.com/yorickshan/html2canvas-pro/commit/a21be92034f1320b0e6a85409a4a768205658989))
+
 ## [2.4.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.0...v2.4.1) (2026-09-01)
 
 ### Bug Fixes
