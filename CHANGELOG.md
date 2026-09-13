@@ -1,3 +1,9 @@
+## [2.4.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.2...v2.4.3) (2026-09-13)
+
+### Bug Fixes
+
+* preserve quoted font family names during serialization ([0b8036c](https://github.com/yorickshan/html2canvas-pro/commit/0b8036c6c0a2aa72fda713d47dc3f23240a2e953))
+
 ## [2.4.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.1...v2.4.2) (2026-09-07)
 
 ### Bug Fixes
