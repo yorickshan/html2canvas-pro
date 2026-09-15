@@ -471,7 +471,19 @@ export class CanvasRenderer {
                 .forEach((shadow) => {
                     this.ctx.save();
                     const borderBoxArea = calculateBorderBoxPath(paint.curves);
-                    const maskOffset = shadow.inset ? 0 : SHADOW_MASK_OFFSET;
+                    // Move the solid mask just outside this surface. A fixed 10,000px
+                    // displacement can exceed a browser's temporary shadow raster limits.
+                    const maskOffset = shadow.inset
+                        ? 0
+                        : this.surfaceRoot
+                          ? Math.max(
+                                0,
+                                paint.container.bounds.left +
+                                    paint.container.bounds.width +
+                                    Math.max(0, shadow.spread.number) -
+                                    this.options.x
+                            ) + 1
+                          : SHADOW_MASK_OFFSET;
                     const shadowPaintingArea = transformPath(
                         borderBoxArea,
                         -maskOffset + (shadow.inset ? 1 : -1) * shadow.spread.number,

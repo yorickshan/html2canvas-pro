@@ -93,7 +93,38 @@ try {
                             `nested WebKit shadow differs from Chromium DOM: ${chromiumReferenceMAE}`
                         );
                         assert.ok(alpha(capture, 40 * scale, 60 * scale) > 5, 'outside nested shadow was lost');
-                    } else assert.ok(error < 2, `${name}/${id} differs from native DOM: ${error}`);
+                    } else {
+                        if (error >= 2) {
+                            const before = await page.evaluate(
+                                async ({ id, scale }) => {
+                                    const { default: renderer } =
+                                        await import('/build/html2canvas-pro-baseline.esm.js');
+                                    return (
+                                        await renderer(document.getElementById(id), {
+                                            scale,
+                                            backgroundColor: null,
+                                            logging: false
+                                        })
+                                    ).toDataURL();
+                                },
+                                { id, scale }
+                            );
+                            await writeFile(
+                                new URL(`${name}-${scale}-${id}-before.png`, output),
+                                Buffer.from(before.split(',')[1], 'base64')
+                            );
+                            console.log(
+                                JSON.stringify({
+                                    engine: name,
+                                    scale,
+                                    id,
+                                    baselineMAE: mae(dom, decode(before)),
+                                    afterMAE: error
+                                })
+                            );
+                        }
+                        assert.ok(error < 2, `${name}/${id} differs from native DOM: ${error}`);
+                    }
                     if (id === 'combined') assert.ok(Math.abs(alpha(capture, 140 * scale, 110 * scale) - 128) <= 1);
                 }
                 // An offset crop must keep negative shadow/blur contributors beyond its edge.
