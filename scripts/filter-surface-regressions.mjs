@@ -21,6 +21,7 @@ function mae(reference, capture) {
 }
 const server = await startFilterServer();
 const results = [];
+const chromiumReferences = new Map();
 try {
     for (const [name, engine] of Object.entries({ chromium, webkit })) {
         const browser = await engine.launch({ headless: true });
@@ -33,7 +34,10 @@ try {
                 await page.goto(server.url + '/tests/reftests/filter/surface-regressions.html');
                 for (const id of ['combined', 'z-order', 'nested-outset', 'text-box-shadow']) {
                     const node = page.locator('#' + id);
-                    const dom = PNG.sync.read(await node.screenshot());
+                    const nativePng = await node.screenshot();
+                    const dom = PNG.sync.read(nativePng);
+                    await writeFile(new URL(`${name}-${scale}-${id}-native.png`, output), nativePng);
+                    if (name === 'chromium' && id === 'nested-outset') chromiumReferences.set(scale, dom);
                     const image = await page.evaluate(
                         async ({ id, scale }) =>
                             (
@@ -55,8 +59,9 @@ try {
                     );
                     if (name === 'webkit' && id === 'nested-outset') {
                         // WebKit's live DOM loses/clips this nested outside shadow.
-                        // Keep the discrepancy visible; require improvement over the release
-                        // and retained shadow pixels instead of claiming native equality.
+                        // Use the independently captured Chromium DOM as the geometry oracle.
+                        // A release-relative ratio varies with each platform's Canvas filter support;
+                        // retain both WebKit measurements without calling them native equality.
                         const before = await page.evaluate(
                             async ({ id, scale }) => {
                                 const { default: renderer } = await import('/build/html2canvas-pro-baseline.esm.js');
@@ -71,10 +76,23 @@ try {
                             { id, scale }
                         );
                         const baselineError = mae(dom, decode(before));
-                        assert.ok(error < baselineError / 2, 'nested WebKit filter must improve the release');
+                        await writeFile(
+                            new URL(`${name}-${scale}-${id}-before.png`, output),
+                            Buffer.from(before.split(',')[1], 'base64')
+                        );
+                        const chromiumReferenceMAE = mae(chromiumReferences.get(scale), capture);
+                        Object.assign(results.at(-1), {
+                            baselineMAE: baselineError,
+                            chromiumReferenceMAE,
+                            nativeShadowDiscrepancy: true
+                        });
+                        console.log(JSON.stringify(results.at(-1)));
+                        await writeFile(new URL('results.json', output), JSON.stringify(results, null, 2));
+                        assert.ok(
+                            chromiumReferenceMAE < 2,
+                            `nested WebKit shadow differs from Chromium DOM: ${chromiumReferenceMAE}`
+                        );
                         assert.ok(alpha(capture, 40 * scale, 60 * scale) > 5, 'outside nested shadow was lost');
-                        results.at(-1).baselineMAE = baselineError;
-                        results.at(-1).nativeShadowDiscrepancy = true;
                     } else assert.ok(error < 2, `${name}/${id} differs from native DOM: ${error}`);
                     if (id === 'combined') assert.ok(Math.abs(alpha(capture, 140 * scale, 110 * scale) - 128) <= 1);
                 }

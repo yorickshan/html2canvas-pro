@@ -249,9 +249,13 @@ release, but does not match these native references exactly:
 | Playwright WebKit, 1x/2x |     about 12.15/255 | about 4.10/255 |
 | System WKWebView, 1x/2x  |     about 13.91/255 |  2.05–2.24/255 |
 
-The report marks this case `nativeShadowDiscrepancy`. Its gate requires a twofold
-error reduction versus the release and retained outside-shadow pixels. It is
-explicitly separate from the strict native-image threshold for the other cases.
+The report marks this case `nativeShadowDiscrepancy`. The portable WebKit probe
+compares this fixture with the independently captured Chromium DOM using the same
+2/255 threshold, and checks retained outside-shadow pixels. A release-relative
+ratio is unsuitable across platforms with different Canvas filter support. Native
+WebKit and baseline errors remain recorded. The macOS host additionally requires
+a twofold error reduction versus its release capture. These gates are explicitly
+separate from the native WebKit threshold for the other cases.
 Do not describe it as pixel-equivalent to native WebKit. Maintainers should triage
 this limitation before the PR leaves Draft.
 
