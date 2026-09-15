@@ -16,6 +16,38 @@ The base is `60cb8bdd925fd7c56cd423d6e2127da177a97279` (version 2.4.3).
 The fixture uses local HTML and inline SVG only. It requires no application,
 account, external image, web font, or proprietary asset.
 
+## Interactive HTML demo
+
+Open `/tests/manual/filter-lab.html` on the same local server. The page provides:
+
+- Four sources: a CTA with text, overlapping HTML children, inline SVG and a local raster image.
+- Sliders for blur, layer opacity, shadow blur and positive/negative shadow offsets.
+- Eight presets covering every on/off combination of blur, shadow and 50% opacity.
+- Live DOM, current library and SVG prototype views, plus transparent PNG downloads.
+- A full preset matrix at 1x or 2x, runtime capability detection and a JSON report download.
+
+The page tests actual Canvas blur behavior instead of inferring it from a user
+agent string. Safari and WebKit-based webviews are a compatibility focus, but the
+compositing bugs are not exclusive to webviews: Chromium reproduces them too.
+An embedded WKWebView or Android WebView host has not been tested directly.
+The [Canvas filter documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter)
+and [WebKit implementation tracker](https://bugs.webkit.org/show_bug.cgi?id=198416)
+provide context; runtime support still needs to be checked on the target device.
+
+The demo does not upload results or fetch external assets. Captures are explicit;
+changing controls invalidates previous playground output. Capture failures clear
+stale downloads and leave the controls available for retry.
+
+The manual demo was exercised in Chromium 148 and Playwright WebKit 26.4 across
+128 source/preset/scale combinations. Prototype center alpha matched 128 for
+50% opacity and 255 for fully opaque presets. Native screenshot comparisons had
+mean absolute RGB error below 3/255 for each combination; this is a tolerance,
+not pixel equality. Zero opacity, negative offsets, capture failure/retry and
+viewport widths 320, 390, 720 and 1440 pixels were also checked. The WebKit runtime
+reported unavailable Canvas blur, while Chromium reported working Canvas blur.
+
+## Pixel probe
+
 Run `node scripts/filter-compositing-probe.mjs` for an automated Chromium
 comparison at 1x and 2x. Set `CHROME_BIN` if using an installed Chrome instead of
 Puppeteer's downloaded browser. Screenshots and metrics go to the ignored

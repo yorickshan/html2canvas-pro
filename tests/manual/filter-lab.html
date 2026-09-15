@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Filter lab · html2canvas-pro</title>
+        <link rel="stylesheet" href="./filter-lab.css" />
+        <script src="../../dist/html2canvas-pro.js" defer></script>
+        <script src="./filter-lab.js" type="module"></script>
+    </head>
+    <body>
+        <main>
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">html2canvas-pro · Rendering experiments</p>
+                    <h1>Filter compositing lab</h1>
+                </div>
+                <a class="draft" href="https://github.com/yorickshan/html2canvas-pro/pull/239">Draft PR #239 ↗</a>
+            </header>
+            <p class="intro">
+                Explore how shadows, blur and opacity combine. Compare the live element with a library capture and an
+                experimental surface compositor.
+            </p>
+            <aside class="compatibility">
+                <strong>Safari &amp; WebKit webviews are a compatibility focus.</strong>
+                <p>
+                    Some engines do not expose working Canvas 2D filters. The prototype uses SVG filters on a rasterized
+                    layer instead. The overlap and clipping defects also reproduce in Chromium, so this is not
+                    exclusively a webview issue.
+                </p>
+                <p id="capability" class="capability">Checking Canvas filter support…</p>
+                <details>
+                    <summary>Runtime and scope</summary>
+                    <p id="runtime"></p>
+                    <p>
+                        Test the actual embedded webview: a browser name alone does not prove support. This demo uses
+                        one untransformed layer, local assets and fixed padding. Nested effects, general CSS filters and
+                        SVG overflow are not fixed by this prototype.
+                    </p>
+                    <p>
+                        <a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter"
+                            >Canvas filter compatibility</a
+                        >
+                        · <a href="https://bugs.webkit.org/show_bug.cgi?id=198416">WebKit implementation tracker</a> ·
+                        <a href="../reftests/filter/compositing.html?run=false">Minimal reproductions</a>
+                    </p>
+                </details>
+            </aside>
+
+            <section class="card" aria-labelledby="playground-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">01 / Playground</p>
+                        <h2 id="playground-title">Build a combination</h2>
+                    </div>
+                    <button id="capture" type="button" class="primary">Capture comparison</button>
+                </div>
+                <fieldset id="controls">
+                    <legend class="visually-hidden">Source and effects</legend>
+                    <div class="controls-grid">
+                        <label
+                            >Source<select id="source">
+                                <option value="cta">CTA with text</option>
+                                <option value="overlap">Overlapping children</option>
+                                <option value="svg">Inline SVG</option>
+                                <option value="image">Raster image</option>
+                            </select></label
+                        >
+                        <label
+                            >Capture scale<select id="scale">
+                                <option value="1">1×</option>
+                                <option value="2">2×</option>
+                            </select></label
+                        >
+                        <label for="blur"
+                            >Layer blur <output id="blur-value" for="blur">4 px</output
+                            ><input id="blur" type="range" min="0" max="8" step="1" value="4"
+                        /></label>
+                        <label for="opacity"
+                            >Layer opacity <output id="opacity-value" for="opacity">50%</output
+                            ><input id="opacity" type="range" min="0" max="100" step="1" value="50"
+                        /></label>
+                        <label class="check"><input id="shadow" type="checkbox" checked /> Drop shadow</label>
+                        <label for="shadow-blur"
+                            >Shadow blur <output id="shadow-blur-value" for="shadow-blur">8 px</output
+                            ><input id="shadow-blur" type="range" min="0" max="10" step="1" value="8"
+                        /></label>
+                        <label for="shadow-x"
+                            >Shadow X <output id="shadow-x-value" for="shadow-x">12 px</output
+                            ><input id="shadow-x" type="range" min="-20" max="20" step="1" value="12"
+                        /></label>
+                        <label for="shadow-y"
+                            >Shadow Y <output id="shadow-y-value" for="shadow-y">8 px</output
+                            ><input id="shadow-y" type="range" min="-20" max="20" step="1" value="8"
+                        /></label>
+                    </div>
+                    <div id="presets" class="presets" role="group" aria-label="Effect presets"></div>
+                </fieldset>
+                <code id="css-value" class="css-value"></code>
+                <p id="status" role="status" aria-live="polite">Preparing comparison…</p>
+                <div class="comparison" id="comparison">
+                    <figure>
+                        <figcaption><span class="dot live"></span>Live DOM</figcaption>
+                        <div class="frame">
+                            <div class="scene" id="playground"><div class="layer"></div></div>
+                        </div>
+                        <p class="metric">Native CSS in this runtime</p>
+                    </figure>
+                    <figure>
+                        <figcaption><span class="dot original"></span>Current library</figcaption>
+                        <div class="frame" id="original-output"><p class="placeholder">Capture to compare</p></div>
+                        <p class="metric" id="original-metric">—</p>
+                        <a id="original-download" hidden>Download PNG</a>
+                    </figure>
+                    <figure>
+                        <figcaption><span class="dot prototype"></span>SVG surface prototype</figcaption>
+                        <div class="frame" id="prototype-output"><p class="placeholder">Capture to compare</p></div>
+                        <p class="metric" id="prototype-metric">—</p>
+                        <a id="prototype-download" hidden>Download PNG</a>
+                    </figure>
+                </div>
+                <p class="footnote">
+                    The checkerboard is outside the captured element. PNGs retain transparency. The prototype processes
+                    the complete layer, then applies opacity.
+                </p>
+            </section>
+
+            <section class="card" aria-labelledby="matrix-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">02 / Combination matrix</p>
+                        <h2 id="matrix-title">Eight ways to combine effects</h2>
+                    </div>
+                    <button id="capture-matrix" type="button">Capture all eight</button>
+                </div>
+                <p>
+                    Presets use the selected source and scale. Blur = 4 px, shadow = (12, 8) / 8 px, opacity = 50% when
+                    enabled.
+                </p>
+                <p id="matrix-status" role="status" aria-live="polite">
+                    Choose Capture all eight to generate the PNG comparisons.
+                </p>
+                <div id="matrix"></div>
+                <a id="report-download" hidden>Download runtime + settings report (JSON)</a>
+            </section>
+            <footer>
+                Experimental, AI-assisted work in
+                <a href="https://github.com/yorickshan/html2canvas-pro/pull/239">draft PR #239</a>. The production
+                renderer is unchanged. All examples run locally; the demo sends no telemetry.
+            </footer>
+        </main>
+    </body>
+</html>

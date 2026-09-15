@@ -66,6 +66,28 @@ try {
             await page.goto(
                 `http://127.0.0.1:${server.address().port}/tests/reftests/filter/compositing.html?run=false`
             );
+            // No-effect and opacity-only presets must bypass an empty SVG filter.
+            const unfiltered = await page.evaluate(async () => {
+                const { filterRaster } = await import('/tests/manual/filter-compositing.js');
+                const source = document.createElement('canvas');
+                source.width = source.height = 4;
+                source.getContext('2d').fillRect(1, 1, 2, 2);
+                const result = [];
+                for (const opacity of [0, 0.5, 1]) {
+                    const output = await filterRaster(source, { blur: 0, opacity }, 1);
+                    const context = output.getContext('2d');
+                    result.push({
+                        center: context.getImageData(2, 2, 1, 1).data[3],
+                        outside: context.getImageData(0, 0, 1, 1).data[3]
+                    });
+                }
+                return result;
+            });
+            assert.deepEqual(unfiltered, [
+                { center: 0, outside: 0 },
+                { center: 128, outside: 0 },
+                { center: 255, outside: 0 }
+            ]);
             for (const id of ['shadow', 'blur', 'combined']) {
                 const stage = await page.$(`#${id}`);
                 const dom = await stage.screenshot();

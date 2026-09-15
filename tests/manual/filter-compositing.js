@@ -16,6 +16,13 @@ function canvasLike(source) {
 // SVG is used even in Chromium here, so both browsers exercise the same fallback.
 // The source is already rasterized: no foreignObject or external resources are used.
 export async function filterRaster(source, { blur, shadow, opacity }, scale) {
+    if (!blur && !shadow) {
+        const output = canvasLike(source);
+        const context = output.getContext('2d');
+        context.globalAlpha = opacity;
+        context.drawImage(source, 0, 0);
+        return output;
+    }
     const namespace = 'http://www.w3.org/2000/svg';
     const element = (tag, attributes = {}) => {
         const node = document.createElementNS(namespace, tag);
@@ -83,17 +90,22 @@ export async function filterRaster(source, { blur, shadow, opacity }, scale) {
 export async function captureCase(id, scale = 1) {
     if (!cases[id]) throw new Error(`Unknown experiment: ${id}`);
     const stage = document.getElementById(id);
+    return captureLayer(stage, cases[id], scale);
+}
+
+// Shared only by the two manual demos. The layer must be untransformed and padded.
+export async function captureLayer(stage, effects, scale = 1) {
     const options = { backgroundColor: null, scale, logging: false };
     const original = await window.html2canvas(stage, options);
     const source = await window.html2canvas(stage, {
         ...options,
         onclone(document) {
-            const layer = document.querySelector(`#${id} .layer`);
+            const layer = document.getElementById(stage.id).querySelector('.layer');
             layer.style.filter = 'none';
             layer.style.opacity = '1';
         }
     });
-    const prototype = await filterRaster(source, cases[id], scale);
+    const prototype = await filterRaster(source, effects, scale);
     return { original, source, prototype };
 }
 
