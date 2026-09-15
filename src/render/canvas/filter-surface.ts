@@ -1,4 +1,12 @@
 import { FilterEffect } from '../effects';
+import { throwIfAborted } from '../../core/abort-helper';
+
+// Only errors in the optional surface path are eligible for legacy fallback.
+export class FilterSurfaceError extends Error {}
+
+export const releaseSurface = (canvas: HTMLCanvasElement): void => {
+    canvas.width = canvas.height = 0;
+};
 
 export interface SimpleFilter {
     blur: number;
@@ -42,20 +50,50 @@ function canvasLike(source: HTMLCanvasElement): HTMLCanvasElement {
     return canvas;
 }
 
+const decodeSurface = (image: HTMLImageElement, signal?: AbortSignal): Promise<void> =>
+    new Promise((resolve, reject) => {
+        const finish = (error?: Error) => {
+            clearTimeout(timer);
+            signal?.removeEventListener('abort', abort);
+            if (error) reject(error);
+            else resolve();
+        };
+        const abort = () => finish(new DOMException('The operation was aborted.', 'AbortError'));
+        const timer = setTimeout(() => finish(new FilterSurfaceError('Filter surface image decode timed out')), 10000);
+        signal?.addEventListener('abort', abort, { once: true });
+        if (signal?.aborted) abort();
+        else
+            image.decode().then(
+                () => finish(),
+                () => finish(new FilterSurfaceError('Filter surface image decode failed'))
+            );
+    });
+
 // Apply effects to the complete raster, then opacity. SVG also works in engines
 // without Canvas 2D filters; no foreignObject or external image is used.
 export async function renderFilterSurface(
     source: HTMLCanvasElement,
     { blur, shadow }: SimpleFilter,
     opacity: number,
-    scale: number
+    scale: number,
+    signal?: AbortSignal
 ): Promise<HTMLCanvasElement> {
+    throwIfAborted(signal);
     if (!blur && !shadow) {
         const output = canvasLike(source);
-        const context = output.getContext('2d')!;
+        const context = output.getContext('2d');
+        if (!context) {
+            releaseSurface(output);
+            throw new FilterSurfaceError('Filter surface canvas is unavailable');
+        }
         context.globalAlpha = opacity;
-        context.drawImage(source, 0, 0);
-        return output;
+        try {
+            context.drawImage(source, 0, 0);
+            return output;
+        } catch {
+            releaseSurface(output);
+            throw new FilterSurfaceError('Filter surface image cannot be drawn');
+        }
     }
     const namespace = 'http://www.w3.org/2000/svg';
     const element = (tag: string, attributes: Record<string, string | number> = {}) => {
@@ -101,22 +139,42 @@ export async function renderFilterSurface(
     }
     defs.appendChild(filter);
     svg.appendChild(defs);
+    let sourceUrl: string;
+    try {
+        sourceUrl = source.toDataURL('image/png');
+        if (sourceUrl === 'data:,') throw new Error('Canvas size is unsupported');
+    } catch {
+        // allowTaint may intentionally produce an unreadable canvas. Keep that
+        // API behavior by letting the caller render the subtree on the old path.
+        throw new FilterSurfaceError('Filter surface pixels cannot be serialized');
+    }
     svg.appendChild(
         element('image', {
             width: source.width,
             height: source.height,
-            href: source.toDataURL('image/png'),
+            href: sourceUrl,
             filter: 'url(#composited-filter)'
         })
     );
     const image = new Image();
-    image.src = `data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
-    await image.decode();
-    const filtered = canvasLike(source);
-    filtered.getContext('2d')!.drawImage(image, 0, 0);
-    const output = canvasLike(source);
-    const context = output.getContext('2d')!;
-    context.globalAlpha = opacity;
-    context.drawImage(filtered, 0, 0);
-    return output;
+    let output: HTMLCanvasElement | undefined;
+    try {
+        image.src = `data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+        await decodeSurface(image, signal);
+        throwIfAborted(signal);
+        output = canvasLike(source);
+        const context = output.getContext('2d');
+        if (!context) throw new FilterSurfaceError('Filter surface canvas is unavailable');
+        context.globalAlpha = opacity;
+        context.drawImage(image, 0, 0);
+        return output;
+    } catch (error) {
+        if (output) releaseSurface(output);
+        if (signal?.aborted) throwIfAborted(signal);
+        throw error instanceof FilterSurfaceError
+            ? error
+            : new FilterSurfaceError('Filter surface image cannot be drawn');
+    } finally {
+        image.removeAttribute('src');
+    }
 }

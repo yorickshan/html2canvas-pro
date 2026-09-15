@@ -172,26 +172,17 @@ export const renderElement = async (
             canvas = await renderer.render(root);
             perfMonitor.end('render');
         }
-
-        perfMonitor.start('cleanup');
-        if (opts.removeContainer ?? true) {
-            if (!DocumentCloner.destroy(container)) {
-                context.logger.error(`Cannot detach cloned iframe as it is not in the DOM anymore`);
-            }
-        }
-        perfMonitor.end('cleanup');
-
-        perfMonitor.end('total');
-        context.logger.debug(`Finished rendering`);
-
-        if (performanceMonitoring) {
-            perfMonitor.logSummary();
-        }
-
-        return canvas;
     } finally {
-        if (root) {
-            root.restoreTree();
+        perfMonitor.start('cleanup');
+        try {
+            if (root) root.restoreTree();
+        } finally {
+            if (opts.removeContainer ?? true) DocumentCloner.destroy(container);
+            perfMonitor.end('cleanup');
         }
     }
+    perfMonitor.end('total');
+    context.logger.debug(`Finished rendering`);
+    if (performanceMonitoring) perfMonitor.logSummary();
+    return canvas;
 };

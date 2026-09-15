@@ -122,11 +122,10 @@ composites the result in z-order. Source effects stop at the surface boundary, s
 ancestor and nested opacity do not get applied twice. Capture bounds gain padding
 for blur and signed shadow offsets.
 
-This first integration only handles untransformed subtrees without blend modes or
+This first integration only handles untransformed subtrees without blend modes, list markers or
 clip-path. Unsupported filter chains retain the existing renderer path. Nested
 opacity and filters, ancestor clipping and clipping before blur have focused
-checks. SVG paint bounds, general filter chains, transforms, CSP/taint behavior,
-large surfaces and broader platform coverage still need work.
+checks. SVG paint bounds, general filter chains and transformed/blended surfaces remain outside this scope.
 
 Filter parsing also preserves units and functional colors: `blur(5px)` no longer
 becomes `blur(5pxpx)`, hue-rotate no longer duplicates its unit, and nested rgba/rgb
@@ -177,24 +176,98 @@ have alpha 0 in the baseline capture and 73–74 in the prototype. These are foc
 fixture results, not a claim of general rendering equivalence or a full Safari UI
 test. WebKit retains a measurable shadow difference that needs investigation.
 
-## Before marking ready for review
+## Surface bounds, errors and cleanup
 
-Already verified: the initial surface integration, simple filter parsing,
-nested opacity and clipping fixtures, 1x/2x pixel comparisons, the public demo,
-and delayed/failed demo stylesheet loading. These are completed checks, not
-remaining implementation tasks.
+The optional surface renderer falls back for the affected subtree when tainted
+pixels cannot be serialized, CSP blocks an SVG data image, or SVG decoding fails.
+This preserves `allowTaint`: a permitted cross-origin image still returns a canvas
+whose pixel reads raise `SecurityError`. Abort remains an `AbortError`; it interrupts
+a stalled decoder promptly and is never converted to fallback. Decode waits have
+a 10-second ceiling.
 
-- [ ] Preserve existing API behavior for tainted canvases, restrictive CSP and SVG decode failures; verify cancellation and cleanup on errors.
-- [ ] Bound intermediate-surface memory and measure large/nested documents. The current surfaces cover the capture viewport, not just the affected layer.
-- [ ] Add focused z-order, outset and unsupported-subtree regressions. Verify that transforms, blending, clip-path and unsupported filter chains retain the existing path.
-- [ ] Run the committed pixel probe in CI and retain repeatable WebKit pixel coverage. Current browser CI checks rendering completion.
-- [ ] Verify combined effects in the intended embedded WKWebView host. Desktop Safari 26.5.2 was checked visually; this does not establish embedded-host pixel correctness.
+Temporary canvas backing stores are cleared on success, failure and abort. Failed
+internally allocated output canvases are cleared; caller-supplied canvases remain
+caller-owned. Clone cleanup runs in `finally`, preserving `removeContainer: false`.
 
-Keep the initial scope to untransformed layers with blur followed by one shadow
-and opacity. General filter chains, multiple shadows, transformed/blended
-surface rendering and SVG overflow are potential follow-ups, not requirements
-to implement every CSS effect in this PR. The library-wide stylesheet-loading
-race also remains a separate issue; the demo currently guards it in `onclone`.
+Surfaces use conservative subtree bounds: overflow descendants, text ink padding,
+box/text shadows and nested filter outsets. Capture crops include nearby pixels
+that contribute through signed offsets or blur. Each capture shares a reservation
+of 16,777,216 intermediate raster pixels (64 MiB of RGBA), counting four rasters per
+active surface conservatively, with sides capped at 8,192 pixels. This bounds
+intermediate backing stores, not the caller's output or browser encoder overhead.
+Over-budget subtrees use the previous path before allocation, without downscaling.
+Box-shadow offsets, blur and the displaced mask also scale correctly inside a 2x
+source surface; previously those source shadows could disappear.
+
+`node scripts/filter-surface-regressions.mjs` checks Chromium/WebKit pixels at
+1x/2x, z-order, nested signed outsets, overflowing text and box shadows, offset
+crops, transformed/rotated/zoomed/blended/clipped ancestors and descendants,
+unsupported filter chains, real taint, CSP, decoder failure, abort and cleanup.
+Unsupported subtrees are compared with the published release. CSP fallback is
+compared with the current legacy path, preserving the separate parser fixes.
+
+`node scripts/filter-surface-benchmark.mjs` records allocations and timings.
+Local Chromium/WebKit measurements on macOS 26.5.2:
+
+| Fixture                              | Peak intermediate canvas backing stores | Retained after capture |
+| ------------------------------------ | --------------------------------------: | ---------------------: |
+| 50 small layers, 2400 × 1600 capture |                           269,568 bytes |                      0 |
+| 40 nested filters                    |                        17,352,208 bytes |                      0 |
+| Over-budget 2600 × 2600 capture      |                     0 (legacy fallback) |                      0 |
+
+The sparse case uses 216 × 156 surfaces instead of a capture-sized canvas per
+layer. Timings are reported, not used as flaky CI thresholds. Canvas instrumentation
+does not measure the internal SVG decoder; the shared reservation includes an
+allowance for those image rasters.
+
+## Real embedded WKWebView
+
+Run `node scripts/wkwebview-probe.mjs` on macOS with Xcode command line tools.
+It compiles a minimal AppKit host embedding a genuine `WKWebView`, takes native
+snapshots and captures the same fixtures with both library versions. It does not
+substitute Safari automation or Playwright WebKit for the native host. Runtime,
+scale, screenshots and measurements are retained in `tmp/wkwebview-probe/`.
+
+In macOS WKWebView 26.5.2, without Canvas 2D filters, the combined blur/shadow/opacity,
+z-order and source text/box-shadow cases stayed below 0.50/255 mean RGB error at
+1x/2x. The combined overlap had alpha 128. This proves the minimal macOS host,
+not an iOS device or another application's WKWebView configuration.
+
+| Native WKWebView                                                     | Published 2.4.3                                                      | Draft PR                                                           |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| ![Native](./assets/filter-compositing/wkwebview-combined-native.png) | ![Before](./assets/filter-compositing/wkwebview-combined-before.png) | ![After](./assets/filter-compositing/wkwebview-combined-after.png) |
+
+### Native WebKit discrepancy
+
+The live WebKit reference loses or clips an outside shadow nested under another
+filtered element. The discrepancy differs between Playwright WebKit 26.4 and
+system WKWebView 26.5.2. The draft retains the specified shadow and improves the
+release, but does not match these native references exactly:
+
+| Nested outside shadow    | Published 2.4.3 MAE |      Draft MAE |
+| ------------------------ | ------------------: | -------------: |
+| Playwright WebKit, 1x/2x |     about 12.15/255 | about 4.10/255 |
+| System WKWebView, 1x/2x  |     about 13.91/255 |  2.05–2.24/255 |
+
+The report marks this case `nativeShadowDiscrepancy`. Its gate requires a twofold
+error reduction versus the release and retained outside-shadow pixels. It is
+explicitly separate from the strict native-image threshold for the other cases.
+Do not describe it as pixel-equivalent to native WebKit. Maintainers should triage
+this limitation before the PR leaves Draft.
+
+## Readiness checklist
+
+- [x] Preserve taint/CSP behavior; verify decoder errors, cancellation and resource cleanup.
+- [x] Crop and budget surfaces; measure large, sparse and nested captures.
+- [x] Add z-order, signed-outset, text/shadow and unsupported-subtree regressions; record the native WebKit discrepancy explicitly.
+- [x] Add CI jobs for the committed pixel probe, Chromium/WebKit regressions and allocation benchmarks, with retained artifacts.
+- [x] Add and run a real macOS WKWebView host at 1x/2x, with a separate CI job.
+
+Npm publication now requires both pixel jobs as well as the existing browser suite.
+Check the actual PR revision's CI status separately. General filter chains,
+multiple shadows, transformed/blended surfaces, SVG overflow and library-wide
+stylesheet readiness remain potential follow-ups. The demo continues to guard
+cloned stylesheet readiness in `onclone`.
 
 The related shadow report #223 was marked fixed in 2.3.2. This draft supplies
 separate fixtures against 2.4.3; it does not assume that report has the same cause.

@@ -6,6 +6,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
+import { chromium } from 'playwright';
 import { PNG } from 'pngjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -73,7 +74,10 @@ await mkdir(output, { recursive: true });
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 let browser;
 try {
-    browser = await puppeteer.launch({ headless: true, executablePath: process.env.CHROME_BIN || undefined });
+    browser = await puppeteer.launch({
+        headless: true,
+        executablePath: process.env.CHROME_BIN || chromium.executablePath()
+    });
     const results = [];
     for (const scale of [1, 2]) {
         const page = await browser.newPage();
