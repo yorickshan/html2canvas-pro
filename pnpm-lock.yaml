@@ -99,6 +99,9 @@ importers:
       glob:
         specifier: ^13.0.0
         version: 13.0.6
+      html2canvas-pro-baseline:
+        specifier: npm:html2canvas-pro@2.4.3
+        version: html2canvas-pro@2.4.3
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -2836,6 +2839,10 @@ packages:
 
   html-void-elements@3.0.0:
     resolution: {integrity: sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg==}
+
+  html2canvas-pro@2.4.3:
+    resolution: {integrity: sha512-ov+EmxDc2abD2uKYpZdFWHkQkl3pu2fH0N98khT1Ojfqr3DJOuGyFIFTSfSyaWxddK9jSJu8sM7aUATxM26mDg==}
+    engines: {node: '>=16.0.0'}
 
   http-errors@1.8.1:
     resolution: {integrity: sha512-Kpk9Sm7NmI+RHhnj6OIWDI1d6fIoFAtFt9RLaTMRlg/8w49juAStsrBgp0Dp4OdxdVbRIeKhtCUvoi/RuAhO4g==}
@@ -7266,6 +7273,11 @@ snapshots:
   html-escaper@2.0.2: {}
 
   html-void-elements@3.0.0: {}
+
+  html2canvas-pro@2.4.3:
+    dependencies:
+      css-line-break: 2.1.0
+      text-segmentation: 1.0.3
 
   http-errors@1.8.1:
     dependencies:

@@ -1,4 +1,10 @@
-import { captureLayer } from './filter-compositing.js';
+import baseline from '../../build/html2canvas-pro-baseline.esm.js';
+import { captureStyledStage } from './filter-compositing.js';
+
+const captureBeforeAfter = async (stage, scale) => ({
+    before: await captureStyledStage(stage, { renderer: baseline, scale }),
+    after: await captureStyledStage(stage, { scale })
+});
 
 const $ = (id) => document.getElementById(id);
 const presets = [
@@ -63,8 +69,8 @@ function capability() {
 
 const runtime = capability();
 $('capability').textContent = runtime.canvasBlurWorks
-    ? 'This runtime: Canvas 2D blur works. The prototype still exercises the SVG path.'
-    : 'This runtime: Canvas 2D blur is unavailable. The prototype uses the SVG path.';
+    ? 'This runtime: Canvas 2D blur works. Compare the published release with the draft fix below.'
+    : 'This runtime: Canvas 2D blur is unavailable. The draft fix uses SVG filters on a rasterized layer.';
 $('runtime').textContent = `${runtime.userAgent} · device pixel ratio ${runtime.devicePixelRatio}`;
 
 let busy = false;
@@ -120,6 +126,7 @@ function updateReport() {
     const report = {
         draft: true,
         productionRendererChanged: true,
+        renderers: { before: 'html2canvas-pro 2.4.3 (published npm release)', after: 'Draft PR #239' },
         capturedAt: new Date().toISOString(),
         runtime,
         comparison: comparisonReport,
@@ -142,14 +149,14 @@ function buildMatrix() {
         row.dataset.preset = String(index);
         row.innerHTML = `<h3></h3><code class="css-value"></code><div class="comparison">
             <figure><figcaption>Live DOM</figcaption><div class="frame"><div class="scene" id="matrix-${index}"><div class="layer"></div></div></div></figure>
-            <figure><figcaption>Draft PR renderer</figcaption><div class="frame original" data-html2canvas-ignore></div><p class="metric"></p></figure>
-            <figure><figcaption>SVG surface prototype</figcaption><div class="frame prototype" data-html2canvas-ignore></div><p class="metric"></p></figure>
+            <figure><figcaption>Before · 2.4.3</figcaption><div class="frame before" data-html2canvas-ignore></div><p class="metric"></p></figure>
+            <figure><figcaption>After · PR #239</figcaption><div class="frame after" data-html2canvas-ignore></div><p class="metric"></p></figure>
         </div>`;
         row.querySelector('h3').textContent = preset.name;
         row.querySelector('code').textContent = describe(presetEffects(preset));
         setLayer(row.querySelector('.scene'), source, presetEffects(preset));
-        clearOutput(row.querySelector('.original'));
-        clearOutput(row.querySelector('.prototype'));
+        clearOutput(row.querySelector('.before'));
+        clearOutput(row.querySelector('.after'));
         $('matrix').appendChild(row);
     });
     matrixReport = [];
@@ -164,7 +171,7 @@ function refresh({ rebuildMatrix = false } = {}) {
     for (const id of ['shadow-blur', 'shadow-x', 'shadow-y']) $(id).disabled = !$('shadow').checked;
     setLayer($('playground'), source, effects);
     $('css-value').textContent = describe(effects);
-    for (const output of ['original', 'prototype']) {
+    for (const output of ['before', 'after']) {
         clearOutput($(output + '-output'));
         $(output + '-metric').textContent = '—';
         $(output + '-download').hidden = true;
@@ -199,13 +206,13 @@ const metricLabel = (metric) =>
 async function captureComparison() {
     if (busy) return;
     setBusy(true);
-    $('status').textContent = 'Capturing the element and applying effects to the complete layer…';
+    $('status').textContent = 'Capturing the same element with published 2.4.3 and draft PR #239…';
     const selected = settings();
     const started = performance.now();
     try {
-        const result = await captureLayer($('playground'), selected.effects, selected.scale);
+        const result = await captureBeforeAfter($('playground'), selected.scale);
         const metrics = {};
-        for (const name of ['original', 'prototype']) {
+        for (const name of ['before', 'after']) {
             const canvas = result[name];
             canvas.setAttribute('aria-label', `${selected.source}: ${name} capture`);
             $(name + '-output').replaceChildren(canvas);
@@ -216,10 +223,11 @@ async function captureComparison() {
             $(name + '-download').hidden = false;
         }
         comparisonReport = { ...selected, metrics, elapsedMs: Math.round(performance.now() - started) };
-        $('status').textContent = `Comparison ready · ${comparisonReport.elapsedMs} ms · SVG prototype path`;
+        $('status').textContent =
+            `Comparison ready · ${comparisonReport.elapsedMs} ms · published 2.4.3 → draft PR #239`;
         $('status').dataset.error = 'false';
     } catch (error) {
-        for (const name of ['original', 'prototype']) {
+        for (const name of ['before', 'after']) {
             clearOutput($(name + '-output'));
             $(name + '-download').hidden = true;
             $(name + '-metric').textContent = '—';
@@ -242,10 +250,10 @@ async function captureMatrix() {
         for (const [index, preset] of presets.entries()) {
             $('matrix-status').textContent = `Capturing ${index + 1} / ${presets.length}: ${preset.name}…`;
             const effects = presetEffects(preset);
-            const result = await captureLayer($(`matrix-${index}`), effects, scale);
+            const result = await captureBeforeAfter($(`matrix-${index}`), scale);
             const row = document.querySelector(`[data-preset="${index}"]`);
             const metrics = {};
-            for (const name of ['original', 'prototype']) {
+            for (const name of ['before', 'after']) {
                 const canvas = result[name];
                 canvas.setAttribute('aria-label', `${preset.name}: ${name} capture`);
                 row.querySelector('.' + name).replaceChildren(canvas);
@@ -254,7 +262,8 @@ async function captureMatrix() {
             }
             matrixReport.push({ preset: preset.name, source, scale, effects, metrics });
         }
-        $('matrix-status').textContent = `All eight combinations captured · ${source} · ${scale}× · SVG prototype path`;
+        $('matrix-status').textContent =
+            `All eight combinations captured · ${source} · ${scale}× · published 2.4.3 → draft PR #239`;
     } catch (error) {
         $('matrix-status').textContent =
             `Stopped after ${matrixReport.length} completed rows: ${error.message}. Retry with Capture all eight.`;
@@ -286,7 +295,7 @@ $('controls').addEventListener('input', (event) =>
 );
 $('capture').addEventListener('click', captureComparison);
 $('capture-matrix').addEventListener('click', captureMatrix);
-for (const name of ['original', 'prototype']) $(name + '-output').setAttribute('data-html2canvas-ignore', '');
+for (const name of ['before', 'after']) $(name + '-output').setAttribute('data-html2canvas-ignore', '');
 refresh({ rebuildMatrix: true });
 setBusy(true);
 $('status').textContent = 'Waiting for the page and renderer to finish loading…';

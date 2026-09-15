@@ -38,7 +38,8 @@ const allowedFiles = new Set([
     '/tests/manual/filter-lab.html',
     '/tests/manual/filter-lab.css',
     '/tests/manual/filter-lab.js',
-    '/dist/html2canvas-pro.js'
+    '/dist/html2canvas-pro.js',
+    '/build/html2canvas-pro-baseline.esm.js'
 ]);
 let failStylesheet = false;
 const server = http.createServer(async (request, response) => {
@@ -195,7 +196,7 @@ try {
             await page.waitForFunction(() =>
                 document.getElementById('status').textContent.startsWith('Comparison ready')
             );
-            const firstCapture = await page.$eval('#original-output canvas', (canvas) => [canvas.width, canvas.height]);
+            const firstCapture = await page.$eval('#after-output canvas', (canvas) => [canvas.width, canvas.height]);
             assert.deepEqual(firstCapture, [280, 220], 'automatic capture must wait for cloned styles');
             await page.select('#scale', String(scale));
             await page.$eval('#scale', (select) => select.dispatchEvent(new Event('input', { bubbles: true })));
@@ -214,12 +215,17 @@ try {
             matrix.forEach((capture, index) => {
                 assert.deepEqual([capture.width, capture.height], [280 * scale, 220 * scale]);
                 const expected = [3, 5, 6, 7].includes(Math.floor(index / 2)) ? 128 : 255;
-                assert.ok(Math.abs(capture.alpha - expected) <= 1, `matrix ${index}: wrong center alpha`);
+                if (index % 2 === 1) {
+                    assert.ok(Math.abs(capture.alpha - expected) <= 1, `matrix ${index}: wrong after center alpha`);
+                }
+                if (index < 2) assert.equal(capture.alpha, 255, 'no-effects control must remain opaque');
             });
+            assert.ok(matrix[14].alpha > 200, 'published baseline must reproduce the combined-opacity defect');
+            assert.ok(Math.abs(matrix[15].alpha - 128) <= 1, 'draft must apply opacity to the complete layer');
             failStylesheet = true;
             await page.click('#capture');
             await page.waitForFunction(() => document.getElementById('status').dataset.error === 'true');
-            assert.equal(await page.$eval('#original-download', (link) => link.hidden), true);
+            assert.equal(await page.$eval('#after-download', (link) => link.hidden), true);
             assert.equal(await page.$eval('#capture', (button) => button.disabled), false);
             failStylesheet = false;
             await page.click('#capture');

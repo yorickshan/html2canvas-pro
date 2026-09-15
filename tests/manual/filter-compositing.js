@@ -121,32 +121,35 @@ async function waitForStylesheets(document) {
     if (document.fonts) await document.fonts.ready;
 }
 
-// Shared only by the two manual demos. The layer must be untransformed and padded.
-export async function captureLayer(stage, effects, scale = 1) {
+// Both baseline and draft captures use the same clone preparation and geometry.
+export async function captureStyledStage(
+    stage,
+    { renderer = window.html2canvas, scale = 1, withoutEffects = false } = {}
+) {
     const bounds = stage.getBoundingClientRect();
-    const capture = (withoutEffects) =>
-        window.html2canvas(stage, {
-            backgroundColor: null,
-            scale,
-            logging: false,
-            async onclone(document, reference) {
-                await waitForStylesheets(document);
-                const clonedBounds = reference.getBoundingClientRect();
-                if (
-                    Math.abs(clonedBounds.width - bounds.width) > 1 ||
-                    Math.abs(clonedBounds.height - bounds.height) > 1
-                ) {
-                    throw new Error('The cloned fixture changed size; its styles are not ready');
-                }
-                if (withoutEffects) {
-                    const layer = reference.querySelector('.layer');
-                    layer.style.filter = 'none';
-                    layer.style.opacity = '1';
-                }
+    return renderer(stage, {
+        backgroundColor: null,
+        scale,
+        logging: false,
+        async onclone(document, reference) {
+            await waitForStylesheets(document);
+            const clonedBounds = reference.getBoundingClientRect();
+            if (Math.abs(clonedBounds.width - bounds.width) > 1 || Math.abs(clonedBounds.height - bounds.height) > 1) {
+                throw new Error('The cloned fixture changed size; its styles are not ready');
             }
-        });
-    const original = await capture(false);
-    const source = await capture(true);
+            if (withoutEffects) {
+                const layer = reference.querySelector('.layer');
+                layer.style.filter = 'none';
+                layer.style.opacity = '1';
+            }
+        }
+    });
+}
+
+// Retain the separate prototype for the minimal reproduction and pixel probe.
+export async function captureLayer(stage, effects, scale = 1) {
+    const original = await captureStyledStage(stage, { scale });
+    const source = await captureStyledStage(stage, { scale, withoutEffects: true });
     const prototype = await filterRaster(source, effects, scale);
     return { original, source, prototype };
 }

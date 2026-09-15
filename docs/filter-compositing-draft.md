@@ -23,7 +23,7 @@ Open `/tests/manual/filter-lab.html` on the same local server. The page provides
 - Four sources: a CTA with text, overlapping HTML children, inline SVG and a local raster image.
 - Sliders for blur, layer opacity, shadow blur and positive/negative shadow offsets.
 - Eight presets covering every on/off combination of blur, shadow and 50% opacity.
-- Live DOM, draft PR renderer and SVG prototype views, plus transparent PNG downloads.
+- Live DOM, published 2.4.3 (before) and draft PR #239 (after), plus transparent PNG downloads.
 - A full preset matrix at 1x or 2x, runtime capability detection and a JSON report download.
 
 The page tests actual Canvas blur behavior instead of inferring it from a user
@@ -34,9 +34,18 @@ The [Canvas filter documentation](https://developer.mozilla.org/en-US/docs/Web/A
 and [WebKit implementation tracker](https://bugs.webkit.org/show_bug.cgi?id=198416)
 provide context; runtime support still needs to be checked on the target device.
 
-The draft renderer already includes the surface-compositing implementation, so
-it should match the separate prototype for supported cases. The demo compares
-both with the live DOM; it does not include the unmodified 2.4.3 renderer.
+The before column imports the unmodified published `html2canvas-pro@2.4.3` ESM
+bundle through an exact dev-dependency alias, with its integrity pinned in the
+lockfile. `pnpm build` copies it to ignored `build/` for the demo; it is not included
+in the library's published `dist/` package. The after column uses this branch's
+normal renderer. Both receive the same DOM, dimensions, scale and stylesheet
+readiness hook. No effects are removed from either capture. Examples without
+effects provide a control and should match. The separate SVG prototype remains
+available in the minimal reproduction and pixel probe.
+
+The default overlapping-children example shows the combined defect immediately.
+The matrix keeps all eight presets for each source, so reviewers can inspect
+individual effects as well as combinations.
 
 The demo does not upload results or fetch external assets. The first comparison
 runs automatically after the page and renderer load. Subsequent captures are
@@ -52,12 +61,33 @@ misleading successful PNG. This is a demo safeguard; general stylesheet readines
 in the document cloner remains separate from the filter renderer integration.
 
 The manual demo was exercised in Chromium 148 and Playwright WebKit 26.4 across
-128 source/preset/scale combinations. Prototype center alpha matched 128 for
+128 source/preset/scale combinations. After-renderer center alpha matched 128 for
 50% opacity and 255 for fully opaque presets. Native screenshot comparisons had
 mean absolute RGB error below 3/255 for each combination; this is a tolerance,
 not pixel equality. Zero opacity, negative offsets, capture failure/retry and
 viewport widths 320, 390, 720 and 1440 pixels were also checked. The WebKit runtime
 reported unavailable Canvas blur, while Chromium reported working Canvas blur.
+
+## Published-release before/after evidence
+
+The actual published 2.4.3 bundle was compared with the draft in Chromium 148
+and Playwright WebKit 26.4: 4 sources × 8 presets × 2 scales × 2 engines.
+All 128 after captures passed native DOM screenshot comparisons (mean RGB error
+below 0.39/255 in Chromium and 1.19/255 in WebKit); no-effects baseline controls also passed. The combined overlap
+center changed from alpha 239 to 128 at 1x in both engines, as expected for 50%
+opacity. The regression probe explicitly checks this baseline defect and its fix.
+
+These are real macOS Safari 26.5.2 screenshots of the local demo, captured through the
+native browser UI at 1x capture scale. In this runtime Canvas 2D blur is unavailable.
+Left: native DOM; center: unmodified published 2.4.3; right: draft PR #239.
+
+![Safari: overlapping children with blur, shadow and 50% opacity](./assets/filter-compositing/safari-overlap-combined.png)
+
+![Safari: inline SVG with a CSS drop shadow](./assets/filter-compositing/safari-svg-shadow.png)
+
+Safari visually reproduced the missing blur and darkened overlap before the fix.
+The after column retained blur and the expected 0.50 center alpha. These desktop
+Safari checks do not establish correctness in an embedded WKWebView host.
 
 ## Pixel probe
 
@@ -158,7 +188,7 @@ remaining implementation tasks.
 - [ ] Bound intermediate-surface memory and measure large/nested documents. The current surfaces cover the capture viewport, not just the affected layer.
 - [ ] Add focused z-order, outset and unsupported-subtree regressions. Verify that transforms, blending, clip-path and unsupported filter chains retain the existing path.
 - [ ] Run the committed pixel probe in CI and retain repeatable WebKit pixel coverage. Current browser CI checks rendering completion.
-- [ ] Verify the combined effects in the intended Safari/WKWebView host. Playwright WebKit and Safari rendering CI do not establish embedded-host pixel correctness.
+- [ ] Verify combined effects in the intended embedded WKWebView host. Desktop Safari 26.5.2 was checked visually; this does not establish embedded-host pixel correctness.
 
 Keep the initial scope to untransformed layers with blur followed by one shadow
 and opacity. General filter chains, multiple shadows, transformed/blended

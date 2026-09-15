@@ -255,10 +255,10 @@ figcaption {
 .dot.live {
     background: #7a8794;
 }
-.dot.original {
+.dot.before {
     background: #c5892b;
 }
-.dot.prototype {
+.dot.after {
     background: var(--accent);
 }
 .frame {

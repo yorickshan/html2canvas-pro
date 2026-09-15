@@ -18,8 +18,8 @@
                 <a class="draft" href="https://github.com/yorickshan/html2canvas-pro/pull/239">Draft PR #239 ↗</a>
             </header>
             <p class="intro">
-                Explore how shadows, blur and opacity combine. Compare the live element with a library capture and an
-                experimental surface compositor.
+                Explore how shadows, blur and opacity combine. Compare the live element with the published 2.4.3 release
+                and the proposed fix in PR #239.
             </p>
             <aside class="compatibility">
                 <strong>Safari &amp; WebKit webviews are a compatibility focus.</strong>
@@ -61,7 +61,7 @@
                         <label
                             >Source<select id="source">
                                 <option value="cta">CTA with text</option>
-                                <option value="overlap">Overlapping children</option>
+                                <option value="overlap" selected>Overlapping children</option>
                                 <option value="svg">Inline SVG</option>
                                 <option value="image">Raster image</option>
                             </select></label
@@ -107,21 +107,21 @@
                         <p class="metric">Native CSS in this runtime</p>
                     </figure>
                     <figure>
-                        <figcaption><span class="dot original"></span>Draft PR renderer</figcaption>
-                        <div class="frame" id="original-output"><p class="placeholder">Capture to compare</p></div>
-                        <p class="metric" id="original-metric">—</p>
-                        <a id="original-download" hidden>Download PNG</a>
+                        <figcaption><span class="dot before"></span>Before · 2.4.3</figcaption>
+                        <div class="frame" id="before-output"><p class="placeholder">Capture to compare</p></div>
+                        <p class="metric" id="before-metric">—</p>
+                        <a id="before-download" hidden>Download PNG</a>
                     </figure>
                     <figure>
-                        <figcaption><span class="dot prototype"></span>SVG surface prototype</figcaption>
-                        <div class="frame" id="prototype-output"><p class="placeholder">Capture to compare</p></div>
-                        <p class="metric" id="prototype-metric">—</p>
-                        <a id="prototype-download" hidden>Download PNG</a>
+                        <figcaption><span class="dot after"></span>After · PR #239</figcaption>
+                        <div class="frame" id="after-output"><p class="placeholder">Capture to compare</p></div>
+                        <p class="metric" id="after-metric">—</p>
+                        <a id="after-download" hidden>Download PNG</a>
                     </figure>
                 </div>
                 <p class="footnote">
-                    PNGs retain transparency. The draft PR renderer already includes the proposed fix, so it should
-                    match the prototype for these examples. The unmodified 2.4.3 renderer is not shown.
+                    Same DOM, dimensions, scale and stylesheet readiness checks for both captures. Only the library
+                    version changes. PNGs retain transparency; examples without effects should look the same.
                 </p>
             </section>
 
