@@ -39,6 +39,14 @@ runs automatically after the page and renderer load. Subsequent captures are
 explicit; changing controls invalidates previous playground output. Capture
 failures clear stale downloads and leave the controls available for retry.
 
+The hosted demo exposed a clone stylesheet race that fast local responses hid.
+The clone's initial load can complete before adopted stylesheet links load,
+turning a 280 × 220 fixture into an unstyled, wide text line. Both demo capture
+paths now await cloned stylesheets and fonts in `onclone`, then verify that the
+fixture kept its size. A stylesheet failure produces an error instead of a
+misleading successful PNG. This is a demo safeguard; general stylesheet readiness
+in the document cloner remains separate from the filter renderer integration.
+
 The manual demo was exercised in Chromium 148 and Playwright WebKit 26.4 across
 128 source/preset/scale combinations. Prototype center alpha matched 128 for
 50% opacity and 255 for fully opaque presets. Native screenshot comparisons had
@@ -55,6 +63,8 @@ Puppeteer's downloaded browser. Screenshots and metrics go to the ignored
 `tmp/filter-compositing-probe/` directory. The probe checks the renderer against
 native DOM screenshots, plus nested opacity, source/ancestor clipping and the
 still-unfixed SVG overflow case.
+It also delays uncached demo stylesheets, checks automatic capture and all eight
+combinations at 1x/2x, and verifies failed stylesheet loading followed by retry.
 
 ## Cases
 

@@ -35,8 +35,12 @@ const allowedFiles = new Set([
     '/tests/reftests/filter/surface-nesting.html',
     '/tests/test.js',
     '/tests/manual/filter-compositing.js',
+    '/tests/manual/filter-lab.html',
+    '/tests/manual/filter-lab.css',
+    '/tests/manual/filter-lab.js',
     '/dist/html2canvas-pro.js'
 ]);
+let failStylesheet = false;
 const server = http.createServer(async (request, response) => {
     const pathname = new URL(request.url, 'http://localhost').pathname;
     if (!allowedFiles.has(pathname)) {
@@ -44,8 +48,20 @@ const server = http.createServer(async (request, response) => {
         return;
     }
     try {
+        if (pathname.endsWith('.css')) {
+            // Each clone must wait for a real request, even on a fast local machine.
+            response.setHeader('Cache-Control', 'no-store');
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            if (failStylesheet) {
+                response.writeHead(503).end();
+                return;
+            }
+        }
         const body = await readFile(path.join(root, pathname));
-        response.setHeader('Content-Type', pathname.endsWith('.js') ? 'text/javascript' : 'text/html');
+        response.setHeader(
+            'Content-Type',
+            pathname.endsWith('.js') ? 'text/javascript' : pathname.endsWith('.css') ? 'text/css' : 'text/html'
+        );
         response.end(body);
     } catch {
         response.writeHead(404).end();
@@ -175,6 +191,42 @@ try {
                     assert.equal(pixel(capture, 175 * scale, 100 * scale)[3], 0);
                 }
             }
+            await page.goto(`http://127.0.0.1:${server.address().port}/tests/manual/filter-lab.html`);
+            await page.waitForFunction(() =>
+                document.getElementById('status').textContent.startsWith('Comparison ready')
+            );
+            const firstCapture = await page.$eval('#original-output canvas', (canvas) => [canvas.width, canvas.height]);
+            assert.deepEqual(firstCapture, [280, 220], 'automatic capture must wait for cloned styles');
+            await page.select('#scale', String(scale));
+            await page.$eval('#scale', (select) => select.dispatchEvent(new Event('input', { bubbles: true })));
+            await page.click('#capture-matrix');
+            await page.waitForFunction(() =>
+                document.getElementById('matrix-status').textContent.startsWith('All eight')
+            );
+            const matrix = await page.$$eval('#matrix canvas', (canvases) =>
+                canvases.map((canvas) => ({
+                    width: canvas.width,
+                    height: canvas.height,
+                    alpha: canvas.getContext('2d').getImageData(canvas.width / 2, canvas.height / 2, 1, 1).data[3]
+                }))
+            );
+            assert.equal(matrix.length, 16);
+            matrix.forEach((capture, index) => {
+                assert.deepEqual([capture.width, capture.height], [280 * scale, 220 * scale]);
+                const expected = [3, 5, 6, 7].includes(Math.floor(index / 2)) ? 128 : 255;
+                assert.ok(Math.abs(capture.alpha - expected) <= 1, `matrix ${index}: wrong center alpha`);
+            });
+            failStylesheet = true;
+            await page.click('#capture');
+            await page.waitForFunction(() => document.getElementById('status').dataset.error === 'true');
+            assert.equal(await page.$eval('#original-download', (link) => link.hidden), true);
+            assert.equal(await page.$eval('#capture', (button) => button.disabled), false);
+            failStylesheet = false;
+            await page.click('#capture');
+            await page.waitForFunction(() =>
+                document.getElementById('status').textContent.startsWith('Comparison ready')
+            );
+            console.log(JSON.stringify({ scale, hostedStylesheetRegression: 'passed', matrixCaptures: matrix.length }));
             assert.deepEqual(errors, []);
         } finally {
             await page.close();

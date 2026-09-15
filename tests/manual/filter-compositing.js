@@ -93,18 +93,60 @@ export async function captureCase(id, scale = 1) {
     return captureLayer(stage, cases[id], scale);
 }
 
+// The clone's initial load can finish before its adopted stylesheet links load.
+// Local files mask this race; a hosted stylesheet needs an explicit readiness check.
+async function waitForStylesheets(document) {
+    await Promise.all(
+        [...document.querySelectorAll('link[rel="stylesheet"]')].map((link) => {
+            if (link.sheet || link.disabled) return;
+            return new Promise((resolve, reject) => {
+                const finish = (error) => {
+                    clearTimeout(timeout);
+                    link.removeEventListener('load', loaded);
+                    link.removeEventListener('error', failed);
+                    if (error) reject(error);
+                    else resolve();
+                };
+                const loaded = () => finish();
+                const failed = () => finish(new Error('The capture stylesheet could not be loaded'));
+                const timeout = setTimeout(
+                    () => finish(new Error('Timed out waiting for the capture stylesheet')),
+                    10000
+                );
+                link.addEventListener('load', loaded, { once: true });
+                link.addEventListener('error', failed, { once: true });
+            });
+        })
+    );
+    if (document.fonts) await document.fonts.ready;
+}
+
 // Shared only by the two manual demos. The layer must be untransformed and padded.
 export async function captureLayer(stage, effects, scale = 1) {
-    const options = { backgroundColor: null, scale, logging: false };
-    const original = await window.html2canvas(stage, options);
-    const source = await window.html2canvas(stage, {
-        ...options,
-        onclone(document) {
-            const layer = document.getElementById(stage.id).querySelector('.layer');
-            layer.style.filter = 'none';
-            layer.style.opacity = '1';
-        }
-    });
+    const bounds = stage.getBoundingClientRect();
+    const capture = (withoutEffects) =>
+        window.html2canvas(stage, {
+            backgroundColor: null,
+            scale,
+            logging: false,
+            async onclone(document, reference) {
+                await waitForStylesheets(document);
+                const clonedBounds = reference.getBoundingClientRect();
+                if (
+                    Math.abs(clonedBounds.width - bounds.width) > 1 ||
+                    Math.abs(clonedBounds.height - bounds.height) > 1
+                ) {
+                    throw new Error('The cloned fixture changed size; its styles are not ready');
+                }
+                if (withoutEffects) {
+                    const layer = reference.querySelector('.layer');
+                    layer.style.filter = 'none';
+                    layer.style.opacity = '1';
+                }
+            }
+        });
+    const original = await capture(false);
+    const source = await capture(true);
     const prototype = await filterRaster(source, effects, scale);
     return { original, source, prototype };
 }
