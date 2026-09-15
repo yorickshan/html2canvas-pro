@@ -38,17 +38,34 @@ try {
                     const dom = PNG.sync.read(nativePng);
                     await writeFile(new URL(`${name}-${scale}-${id}-native.png`, output), nativePng);
                     if (name === 'chromium' && id === 'nested-outset') chromiumReferences.set(scale, dom);
-                    const image = await page.evaluate(
-                        async ({ id, scale }) =>
-                            (
-                                await window.html2canvas(document.getElementById(id), {
+                    const rendered = await page.evaluate(
+                        async ({ id, scale }) => {
+                            const serialize = HTMLCanvasElement.prototype.toDataURL;
+                            const surfaces = [];
+                            HTMLCanvasElement.prototype.toDataURL = function (...args) {
+                                const value = serialize.apply(this, args);
+                                if (id === 'text-box-shadow') surfaces.push(value);
+                                return value;
+                            };
+                            try {
+                                const canvas = await window.html2canvas(document.getElementById(id), {
                                     scale,
                                     backgroundColor: null,
                                     logging: false
-                                })
-                            ).toDataURL(),
+                                });
+                                return { image: serialize.call(canvas), surfaces };
+                            } finally {
+                                HTMLCanvasElement.prototype.toDataURL = serialize;
+                            }
+                        },
                         { id, scale }
                     );
+                    const image = rendered.image;
+                    for (const [index, surface] of rendered.surfaces.entries())
+                        await writeFile(
+                            new URL(`${name}-${scale}-${id}-surface-${index}.png`, output),
+                            Buffer.from(surface.split(',')[1], 'base64')
+                        );
                     const capture = decode(image),
                         error = mae(dom, capture);
                     results.push({ engine: name, scale, id, mae: error });
