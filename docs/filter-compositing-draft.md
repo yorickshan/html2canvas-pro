@@ -244,6 +244,16 @@ not an iOS device or another application's WKWebView configuration.
 
 ### Native WebKit discrepancy
 
+The following figures show the exact `nested-outset` case from the passing CI run
+for code revision `05ab767`. Each panel retains the original 2× capture pixels;
+transparent PNGs are presented on white for comparison.
+
+![Actual WKWebView, published 2.4.3 and PR result](./assets/filter-compositing/nested-shadow/wkwebview-comparison.png)
+
+![Native Chromium, native WebKit and PR result in WebKit](./assets/filter-compositing/nested-shadow/engine-comparison.png)
+
+[Download original PNGs and view their provenance](./assets/filter-compositing/nested-shadow/README.md).
+
 The live WebKit reference loses or clips an outside shadow nested under another
 filtered element. The discrepancy differs between Playwright WebKit 26.4 and
 system WKWebView 26.5.2. The draft retains the specified shadow and improves the
