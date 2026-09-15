@@ -32,7 +32,7 @@ try {
                     deviceScaleFactor: scale
                 });
                 await page.goto(server.url + '/tests/reftests/filter/surface-regressions.html');
-                for (const id of ['combined', 'z-order', 'nested-outset', 'text-box-shadow']) {
+                for (const id of ['combined', 'z-order', 'nested-outset', 'text-box-shadow', 'rounded-box-shadow']) {
                     const node = page.locator('#' + id);
                     const nativePng = await node.screenshot();
                     const dom = PNG.sync.read(nativePng);
@@ -263,57 +263,60 @@ try {
             }
             await page.goto(server.url + '/tests/reftests/filter/surface-regressions.html');
             const lifecycle = await page.evaluate(async () => {
-                const stage = document.getElementById('combined'),
-                    rows = [];
-                for (const mode of ['decode-failure', 'abort', 'render-failure', 'retain-container']) {
-                    const originalDecode = HTMLImageElement.prototype.decode,
-                        originalFill = CanvasRenderingContext2D.prototype.fill;
-                    const originalCreate = document.createElement;
-                    const canvases = [];
-                    let error = null;
-                    let result;
-                    document.createElement = function (tag, ...args) {
-                        const element = originalCreate.call(this, tag, ...args);
-                        if (tag === 'canvas') canvases.push(element);
-                        return element;
-                    };
-                    const controller = new AbortController();
-                    if (mode === 'abort')
-                        HTMLImageElement.prototype.decode = function () {
-                            setTimeout(() => controller.abort(), 20);
-                            return new Promise(() => {});
+                const rows = [];
+                for (const id of ['combined', 'text-box-shadow']) {
+                    const stage = document.getElementById(id);
+                    for (const mode of ['decode-failure', 'abort', 'render-failure', 'retain-container']) {
+                        const originalDecode = HTMLImageElement.prototype.decode,
+                            originalFill = CanvasRenderingContext2D.prototype.fill;
+                        const originalCreate = document.createElement;
+                        const canvases = [];
+                        let error = null;
+                        let result;
+                        document.createElement = function (tag, ...args) {
+                            const element = originalCreate.call(this, tag, ...args);
+                            if (tag === 'canvas') canvases.push(element);
+                            return element;
                         };
-                    if (mode === 'decode-failure')
-                        HTMLImageElement.prototype.decode = () =>
-                            Promise.reject(new Error('Injected SVG decode failure'));
-                    if (mode === 'render-failure' || mode === 'retain-container')
-                        CanvasRenderingContext2D.prototype.fill = () => {
-                            throw new Error('Injected raster failure');
-                        };
-                    const start = performance.now();
-                    try {
-                        result = await window.html2canvas(stage, {
-                            scale: 1,
-                            backgroundColor: null,
-                            logging: false,
-                            signal: controller.signal,
-                            removeContainer: mode !== 'retain-container'
+                        const controller = new AbortController();
+                        if (mode === 'abort')
+                            HTMLImageElement.prototype.decode = function () {
+                                setTimeout(() => controller.abort(), 20);
+                                return new Promise(() => {});
+                            };
+                        if (mode === 'decode-failure')
+                            HTMLImageElement.prototype.decode = () =>
+                                Promise.reject(new Error('Injected SVG decode failure'));
+                        if (mode === 'render-failure' || mode === 'retain-container')
+                            CanvasRenderingContext2D.prototype.fill = () => {
+                                throw new Error('Injected raster failure');
+                            };
+                        const start = performance.now();
+                        try {
+                            result = await window.html2canvas(stage, {
+                                scale: 1,
+                                backgroundColor: null,
+                                logging: false,
+                                signal: controller.signal,
+                                removeContainer: mode !== 'retain-container'
+                            });
+                        } catch (e) {
+                            error = e.name + ': ' + e.message;
+                        } finally {
+                            HTMLImageElement.prototype.decode = originalDecode;
+                            CanvasRenderingContext2D.prototype.fill = originalFill;
+                            document.createElement = originalCreate;
+                        }
+                        rows.push({
+                            id,
+                            mode,
+                            error,
+                            elapsed: performance.now() - start,
+                            iframes: document.querySelectorAll('.html2canvas-container').length,
+                            unreleased: canvases.filter((c) => c !== result && c.width * c.height > 0).length
                         });
-                    } catch (e) {
-                        error = e.name + ': ' + e.message;
-                    } finally {
-                        HTMLImageElement.prototype.decode = originalDecode;
-                        CanvasRenderingContext2D.prototype.fill = originalFill;
-                        document.createElement = originalCreate;
+                        document.querySelectorAll('.html2canvas-container').forEach((frame) => frame.remove());
                     }
-                    rows.push({
-                        mode,
-                        error,
-                        elapsed: performance.now() - start,
-                        iframes: document.querySelectorAll('.html2canvas-container').length,
-                        unreleased: canvases.filter((c) => c !== result && c.width * c.height > 0).length
-                    });
-                    document.querySelectorAll('.html2canvas-container').forEach((frame) => frame.remove());
                 }
                 return rows;
             });

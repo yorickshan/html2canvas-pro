@@ -196,8 +196,13 @@ of 16,777,216 intermediate raster pixels (64 MiB of RGBA), counting four rasters
 active surface conservatively, with sides capped at 8,192 pixels. This bounds
 intermediate backing stores, not the caller's output or browser encoder overhead.
 Over-budget subtrees use the previous path before allocation, without downscaling.
-Box-shadow offsets, blur and the displaced mask also scale correctly inside a 2x
-source surface; previously those source shadows could disappear.
+Outset box shadows inside a source surface use a visible silhouette and the same
+SVG blur helper. Linux WebKit lost the interior of shadows from off-canvas Canvas
+masks; a smaller displacement did not fix it. The silhouette path shares the
+capture budget and cleanup. An even-odd clip preserves the rounded border-box
+cutout without reversing Bezier curves. Tests cover transparent rounded boxes,
+multiple box shadows, signed offsets and negative spread at 1x/2x. Inset shadows
+retain the previous path, with capture-scaled metrics in a source surface.
 
 `node scripts/filter-surface-regressions.mjs` checks Chromium/WebKit pixels at
 1x/2x, z-order, nested signed outsets, overflowing text and box shadows, offset

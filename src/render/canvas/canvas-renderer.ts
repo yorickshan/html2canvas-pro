@@ -2,6 +2,7 @@ import { ElementPaint, parseStackingContexts, StackingContext } from '../stackin
 import { Color } from '../../css/types/color';
 import { asString, isTransparent } from '../../css/types/color-utilities';
 import { ElementContainer } from '../../dom/element-container';
+import { BoxShadow } from '../../css/property-descriptors/box-shadow';
 import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
 import { Path, transformPath } from '../path';
 import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
@@ -430,6 +431,72 @@ export class CanvasRenderer {
         formatCanvasPath(this.ctx, paths);
     }
 
+    private async renderSurfaceBoxShadow(paint: ElementPaint, shadow: BoxShadow[number]): Promise<void> {
+        // Rasterize a visible silhouette, then blur it. Linux WebKit can drop the
+        // interior of Canvas shadows whose solid mask is outside a cropped canvas.
+        const spread = shadow.spread.number;
+        const blur = shadow.blur.number / 2;
+        const margin = Math.ceil(3 * blur) + 1;
+        const box = paint.container.bounds.add(-spread, -spread, 2 * spread, 2 * spread);
+        if (box.width <= 0 || box.height <= 0) return;
+        const scale = this.options.scale;
+        const bounds = cropSurface(
+            box.add(-margin, -margin, 2 * margin, 2 * margin),
+            new Bounds(
+                this.options.x - shadow.offsetX.number,
+                this.options.y - shadow.offsetY.number,
+                this.options.width,
+                this.options.height
+            ),
+            margin,
+            scale
+        );
+        if (!bounds.width || !bounds.height) return;
+        const width = Math.ceil(bounds.width * scale),
+            height = Math.ceil(bounds.height * scale);
+        const reserved = reserveSurface(this.surfaceBudget, width, height);
+        if (!reserved) throw new FilterSurfaceError('Box shadow surface budget exceeded');
+        let source: HTMLCanvasElement | undefined;
+        let filtered: HTMLCanvasElement | undefined;
+        try {
+            source = document.createElement('canvas');
+            source.width = width;
+            source.height = height;
+            const ctx = source.getContext('2d');
+            if (!ctx) throw new FilterSurfaceError('Box shadow surface canvas is unavailable');
+            ctx.scale(scale, scale);
+            ctx.translate(-bounds.left, -bounds.top);
+            createCanvasPath(
+                ctx,
+                transformPath(calculateBorderBoxPath(paint.curves), -spread, -spread, 2 * spread, 2 * spread)
+            );
+            ctx.fillStyle = asString(shadow.color);
+            ctx.fill();
+            filtered = await renderFilterSurface(source, { blur }, 1, scale, this.options.signal);
+            this.ctx.save();
+            try {
+                this.ctx.beginPath();
+                this.ctx.rect(this.options.x, this.options.y, this.options.width, this.options.height);
+                formatCanvasPath(this.ctx, calculateBorderBoxPath(paint.curves));
+                this.ctx.closePath();
+                this.ctx.clip('evenodd');
+                this.ctx.drawImage(
+                    filtered,
+                    bounds.left + shadow.offsetX.number,
+                    bounds.top + shadow.offsetY.number,
+                    filtered.width / scale,
+                    filtered.height / scale
+                );
+            } finally {
+                this.ctx.restore();
+            }
+        } finally {
+            if (source) releaseSurface(source);
+            if (filtered) releaseSurface(filtered);
+            this.surfaceBudget.pixels -= reserved;
+        }
+    }
+
     async renderNodeBackgroundAndBorders(paint: ElementPaint): Promise<void> {
         this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.BACKGROUND_BORDERS, this.surfaceRoot));
         const styles = paint.container.styles;
@@ -465,55 +532,44 @@ export class CanvasRenderer {
                 this.ctx.restore();
             }
 
-            styles.boxShadow
-                .slice(0)
-                .reverse()
-                .forEach((shadow) => {
-                    this.ctx.save();
-                    const borderBoxArea = calculateBorderBoxPath(paint.curves);
-                    // Move the solid mask just outside this surface. A fixed 10,000px
-                    // displacement can exceed a browser's temporary shadow raster limits.
-                    const maskOffset = shadow.inset
-                        ? 0
-                        : this.surfaceRoot
-                          ? Math.max(
-                                0,
-                                paint.container.bounds.left +
-                                    paint.container.bounds.width +
-                                    Math.max(0, shadow.spread.number) -
-                                    this.options.x
-                            ) + 1
-                          : SHADOW_MASK_OFFSET;
-                    const shadowPaintingArea = transformPath(
-                        borderBoxArea,
-                        -maskOffset + (shadow.inset ? 1 : -1) * shadow.spread.number,
-                        (shadow.inset ? 1 : -1) * shadow.spread.number,
-                        shadow.spread.number * (shadow.inset ? -2 : 2),
-                        shadow.spread.number * (shadow.inset ? -2 : 2)
-                    );
+            for (const shadow of styles.boxShadow.slice(0).reverse()) {
+                if (this.surfaceRoot && !shadow.inset) {
+                    await this.renderSurfaceBoxShadow(paint, shadow);
+                    continue;
+                }
+                this.ctx.save();
+                const borderBoxArea = calculateBorderBoxPath(paint.curves);
+                const maskOffset = shadow.inset ? 0 : SHADOW_MASK_OFFSET;
+                const shadowPaintingArea = transformPath(
+                    borderBoxArea,
+                    -maskOffset + (shadow.inset ? 1 : -1) * shadow.spread.number,
+                    (shadow.inset ? 1 : -1) * shadow.spread.number,
+                    shadow.spread.number * (shadow.inset ? -2 : 2),
+                    shadow.spread.number * (shadow.inset ? -2 : 2)
+                );
 
-                    if (shadow.inset) {
-                        this.path(borderBoxArea);
-                        this.ctx.clip();
-                        this.mask(shadowPaintingArea);
-                    } else {
-                        this.mask(borderBoxArea);
-                        this.ctx.clip();
-                        this.path(shadowPaintingArea);
-                    }
+                if (shadow.inset) {
+                    this.path(borderBoxArea);
+                    this.ctx.clip();
+                    this.mask(shadowPaintingArea);
+                } else {
+                    this.mask(borderBoxArea);
+                    this.ctx.clip();
+                    this.path(shadowPaintingArea);
+                }
 
-                    // Canvas shadow metrics ignore the transform. Surface sources
-                    // need capture-pixel offsets, including the displaced mask.
-                    const shadowScale = this.surfaceRoot ? this.options.scale : 1;
-                    this.ctx.shadowOffsetX = (shadow.offsetX.number + maskOffset) * shadowScale;
-                    this.ctx.shadowOffsetY = shadow.offsetY.number * shadowScale;
-                    this.ctx.shadowColor = asString(shadow.color);
-                    this.ctx.shadowBlur = shadow.blur.number * shadowScale;
-                    this.ctx.fillStyle = shadow.inset ? asString(shadow.color) : 'rgba(0,0,0,1)';
+                // Canvas shadow metrics ignore the transform. Surface sources
+                // need capture-pixel offsets, including the displaced mask.
+                const shadowScale = this.surfaceRoot ? this.options.scale : 1;
+                this.ctx.shadowOffsetX = (shadow.offsetX.number + maskOffset) * shadowScale;
+                this.ctx.shadowOffsetY = shadow.offsetY.number * shadowScale;
+                this.ctx.shadowColor = asString(shadow.color);
+                this.ctx.shadowBlur = shadow.blur.number * shadowScale;
+                this.ctx.fillStyle = shadow.inset ? asString(shadow.color) : 'rgba(0,0,0,1)';
 
-                    this.ctx.fill();
-                    this.ctx.restore();
-                });
+                this.ctx.fill();
+                this.ctx.restore();
+            }
         }
 
         // Render border-image if present (replaces traditional borders per CSS spec)
