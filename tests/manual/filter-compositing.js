@@ -154,12 +154,12 @@ export async function captureLayer(stage, effects, scale = 1) {
 export async function showPrototype() {
     const notice = document.createElement('p');
     notice.textContent =
-        'Draft: each row shows live DOM, current library capture, then SVG-composited prototype. SVG overflow remains unfixed.';
+        'Draft: each row shows live DOM, draft PR renderer, then SVG-composited prototype. SVG overflow remains unfixed.';
     document.querySelector('h1').after(notice);
     for (const id of Object.keys(cases)) {
         const { original, prototype } = await captureCase(id);
         for (const [label, canvas] of [
-            ['Current capture', original],
+            ['Draft PR renderer', original],
             ['Prototype', prototype]
         ]) {
             canvas.className = 'result';

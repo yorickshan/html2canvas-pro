@@ -23,7 +23,7 @@ Open `/tests/manual/filter-lab.html` on the same local server. The page provides
 - Four sources: a CTA with text, overlapping HTML children, inline SVG and a local raster image.
 - Sliders for blur, layer opacity, shadow blur and positive/negative shadow offsets.
 - Eight presets covering every on/off combination of blur, shadow and 50% opacity.
-- Live DOM, current library and SVG prototype views, plus transparent PNG downloads.
+- Live DOM, draft PR renderer and SVG prototype views, plus transparent PNG downloads.
 - A full preset matrix at 1x or 2x, runtime capability detection and a JSON report download.
 
 The page tests actual Canvas blur behavior instead of inferring it from a user
@@ -33,6 +33,10 @@ An embedded WKWebView or Android WebView host has not been tested directly.
 The [Canvas filter documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter)
 and [WebKit implementation tracker](https://bugs.webkit.org/show_bug.cgi?id=198416)
 provide context; runtime support still needs to be checked on the target device.
+
+The draft renderer already includes the surface-compositing implementation, so
+it should match the separate prototype for supported cases. The demo compares
+both with the live DOM; it does not include the unmodified 2.4.3 renderer.
 
 The demo does not upload results or fetch external assets. The first comparison
 runs automatically after the page and renderer load. Subsequent captures are
@@ -145,12 +149,22 @@ test. WebKit retains a measurable shadow difference that needs investigation.
 
 ## Before marking ready for review
 
-- Preserve nested filters, opacity, clipping, transforms, blend modes and z-order.
-- Verify derived filter outsets for general cases and preserve SVG paint bounds.
-- Preserve filter order, repeated drop shadows, other filter functions and URL filters.
-- Handle resource failures, tainted canvases, restrictive CSP and cancellation.
-- Bound surface memory and verify performance on large/nested documents.
-- Broaden automated browser and embedded-webview coverage before marking ready.
+Already verified: the initial surface integration, simple filter parsing,
+nested opacity and clipping fixtures, 1x/2x pixel comparisons, the public demo,
+and delayed/failed demo stylesheet loading. These are completed checks, not
+remaining implementation tasks.
+
+- [ ] Preserve existing API behavior for tainted canvases, restrictive CSP and SVG decode failures; verify cancellation and cleanup on errors.
+- [ ] Bound intermediate-surface memory and measure large/nested documents. The current surfaces cover the capture viewport, not just the affected layer.
+- [ ] Add focused z-order, outset and unsupported-subtree regressions. Verify that transforms, blending, clip-path and unsupported filter chains retain the existing path.
+- [ ] Run the committed pixel probe in CI and retain repeatable WebKit pixel coverage. Current browser CI checks rendering completion.
+- [ ] Verify the combined effects in the intended Safari/WKWebView host. Playwright WebKit and Safari rendering CI do not establish embedded-host pixel correctness.
+
+Keep the initial scope to untransformed layers with blur followed by one shadow
+and opacity. General filter chains, multiple shadows, transformed/blended
+surface rendering and SVG overflow are potential follow-ups, not requirements
+to implement every CSS effect in this PR. The library-wide stylesheet-loading
+race also remains a separate issue; the demo currently guards it in `onclone`.
 
 The related shadow report #223 was marked fixed in 2.3.2. This draft supplies
 separate fixtures against 2.4.3; it does not assume that report has the same cause.

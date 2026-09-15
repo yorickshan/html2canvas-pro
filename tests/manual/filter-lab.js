@@ -142,7 +142,7 @@ function buildMatrix() {
         row.dataset.preset = String(index);
         row.innerHTML = `<h3></h3><code class="css-value"></code><div class="comparison">
             <figure><figcaption>Live DOM</figcaption><div class="frame"><div class="scene" id="matrix-${index}"><div class="layer"></div></div></div></figure>
-            <figure><figcaption>Current library</figcaption><div class="frame original" data-html2canvas-ignore></div><p class="metric"></p></figure>
+            <figure><figcaption>Draft PR renderer</figcaption><div class="frame original" data-html2canvas-ignore></div><p class="metric"></p></figure>
             <figure><figcaption>SVG surface prototype</figcaption><div class="frame prototype" data-html2canvas-ignore></div><p class="metric"></p></figure>
         </div>`;
         row.querySelector('h3').textContent = preset.name;
