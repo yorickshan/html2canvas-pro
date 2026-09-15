@@ -9,13 +9,8 @@ describe('filter', () => {
         expect(parse('none')).toBeNull();
     });
 
-    // NOTE: blur() and hue-rotate() currently emit duplicated unit suffixes
-    // because renderFilterArgs renders the dimension token's unit (e.g. "5px")
-    // and the switch case also adds the suffix (e.g. "px"). This is a known
-    // rendering quirk that does not affect Canvas API behaviour (ctx.filter
-    // normalises the string internally). See source at filter.ts:27,41.
     it('single blur function', () => {
-        expect(parse('blur(5px)')).toBe('blur(5pxpx)');
+        expect(parse('blur(5px)')).toBe('blur(5px)');
     });
 
     it('brightness', () => {
@@ -31,7 +26,7 @@ describe('filter', () => {
     });
 
     it('hue-rotate with deg', () => {
-        expect(parse('hue-rotate(90deg)')).toBe('hue-rotate(90degdeg)');
+        expect(parse('hue-rotate(90deg)')).toBe('hue-rotate(90deg)');
     });
 
     it('invert', () => {
@@ -57,7 +52,17 @@ describe('filter', () => {
 
     it('multiple filter functions combined', () => {
         const result = parse('blur(2px) brightness(1.5)');
-        expect(result).toBe('blur(2pxpx) brightness(1.5)');
+        expect(result).toBe('blur(2px) brightness(1.5)');
+    });
+
+    it.each([
+        'drop-shadow(12px -8px 4px rgba(0, 0, 0, 0.5))',
+        'drop-shadow(rgb(10 20 30 / 50%) 0px 2px 8px)',
+        'blur(4px) drop-shadow(12px 8px 8px rgba(0, 0, 0, 0.5))',
+        'hue-rotate(0.5turn)',
+        'blur(0)'
+    ])('preserves dimensions, color functions and filter order: %s', (value) => {
+        expect(parse(value)).toBe(value);
     });
 
     it('unknown filter name is skipped', () => {

@@ -1,4 +1,4 @@
-// Draft diagnostic, intentionally separate from the production regression suite.
+// Focused browser regressions for the draft surface compositor.
 // Uses the existing Puppeteer/pngjs dependencies. Build the library first.
 import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -32,6 +32,7 @@ function meanAbsoluteError(reference, capture) {
 
 const allowedFiles = new Set([
     '/tests/reftests/filter/compositing.html',
+    '/tests/reftests/filter/surface-nesting.html',
     '/tests/test.js',
     '/tests/manual/filter-compositing.js',
     '/dist/html2canvas-pro.js'
@@ -124,12 +125,15 @@ try {
                     );
                 }
                 assert.ok(result.prototypeMAE < 1, `${id}: prototype differs from the DOM screenshot`);
-                assert.ok(
-                    result.prototypeMAE < result.originalMAE / 4,
-                    `${id}: draft no longer demonstrates improvement`
-                );
-                if (id === 'combined') assert.ok(Math.abs(result.prototypeCenter[3] - 128) <= 1);
-                if (id === 'shadow') assert.ok(result.prototypeOutside[3] > 50);
+                assert.ok(result.originalMAE < 1, `${id}: renderer differs from the DOM screenshot`);
+                if (id === 'combined') {
+                    assert.ok(Math.abs(result.prototypeCenter[3] - 128) <= 1);
+                    assert.ok(Math.abs(result.originalCenter[3] - 128) <= 1);
+                }
+                if (id === 'shadow') {
+                    assert.ok(result.prototypeOutside[3] > 50);
+                    assert.ok(result.originalOutside[3] > 50);
+                }
             }
             const stage = await page.$('#overflow');
             const reference = PNG.sync.read(Buffer.from(await stage.screenshot()));
@@ -146,6 +150,31 @@ try {
             // This remaining defect is reproduced, not fixed by the prototype.
             assert.deepEqual(pixel(reference, 75 * scale, 100 * scale), [225, 157, 24, 255]);
             assert.equal(pixel(capture, 75 * scale, 100 * scale)[3], 0);
+            await page.goto(
+                `http://127.0.0.1:${server.address().port}/tests/reftests/filter/surface-nesting.html?run=false`
+            );
+            for (const id of ['nested', 'clipped', 'own-clip']) {
+                const capture = decode(
+                    await page.evaluate(
+                        async (id, scale) =>
+                            (
+                                await window.html2canvas(document.getElementById(id), {
+                                    scale,
+                                    backgroundColor: null,
+                                    logging: false
+                                })
+                            ).toDataURL(),
+                        id,
+                        scale
+                    )
+                );
+                if (id === 'nested') assert.ok(Math.abs(pixel(capture, 100 * scale, 90 * scale)[3] - 64) <= 1);
+                if (id === 'clipped') assert.equal(pixel(capture, 165 * scale, 100 * scale)[3], 0);
+                if (id === 'own-clip') {
+                    assert.ok(pixel(capture, 165 * scale, 100 * scale)[3] > 0);
+                    assert.equal(pixel(capture, 175 * scale, 100 * scale)[3], 0);
+                }
+            }
             assert.deepEqual(errors, []);
         } finally {
             await page.close();

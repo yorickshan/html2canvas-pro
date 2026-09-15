@@ -119,7 +119,7 @@ function clearOutput(frame) {
 function updateReport() {
     const report = {
         draft: true,
-        productionRendererChanged: false,
+        productionRendererChanged: true,
         capturedAt: new Date().toISOString(),
         runtime,
         comparison: comparisonReport,
@@ -288,4 +288,11 @@ $('capture').addEventListener('click', captureComparison);
 $('capture-matrix').addEventListener('click', captureMatrix);
 for (const name of ['original', 'prototype']) $(name + '-output').setAttribute('data-html2canvas-ignore', '');
 refresh({ rebuildMatrix: true });
-captureComparison();
+setBusy(true);
+$('status').textContent = 'Waiting for the page and renderer to finish loading…';
+const initialCapture = () => {
+    setBusy(false);
+    captureComparison();
+};
+if (document.readyState === 'complete') initialCapture();
+else window.addEventListener('load', initialCapture, { once: true });

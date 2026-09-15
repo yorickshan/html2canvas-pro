@@ -1,7 +1,7 @@
 # Draft: compositing CSS filters on an intermediate surface
 
-This is a reproduction and a test-only prototype. It does not change the public
-API or the production renderer. The draft is not ready to merge.
+This draft now includes an initial renderer integration, an interactive demo and
+a separate test-only prototype. It does not change the public API and is not ready to merge.
 
 The base is `60cb8bdd925fd7c56cd423d6e2127da177a97279` (version 2.4.3).
 
@@ -34,9 +34,10 @@ The [Canvas filter documentation](https://developer.mozilla.org/en-US/docs/Web/A
 and [WebKit implementation tracker](https://bugs.webkit.org/show_bug.cgi?id=198416)
 provide context; runtime support still needs to be checked on the target device.
 
-The demo does not upload results or fetch external assets. Captures are explicit;
-changing controls invalidates previous playground output. Capture failures clear
-stale downloads and leave the controls available for retry.
+The demo does not upload results or fetch external assets. The first comparison
+runs automatically after the page and renderer load. Subsequent captures are
+explicit; changing controls invalidates previous playground output. Capture
+failures clear stale downloads and leave the controls available for retry.
 
 The manual demo was exercised in Chromium 148 and Playwright WebKit 26.4 across
 128 source/preset/scale combinations. Prototype center alpha matched 128 for
@@ -51,9 +52,9 @@ reported unavailable Canvas blur, while Chromium reported working Canvas blur.
 Run `node scripts/filter-compositing-probe.mjs` for an automated Chromium
 comparison at 1x and 2x. Set `CHROME_BIN` if using an installed Chrome instead of
 Puppeteer's downloaded browser. Screenshots and metrics go to the ignored
-`tmp/filter-compositing-probe/` directory. The probe asserts the prototype's
-improvement and the still-unfixed overflow case; it is not a production regression
-test that should remain unchanged after integration.
+`tmp/filter-compositing-probe/` directory. The probe checks the renderer against
+native DOM screenshots, plus nested opacity, source/ancestor clipping and the
+still-unfixed SVG overflow case.
 
 ## Cases
 
@@ -63,11 +64,41 @@ test that should remain unchanged after integration.
 - An inline SVG with visible overflow must retain the outside half of its stroke.
   This last case is reproduced only; the prototype does not fix SVG bounds.
 
-`EffectsRenderer` currently applies filter and opacity state to individual canvas
+In the 2.4.3 baseline, `EffectsRenderer` applies filter and opacity state to individual canvas
 draws. `renderReplacedElement` clips its draw to the element's padding box. These
 operations do not provide an intermediate surface for the complete filtered
 subtree. In addition, assigning `ctx.filter` cannot provide blur on engines that
 do not implement Canvas 2D filters.
+
+## Initial renderer integration
+
+`CanvasRenderer` now rasterizes eligible filter/opacity stacking contexts on an
+intermediate surface. It applies blur followed by one shadow, then opacity, and
+composites the result in z-order. Source effects stop at the surface boundary, so
+ancestor and nested opacity do not get applied twice. Capture bounds gain padding
+for blur and signed shadow offsets.
+
+This first integration only handles untransformed subtrees without blend modes or
+clip-path. Unsupported filter chains retain the existing renderer path. Nested
+opacity and filters, ancestor clipping and clipping before blur have focused
+checks. SVG paint bounds, general filter chains, transforms, CSP/taint behavior,
+large surfaces and broader platform coverage still need work.
+
+Filter parsing also preserves units and functional colors: `blur(5px)` no longer
+becomes `blur(5pxpx)`, hue-rotate no longer duplicates its unit, and nested rgba/rgb
+color functions retain their arguments. Non-empty filters create a real stacking
+context.
+
+The 128 demo comparisons were rerun against the integrated renderer. Both renderer
+and prototype stayed below 0.39/255 mean absolute RGB error in Chromium and
+1.19/255 in WebKit. Center alpha matched every expected 50% / 100% preset. Two
+nested 50% opacities produced alpha 64 in both engines. These results do not prove
+arbitrary-page equivalence.
+
+The integrated build, lint, 1,195 unit tests and 113 Chrome reftests passed. The
+committed pixel probe also passed in Chrome 152 at 1x and 2x. The Karma suite
+checks successful rendering, not pixel equivalence; the probe checks pixels for
+the focused filter fixtures.
 
 ## Prototype
 
@@ -90,33 +121,28 @@ Playwright WebKit 26.4, at both 1x and 2x. The SVG path ran in both engines.
 
 Mean absolute RGB error on a white background, per channel on a 0–255 scale:
 
-| Case                    | Chromium current → prototype | WebKit current → prototype |
-| ----------------------- | ---------------------------- | -------------------------- |
-| SVG shadow              | 4.54–4.57 → less than 0.001  | 4.29–4.32 → 0.52–0.60      |
-| Parent blur             | 3.34–3.67 → 0.015            | 3.33–3.96 → 0.096–0.097    |
-| Blur + shadow + opacity | 11.25–12.14 → 0.075–0.081    | 11.24–12.01 → 0.27–0.30    |
+| Case                    | Chromium baseline → prototype | WebKit baseline → prototype |
+| ----------------------- | ----------------------------- | --------------------------- |
+| SVG shadow              | 4.54–4.57 → less than 0.001   | 4.29–4.32 → 0.52–0.60       |
+| Parent blur             | 3.34–3.67 → 0.015             | 3.33–3.96 → 0.096–0.097     |
+| Blur + shadow + opacity | 11.25–12.14 → 0.075–0.081     | 11.24–12.01 → 0.27–0.30     |
 
-The combined fixture's overlapping center has alpha 239–240 in the current
+The combined fixture's overlapping center has alpha 239–240 in the baseline
 capture, versus 128 in the prototype (expected 50%). Outside SVG shadow pixels
-have alpha 0 in the current capture and 73–74 in the prototype. These are focused
+have alpha 0 in the baseline capture and 73–74 in the prototype. These are focused
 fixture results, not a claim of general rendering equivalence or a full Safari UI
 test. WebKit retains a measurable shadow difference that needs investigation.
 
-The library build, lint, 1,178 unit tests and 112 Chrome reftests passed. The Karma
-suite checks successful rendering, not pixel equivalence; the screenshot probe
-provides the pixel comparison for these new cases.
+## Before marking ready for review
 
-## Before integrating into the renderer
-
-- Define intermediate surfaces at the appropriate stacking-context boundary.
 - Preserve nested filters, opacity, clipping, transforms, blend modes and z-order.
-- Derive filter outsets and SVG paint bounds rather than relying on fixture padding.
+- Verify derived filter outsets for general cases and preserve SVG paint bounds.
 - Preserve filter order, repeated drop shadows, other filter functions and URL filters.
 - Handle resource failures, tainted canvases, restrictive CSP and cancellation.
 - Bound surface memory and verify performance on large/nested documents.
-- Add automated browser regressions before promoting this draft to a mergeable fix.
+- Broaden automated browser and embedded-webview coverage before marking ready.
 
 The related shadow report #223 was marked fixed in 2.3.2. This draft supplies
 separate fixtures against 2.4.3; it does not assume that report has the same cause.
 
-AI-assisted investigation and prototype.
+AI-assisted investigation and implementation.

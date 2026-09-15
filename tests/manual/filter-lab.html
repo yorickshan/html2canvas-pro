@@ -24,9 +24,9 @@
             <aside class="compatibility">
                 <strong>Safari &amp; WebKit webviews are a compatibility focus.</strong>
                 <p>
-                    Some engines do not expose working Canvas 2D filters. The prototype uses SVG filters on a rasterized
-                    layer instead. The overlap and clipping defects also reproduce in Chromium, so this is not
-                    exclusively a webview issue.
+                    Some engines do not expose working Canvas 2D filters. This branch uses SVG filters on a rasterized
+                    layer for supported cases. The baseline overlap and clipping defects also reproduce in Chromium, so
+                    this is not exclusively a webview issue.
                 </p>
                 <p id="capability" class="capability">Checking Canvas filter support…</p>
                 <details>
@@ -34,8 +34,8 @@
                     <p id="runtime"></p>
                     <p>
                         Test the actual embedded webview: a browser name alone does not prove support. This demo uses
-                        one untransformed layer, local assets and fixed padding. Nested effects, general CSS filters and
-                        SVG overflow are not fixed by this prototype.
+                        one untransformed layer and local assets. The branch includes an initial renderer integration;
+                        transforms, blend modes, general filter chains and SVG overflow remain unfinished.
                     </p>
                     <p>
                         <a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter"
@@ -145,8 +145,9 @@
             </section>
             <footer>
                 Experimental, AI-assisted work in
-                <a href="https://github.com/yorickshan/html2canvas-pro/pull/239">draft PR #239</a>. The production
-                renderer is unchanged. All examples run locally; the demo sends no telemetry.
+                <a href="https://github.com/yorickshan/html2canvas-pro/pull/239">draft PR #239</a>. This branch includes
+                an initial renderer integration and is not ready to merge. All examples run locally; the demo sends no
+                telemetry.
             </footer>
         </main>
     </body>

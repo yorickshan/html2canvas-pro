@@ -9,6 +9,8 @@ import {
     FilterEffect,
     IElementEffect,
     isClipEffect,
+    isFilterEffect,
+    isOpacityEffect,
     OpacityEffect,
     TransformEffect
 } from './effects';
@@ -119,12 +121,16 @@ export class ElementPaint {
         }
     }
 
-    getEffects(target: EffectTarget): IElementEffect[] {
+    getEffects(target: EffectTarget, surfaceRoot?: ElementPaint): IElementEffect[] {
         let inFlow = [POSITION.ABSOLUTE, POSITION.FIXED].indexOf(this.container.styles.position) === -1;
-        let parent = this.parent;
-        const effects = this.effects.slice(0);
+        let parent = this === surfaceRoot ? null : this.parent;
+        const sourceEffects = (paint: ElementPaint) =>
+            paint.effects.filter(
+                (effect) => paint !== surfaceRoot || (!isFilterEffect(effect) && !isOpacityEffect(effect))
+            );
+        const effects = sourceEffects(this);
         while (parent) {
-            const croplessEffects = parent.effects.filter((effect) => !isClipEffect(effect));
+            const croplessEffects = sourceEffects(parent).filter((effect) => !isClipEffect(effect));
             if (inFlow || parent.container.styles.position !== POSITION.STATIC || !parent.parent) {
                 inFlow = [POSITION.ABSOLUTE, POSITION.FIXED].indexOf(parent.container.styles.position) === -1;
                 if (hasOverflowClip(parent.container.styles)) {
@@ -141,7 +147,7 @@ export class ElementPaint {
                 effects.unshift(...croplessEffects);
             }
 
-            parent = parent.parent;
+            parent = parent === surfaceRoot ? null : parent.parent;
         }
 
         return effects.filter((effect) => contains(effect.target, target));

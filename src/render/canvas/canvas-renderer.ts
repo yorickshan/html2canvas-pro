@@ -10,7 +10,10 @@ import { CSSImageType, CSSURLImage } from '../../css/types/image';
 import { getBackgroundValueForIndex } from '../background';
 import { contentBox } from '../box-sizing';
 import { ReplacedElementContainer } from '../../dom/replaced-elements';
-import { EffectTarget } from '../effects';
+import { EffectTarget, isClipEffect, isFilterEffect, isOpacityEffect } from '../effects';
+import { CLIP_PATH_TYPE } from '../../css/property-descriptors/clip-path';
+import { MIX_BLEND_MODE } from '../../css/property-descriptors/mix-blend-mode';
+import { filterOutset, parseSimpleFilter, renderFilterSurface, SimpleFilter } from './filter-surface';
 import { TextRenderer } from './text-renderer';
 import { Context } from '../../core/context';
 import { BackgroundRenderer } from './background-renderer';
@@ -67,7 +70,11 @@ export class CanvasRenderer {
     private readonly effectsRenderer: EffectsRenderer;
     private readonly textRenderer: TextRenderer;
 
-    constructor(context: Context, options: RenderConfigurations) {
+    constructor(
+        context: Context,
+        options: RenderConfigurations,
+        private readonly surfaceRoot?: ElementPaint
+    ) {
         this.context = context;
         this.options = options;
         this.canvas = options.canvas ? options.canvas : document.createElement('canvas');
@@ -131,8 +138,82 @@ export class CanvasRenderer {
     async renderStack(stack: StackingContext): Promise<void> {
         const styles = stack.element.container.styles;
         if (styles.isVisible()) {
+            const filter = parseSimpleFilter(styles.filter);
+            if (
+                stack.element !== this.surfaceRoot &&
+                filter &&
+                (styles.filter || styles.opacity < 1) &&
+                this.canComposite(stack.element)
+            ) {
+                await this.renderCompositedStack(stack, filter);
+                return;
+            }
             await this.renderStackContent(stack);
         }
+    }
+
+    // Draft scope: transformed, blended and clip-path subtrees keep the old path.
+    // The surface root owns its filter/opacity; ancestors are applied at composition.
+    private canComposite(paint: ElementPaint): boolean {
+        const supported = (container: ElementContainer): boolean => {
+            const styles = container.styles;
+            return (
+                !styles.isTransformed() &&
+                styles.zoom === 1 &&
+                styles.mixBlendMode === MIX_BLEND_MODE.NORMAL &&
+                styles.clipPath.type === CLIP_PATH_TYPE.NONE &&
+                parseSimpleFilter(styles.filter) !== null
+            );
+        };
+        const subtree = (container: ElementContainer): boolean =>
+            supported(container) && container.elements.every(subtree);
+        let ancestor = paint.parent;
+        while (ancestor && ancestor !== this.surfaceRoot) {
+            if (!supported(ancestor.container)) return false;
+            ancestor = ancestor.parent;
+        }
+        return subtree(paint.container);
+    }
+
+    private async renderCompositedStack(stack: StackingContext, filter: SimpleFilter): Promise<void> {
+        const signal = this.options.signal;
+        if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+        const margin = filterOutset(filter);
+        const options = {
+            ...this.options,
+            canvas: undefined,
+            backgroundColor: null,
+            x: this.options.x - margin,
+            y: this.options.y - margin,
+            width: this.options.width + margin * 2,
+            height: this.options.height + margin * 2
+        };
+        const source = new CanvasRenderer(this.context, options, stack.element);
+        await source.renderStackContent(stack);
+        source.effectsRenderer.applyEffects([]);
+        const filtered = await renderFilterSurface(
+            source.canvas,
+            filter,
+            stack.element.container.styles.opacity,
+            options.scale
+        );
+        if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+        const own = stack.element.effects;
+        const effects = stack.element
+            .getEffects(EffectTarget.CONTENT, this.surfaceRoot)
+            .filter(
+                (effect) =>
+                    !own.includes(effect) ||
+                    (!isFilterEffect(effect) && !isOpacityEffect(effect) && !isClipEffect(effect))
+            );
+        this.effectsRenderer.applyEffects(effects);
+        this.ctx.drawImage(
+            filtered,
+            options.x,
+            options.y,
+            filtered.width / options.scale,
+            filtered.height / options.scale
+        );
     }
 
     async renderNode(paint: ElementPaint): Promise<void> {
@@ -179,7 +260,7 @@ export class CanvasRenderer {
     }
 
     async renderNodeContent(paint: ElementPaint): Promise<void> {
-        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.CONTENT));
+        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.CONTENT, this.surfaceRoot));
         const container = paint.container;
         const curves = paint.curves;
         const styles = container.styles;
@@ -296,7 +377,7 @@ export class CanvasRenderer {
     }
 
     async renderNodeBackgroundAndBorders(paint: ElementPaint): Promise<void> {
-        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.BACKGROUND_BORDERS));
+        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.BACKGROUND_BORDERS, this.surfaceRoot));
         const styles = paint.container.styles;
         const hasBackground = !isTransparent(styles.backgroundColor) || styles.backgroundImage.length;
         const hasTextClip = hasTextBackgroundClip(styles);

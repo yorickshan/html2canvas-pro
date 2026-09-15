@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Filter surfaces: nesting and clipping</title>
+        <script src="../../test.js"></script>
+        <style>
+            body {
+                margin: 20px;
+                background: white;
+                font:
+                    16px/24px Arial,
+                    sans-serif;
+            }
+            h2 {
+                margin: 16px 0;
+                font-size: 20px;
+                line-height: 24px;
+            }
+            .stage {
+                position: relative;
+                width: 280px;
+                height: 220px;
+            }
+            .subject {
+                position: absolute;
+                left: 60px;
+                top: 60px;
+                width: 100px;
+                height: 60px;
+            }
+            .fill {
+                width: 100px;
+                height: 60px;
+                background: #176b70;
+            }
+            .clip {
+                position: absolute;
+                left: 60px;
+                top: 60px;
+                width: 100px;
+                height: 80px;
+                overflow: hidden;
+            }
+            .clip .subject {
+                left: 0;
+                top: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Nested opacity and filters (center alpha = 25%)</h2>
+        <div id="nested" class="stage">
+            <div class="subject" style="opacity: 0.5; filter: blur(2px)">
+                <div class="fill" style="opacity: 0.5; filter: drop-shadow(12px 8px 4px black)"></div>
+            </div>
+        </div>
+        <h2>Ancestor clips the completed shadow</h2>
+        <div id="clipped" class="stage">
+            <div class="clip">
+                <div class="subject" style="filter: drop-shadow(20px 20px 8px black)"><div class="fill"></div></div>
+            </div>
+        </div>
+        <h2>Own overflow clips the source before filtering</h2>
+        <div id="own-clip" class="stage">
+            <div class="subject" style="overflow: hidden; filter: blur(4px)">
+                <div class="fill" style="width: 160px"></div>
+            </div>
+        </div>
+    </body>
+</html>
