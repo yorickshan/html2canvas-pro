@@ -2,6 +2,8 @@
 
 Implemented in `1720a274cc94e31fb7777bde184ca0b9621b4601`. Measurements below were recorded on 16 September 2026. The native backend is now used by the production renderer, not just the benchmark. The public API and surface eligibility rules are unchanged.
 
+**Over-budget follow-up:** the [controlled attribution report](./filter-overbudget.md) now separates the earlier release/draft gap from memory-budget overhead. The corrected filter descriptor makes legacy blur actually execute; descriptor-only and direct-legacy controls reproduce the same pixels. The historical numbers below are retained, not reclassified as an isolated cost of budget rejection.
+
 ## Rendering policy
 
 Eligible complete layers use Canvas filters only after a cached, per-Document probe observes actual blur and a correctly colored semitransparent shadow. The probe checks for the API before assigning to it, preventing a JavaScript expando from masquerading as support. Probe canvases are released, and only a boolean is retained.
@@ -79,7 +81,7 @@ The published release and current draft capture identical DOM but do not always 
 
 ## Remaining limits
 
-The SVG fallback still pays its encoding/decoding cost on runtimes without working native filters. This change does not fix that cost, nor does it change over-budget legacy rendering. In the over-budget Chromium case the draft still takes 508.9 ms versus 79.0 ms for the release, despite zero SVG encodes. That gap must be investigated separately with rendering equivalence in mind; it is not solved by this fast path. CPU scheduling, browser implementation and image entropy affect results. No peak browser-process-memory measurement or universal latency guarantee is claimed.
+The SVG fallback still pays its encoding/decoding cost on runtimes without working native filters. This change does not fix that cost, nor does it change over-budget legacy rendering. In the historical over-budget Chromium case the draft took 508.9 ms versus 79.0 ms for the release, despite zero SVG encodes. The subsequent [five-variant attribution](./filter-overbudget.md) isolates the descriptor fixes: the release was not applying the same blur, and normal rejection matches a direct-legacy control. This explains the reproduction; it does not make legacy filtering fast or correct its group-opacity limitation. CPU scheduling, browser implementation and image entropy affect results. No peak browser-process-memory measurement or universal latency guarantee is claimed.
 
 Performance measurements here are headless Linux Chromium/Firefox/Playwright WebKit. Passing macOS Safari and WKWebView correctness checks is not a macOS performance measurement. Representative real devices and embedded webview hosts still need timing measurements.
 
