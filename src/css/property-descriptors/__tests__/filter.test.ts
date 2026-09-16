@@ -65,6 +65,34 @@ describe('filter', () => {
         expect(parse(value)).toBe(value);
     });
 
+    describe('blur argument serialization', () => {
+        it.each(['blur()', 'blur(0px)', 'blur(0.5px)', 'blur(2em)'])(
+            'preserves omitted, zero, fractional and relative lengths: %s',
+            (value) => {
+                expect(parse(value)).toBe(value);
+            }
+        );
+
+        // This descriptor serializes CSS; it must not turn an invalid length into
+        // a valid effect by adding px. Browser acceptance and ignored-assignment
+        // behavior are checked in scripts/filter-descriptor-regressions.mjs.
+        it.each([
+            'blur(5)',
+            'blur(0.5)',
+            'blur(-5)',
+            'blur(5%)',
+            'blur(-5px)',
+            'blur(5pxpx)',
+            'blur(5) brightness(2)'
+        ])('does not repair invalid blur arguments: %s', (value) => {
+            expect(parse(value)).toBe(value);
+        });
+
+        it('preserves valid unitless zero in a filter chain', () => {
+            expect(parse('blur(0) brightness(2)')).toBe('blur(0) brightness(2)');
+        });
+    });
+
     it('unknown filter name is skipped', () => {
         expect(parse('unknown(1)')).toBeNull();
     });

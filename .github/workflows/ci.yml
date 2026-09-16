@@ -189,6 +189,7 @@ jobs:
                   name: build
                   path: build
             - run: pnpm exec playwright install --with-deps chromium webkit
+            - run: node scripts/filter-descriptor-regressions.mjs
             - run: node scripts/filter-compositing-probe.mjs
             - run: node scripts/filter-surface-regressions.mjs
             - run: node scripts/filter-surface-benchmark.mjs
