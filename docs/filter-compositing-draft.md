@@ -1,7 +1,16 @@
 # Draft: compositing CSS filters on an intermediate surface
 
-This draft now includes an initial renderer integration, an interactive demo and
-a separate test-only prototype. It does not change the public API and is not ready to merge.
+This draft includes a production native Canvas filter path with SVG fallback,
+an interactive demo and a separate test-only prototype. It does not change the
+public API. PR #239 remains Draft; the original 2.4.3 release does not include
+these changes.
+
+For current user-facing behavior, see [CSS filters and layer opacity](./filter-support.md).
+For the native backend, validation and measured remaining performance limits,
+see [the production fast-path report](./filter-native-fastpath.md). Historical
+experiments below retain their original measurements; they are not current-run
+performance claims. The nested outside-shadow policy was accepted by the
+maintainer on 16 September 2026, as recorded in the discrepancy section below.
 
 The base is `60cb8bdd925fd7c56cd423d6e2127da177a97279` (version 2.4.3).
 
@@ -29,7 +38,8 @@ Open `/tests/manual/filter-lab.html` on the same local server. The page provides
 The page tests actual Canvas blur behavior instead of inferring it from a user
 agent string. Safari and WebKit-based webviews are a compatibility focus, but the
 compositing bugs are not exclusive to webviews: Chromium reproduces them too.
-An embedded WKWebView or Android WebView host has not been tested directly.
+A genuine macOS WKWebView host has also been tested, as documented below;
+iOS devices and Android WebView hosts have not been tested directly.
 The [Canvas filter documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter)
 and [WebKit implementation tracker](https://bugs.webkit.org/show_bug.cgi?id=198416)
 provide context; runtime support still needs to be checked on the target device.
@@ -116,32 +126,45 @@ do not implement Canvas 2D filters.
 
 ## Initial renderer integration
 
-`CanvasRenderer` now rasterizes eligible filter/opacity stacking contexts on an
+`CanvasRenderer` rasterizes eligible filter/opacity stacking contexts on an
 intermediate surface. It applies blur followed by one shadow, then opacity, and
 composites the result in z-order. Source effects stop at the surface boundary, so
 ancestor and nested opacity do not get applied twice. Capture bounds gain padding
 for blur and signed shadow offsets.
 
-This first integration only handles untransformed subtrees without blend modes, list markers or
-clip-path. Unsupported filter chains retain the existing renderer path. Nested
-opacity and filters, ancestor clipping and clipping before blur have focused
-checks. SVG paint bounds, general filter chains and transformed/blended surfaces remain outside this scope.
+The production helper now checks actual native blur and colored shadow pixels,
+uses Canvas filters where that probe succeeds, and retries SVG for recoverable
+native failures. Both backends apply layer opacity after filtering. Opacity-only
+layers skip the probe. This backend selection is separate from surface eligibility:
+returning to SVG preserves layer composition, while returning to the previous
+subtree renderer does not gain the new compositing guarantees.
+
+This first integration only handles untransformed subtrees without non-normal
+mix-blend-mode, non-unit zoom, list markers or clip-path. Relevant ancestors are
+checked too. Unsupported filter chains, including `blur(5px) brightness(2)`,
+reversed shadow/blur order and multiple drop shadows, retain the existing renderer
+path. CSS `opacity` is supported separately; `filter: opacity(...)` is outside the
+subset. See [supported combinations and fallback behavior](./filter-support.md).
+Nested opacity and filters, ancestor clipping and clipping before blur have focused
+checks. SVG paint bounds, general filter chains and transformed/blended surfaces
+remain outside this scope.
 
 Filter parsing also preserves units and functional colors: `blur(5px)` no longer
 becomes `blur(5pxpx)`, hue-rotate no longer duplicates its unit, and nested rgba/rgb
 color functions retain their arguments. Non-empty filters create a real stacking
 context.
 
-The 128 demo comparisons were rerun against the integrated renderer. Both renderer
+The 128 demo comparisons were rerun against the initial integrated renderer. Both renderer
 and prototype stayed below 0.39/255 mean absolute RGB error in Chromium and
 1.19/255 in WebKit. Center alpha matched every expected 50% / 100% preset. Two
 nested 50% opacities produced alpha 64 in both engines. These results do not prove
 arbitrary-page equivalence.
 
-The integrated build, lint, 1,195 unit tests and 113 Chrome reftests passed. The
+The initial integrated build, lint, 1,195 unit tests and 113 Chrome reftests passed. The
 committed pixel probe also passed in Chrome 152 at 1x and 2x. The Karma suite
 checks successful rendering, not pixel equivalence; the probe checks pixels for
-the focused filter fixtures.
+the focused filter fixtures. Later validation and measurements are recorded in the
+[production native fast-path report](./filter-native-fastpath.md).
 
 ## Prototype
 
@@ -174,16 +197,18 @@ The combined fixture's overlapping center has alpha 239–240 in the baseline
 capture, versus 128 in the prototype (expected 50%). Outside SVG shadow pixels
 have alpha 0 in the baseline capture and 73–74 in the prototype. These are focused
 fixture results, not a claim of general rendering equivalence or a full Safari UI
-test. WebKit retains a measurable shadow difference that needs investigation.
+test. The native WebKit shadow discrepancy is documented separately below.
 
 ## Surface bounds, errors and cleanup
 
-The optional surface renderer falls back for the affected subtree when tainted
-pixels cannot be serialized, CSP blocks an SVG data image, or SVG decoding fails.
-This preserves `allowTaint`: a permitted cross-origin image still returns a canvas
-whose pixel reads raise `SecurityError`. Abort remains an `AbortError`; it interrupts
-a stalled decoder promptly and is never converted to fallback. Decode waits have
-a 10-second ceiling.
+If native filtering is unavailable or fails recoverably, the SVG backend is tried
+on the completed surface. When that SVG path cannot serialize tainted pixels,
+CSP blocks its data image, or decoding fails, the affected subtree returns to the
+previous renderer. A working native path does not need a data image and can retain
+surface composition under such a CSP. This preserves `allowTaint`: a permitted
+cross-origin image still returns a canvas whose pixel reads raise `SecurityError`.
+Abort remains an `AbortError`; it interrupts a stalled decoder promptly and is
+never converted to fallback. SVG decode waits have a 10-second ceiling.
 
 Temporary canvas backing stores are cleared on success, failure and abort. Failed
 internally allocated output canvases are cleared; caller-supplied canvases remain
@@ -197,22 +222,23 @@ active surface conservatively, with sides capped at 8,192 pixels. This bounds
 intermediate backing stores, not the caller's output or browser encoder overhead.
 Over-budget subtrees use the previous path before allocation, without downscaling.
 Outset box shadows inside a source surface use a visible silhouette and the same
-SVG blur helper. Linux WebKit lost the interior of shadows from off-canvas Canvas
-masks; a smaller displacement did not fix it. The silhouette path shares the
-capture budget and cleanup. An even-odd clip preserves the rounded border-box
-cutout without reversing Bezier curves. Tests cover transparent rounded boxes,
-multiple box shadows, signed offsets and negative spread at 1x/2x. Inset shadows
-retain the previous path, with capture-scaled metrics in a source surface.
+filter helper, which selects native filtering or SVG. Linux WebKit lost the interior
+of shadows from off-canvas Canvas masks; a smaller displacement did not fix it.
+The silhouette path shares the capture budget and cleanup. An even-odd clip preserves
+the rounded border-box cutout without reversing Bezier curves. Tests cover transparent
+rounded boxes, multiple box shadows, signed offsets and negative spread at 1x/2x.
+Inset shadows retain the previous path, with capture-scaled metrics in a source surface.
 
 `node scripts/filter-surface-regressions.mjs` checks Chromium/WebKit pixels at
 1x/2x, z-order, nested signed outsets, overflowing text and box shadows, offset
 crops, transformed/rotated/zoomed/blended/clipped ancestors and descendants,
 unsupported filter chains, real taint, CSP, decoder failure, abort and cleanup.
-Unsupported subtrees are compared with the published release. CSP fallback is
-compared with the current legacy path, preserving the separate parser fixes.
+Unsupported subtrees are compared with the published release. Explicit SVG/CSP
+fallback checks use the current legacy path, preserving the separate parser fixes;
+working native behavior under blocked data-image CSP is checked separately.
 
 `node scripts/filter-surface-benchmark.mjs` records allocations and timings.
-Local Chromium/WebKit measurements on macOS 26.5.2:
+Historical Chromium/WebKit measurements on macOS 26.5.2:
 
 | Fixture                              | Peak intermediate canvas backing stores | Retained after capture |
 | ------------------------------------ | --------------------------------------: | ---------------------: |
@@ -227,7 +253,8 @@ allowance for those image rasters.
 
 ## Real embedded WKWebView
 
-Run `node scripts/wkwebview-probe.mjs` on macOS with Xcode command line tools.
+Run `node scripts/wkwebview-probe.mjs` on macOS with Xcode command line tools,
+after installing dependencies and running `pnpm build`.
 It compiles a minimal AppKit host embedding a genuine `WKWebView`, takes native
 snapshots and captures the same fixtures with both library versions. It does not
 substitute Safari automation or Playwright WebKit for the native host. Runtime,
@@ -250,7 +277,7 @@ transparent PNGs are presented on white for comparison.
 
 ![Actual WKWebView, published 2.4.3 and PR result](./assets/filter-compositing/nested-shadow/wkwebview-comparison.png)
 
-![Native Chromium, native WebKit and PR result in WebKit](./assets/filter-compositing/nested-shadow/engine-comparison.png)
+![Native Chromium, native WebKit and PR result](./assets/filter-compositing/nested-shadow/engine-comparison.png)
 
 [Download original PNGs and view their provenance](./assets/filter-compositing/nested-shadow/README.md).
 
@@ -271,8 +298,10 @@ ratio is unsuitable across platforms with different Canvas filter support. Nativ
 WebKit and baseline errors remain recorded. The macOS host additionally requires
 a twofold error reduction versus its release capture. These gates are explicitly
 separate from the native WebKit threshold for the other cases.
-Do not describe it as pixel-equivalent to native WebKit. Maintainers should triage
-this limitation before the PR leaves Draft.
+Do not describe it as pixel-equivalent to native WebKit. In the
+[16 September 2026 maintainer review](https://github.com/yorickshan/html2canvas-pro/pull/239#issuecomment-5694372459),
+preserving the complete shadow and documenting this native difference was accepted.
+This is an accepted rendering policy, not a resolution of all remaining PR work.
 
 ## Readiness checklist
 
@@ -280,13 +309,18 @@ this limitation before the PR leaves Draft.
 - [x] Crop and budget surfaces; measure large, sparse and nested captures.
 - [x] Add z-order, signed-outset, text/shadow and unsupported-subtree regressions; record the native WebKit discrepancy explicitly.
 - [x] Add CI jobs for the committed pixel probe, Chromium/WebKit regressions and allocation benchmarks, with retained artifacts.
-- [x] Add and run a real macOS WKWebView host at 1x/2x, with a separate CI job.
+- [x] Add and run a real macOS WKWebView host at 1x/2x.
+- [x] Cover unitless blur and descriptor edge cases.
+- [x] Measure SVG cost and add a validated production native Canvas fast path with SVG fallback.
+- [x] Document the surface subset, examples and distinct fallback guarantees in the user-facing guide.
+- [x] Record maintainer acceptance of the nested outside-shadow policy.
 
-Npm publication now requires both pixel jobs as well as the existing browser suite.
-Check the actual PR revision's CI status separately. General filter chains,
-multiple shadows, transformed/blended surfaces, SVG overflow and library-wide
-stylesheet readiness remain potential follow-ups. The demo continues to guard
-cloned stylesheet readiness in `onclone`.
+CI execution and publication dependencies are defined by the committed workflows;
+check the actual PR revision's CI status separately. General filter chains,
+multiple drop shadows, transformed/blended surfaces, SVG overflow and library-wide
+stylesheet readiness remain potential follow-ups. The measured over-budget legacy
+performance gap and remaining SVG cost are described in the native fast-path report.
+The demo continues to guard cloned stylesheet readiness in `onclone`.
 
 The related shadow report #223 was marked fixed in 2.3.2. This draft supplies
 separate fixtures against 2.4.3; it does not assume that report has the same cause.
