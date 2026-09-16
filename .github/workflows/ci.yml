@@ -202,42 +202,13 @@ jobs:
                       tmp/filter-surface-regressions
                   if-no-files-found: warn
 
-    wkwebview-pixels:
-        runs-on: macos-latest
-        name: Native WKWebView pixels
-        timeout-minutes: 15
-        needs: build
-        steps:
-            - uses: actions/checkout@v5
-            - uses: pnpm/action-setup@v6
-            - uses: actions/setup-node@v5
-              with:
-                  node-version: 24
-                  cache: 'pnpm'
-            - run: pnpm install --frozen-lockfile
-            - uses: actions/download-artifact@v7
-              with:
-                  name: dist
-                  path: dist
-            - uses: actions/download-artifact@v7
-              with:
-                  name: build
-                  path: build
-            - run: node scripts/wkwebview-probe.mjs
-            - uses: actions/upload-artifact@v6
-              if: always()
-              with:
-                  name: native-wkwebview-pixels
-                  path: |
-                      tmp/wkwebview-probe/*.png
-                      tmp/wkwebview-probe/results.json
-                  if-no-files-found: warn
-
+    # Native WKWebView diagnostics run separately on v* tags or manual dispatch.
+    # See wkwebview-pixels.yml; they do not gate NPM publication.
     publish:
         runs-on: ubuntu-latest
         name: Publish NPM
         if: startsWith(github.ref, 'refs/tags/v')
-        needs: [browser-test, filter-pixels, wkwebview-pixels]
+        needs: [browser-test, filter-pixels]
         permissions:
             contents: write
             # Required for OIDC trusted publishing to npm

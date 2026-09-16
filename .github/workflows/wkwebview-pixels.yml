@@ -1,0 +1,78 @@
+name: Native WKWebView pixels
+
+# Expensive native-host diagnostics are separate from PR CI and NPM publication.
+on:
+    push:
+        tags:
+            - 'v*'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: native-wkwebview-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        name: Build WKWebView probe
+        timeout-minutes: 10
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  persist-credentials: false
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm build
+            - uses: actions/upload-artifact@v6
+              with:
+                  name: wkwebview-dist
+                  path: dist
+                  if-no-files-found: error
+                  retention-days: 7
+            - uses: actions/upload-artifact@v6
+              with:
+                  name: wkwebview-build
+                  path: build
+                  if-no-files-found: error
+                  retention-days: 7
+
+    wkwebview-pixels:
+        runs-on: macos-latest
+        name: Native WKWebView pixels (diagnostic)
+        timeout-minutes: 15
+        needs: build
+        steps:
+            - uses: actions/checkout@v5
+              with:
+                  persist-credentials: false
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
+            - uses: actions/download-artifact@v7
+              with:
+                  name: wkwebview-dist
+                  path: dist
+            - uses: actions/download-artifact@v7
+              with:
+                  name: wkwebview-build
+                  path: build
+            - run: node scripts/wkwebview-probe.mjs
+            - uses: actions/upload-artifact@v6
+              if: always()
+              with:
+                  name: native-wkwebview-pixels
+                  path: |
+                      tmp/wkwebview-probe/*.png
+                      tmp/wkwebview-probe/results.json
+                  if-no-files-found: warn
+                  retention-days: 30
