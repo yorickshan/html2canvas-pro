@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Performance · html2canvas-pro filter lab</title>
+    <style>
+        :root { color-scheme: light; font-family: system-ui, sans-serif; color: #182b30; background: #f2f6f5; }
+        body { margin: 0; } main { max-width: 1200px; margin: auto; padding: 32px 20px 64px; }
+        h1 { font-size: clamp(30px, 4vw, 48px); margin: 12px 0; } h2 { margin-top: 0; }
+        p { max-width: 85ch; line-height: 1.6; } a { color: #12676c; }
+        .eyebrow { text-transform: uppercase; letter-spacing: .13em; font-size: 12px; font-weight: 700; }
+        section { background: white; border: 1px solid #d5e0df; border-radius: 12px; padding: 24px; margin-top: 24px; }
+        .notice { border-left: 4px solid #ba7b20; background: #fff8e9; padding: 12px 20px; }
+        .controls { display: flex; gap: 16px; align-items: end; flex-wrap: wrap; }
+        label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+        button, select, input { font: inherit; } button, select { padding: 10px 14px; border: 1px solid #adbfbd; border-radius: 6px; }
+        button { cursor: pointer; background: #edf4f3; } #run { background: #176b70; color: white; }
+        button:disabled { opacity: .5; cursor: default; } .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+        caption { text-align: left; font-weight: 700; margin: 22px 0 10px; font-size: 16px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #dde6e4; white-space: nowrap; }
+        th { background: #eff5f4; } code { overflow-wrap: anywhere; } pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+        #status { min-height: 1.6em; } [hidden] { display: none !important; }
+    </style>
+</head>
+<body><main>
+    <a href="./filter-lab.html">← Back to the before / after lab</a>
+    <p class="eyebrow">03 / Performance · Draft PR #239</p>
+    <h1>Measure the cost of correctness</h1>
+    <p>Reproducible timings for the real SVG surface helper and full DOM captures. Run locally in this browser or inspect a saved CLI report. No requests or telemetry are sent by the benchmark.</p>
+    <div class="notice"><strong>No universal “fast enough” claim.</strong>
+        <p>Hardware, browser and image entropy matter. A faster release capture can be missing blur or applying opacity incorrectly. A memory-budget fallback is explicitly labeled, not counted as a successful filtered rendering.</p>
+    </div>
+    <section aria-labelledby="method"><h2 id="method">What is measured?</h2>
+        <p><strong>Surface:</strong> 512², 1000² and 2000² raster pixels, flat and seeded noisy images, blur and blur + shadow. Compare an opacity-only copy, the production SVG pipeline and a benchmark-only Canvas filter alternative. Native filtering uses two passes so opacity is applied after filtering, not before shadow merge.</p>
+        <p><strong>Full capture:</strong> published 2.4.3 and the current draft on identical DOM: no-effects controls, combined effects, 50 sparse layers, 12 nested filters and a 2600² over-budget case. Surface source creation is outside its timer; DOM cloning/rendering is inside full-capture timing.</p>
+        <p>Each case records its first observation separately, excludes two warmups, then rotates backend order. Total time includes a full pixel readback to flush deferred drawing. Encode, decode, submission and readback durations remain available in JSON. With nine samples, nearest-rank p95 equals the maximum; it is not a stable tail-latency estimate.</p>
+        <p>Center opacity, outside blur, actual SVG usage and clone cleanup are checked. These are sanity checks, not full visual equivalence. The existing pixel-regression and allocation suites remain necessary. This page does not measure peak browser-process or SVG-decoder memory.</p>
+    </section>
+    <section aria-labelledby="run-title"><h2 id="run-title">Run on this device</h2>
+        <p>Keep this tab visible. Close other busy tabs. No benchmark starts automatically; a full run can be resource-intensive.</p>
+        <div class="controls">
+            <label>Samples per case<select id="iterations"><option>5</option><option selected>9</option><option>21</option></select></label>
+            <label>Scope<select id="scope"><option value="full">Surface + full capture</option><option value="surface">Surface only</option></select></label>
+            <button id="run" type="button">Run benchmark</button><button id="stop" type="button" disabled>Stop</button>
+            <label>Load saved JSON<input id="import" type="file" accept=".json,application/json" /></label>
+        </div>
+        <p id="status" role="status" aria-live="polite">Ready. Results depend on this device and runtime.</p>
+        <a id="download" hidden>Download raw observations (JSON)</a>
+        <div id="results"></div>
+    </section>
+    <footer><p>Reproduce in the repository: <code>pnpm build &amp;&amp; node scripts/filter-performance.mjs</code>.
+        <a href="https://github.com/yorickshan/html2canvas-pro/pull/239">Review PR #239</a>. The Canvas alternative is benchmark-only; this page does not change the production renderer.</p></footer>
+</main>
+<script type="module">
+    import { runPerformance } from './filter-performance.js';
+    const $ = id => document.getElementById(id);
+    let controller, downloadURL;
+    const number = value => typeof value === 'number' ? value.toFixed(2) : '—';
+    function table(parent, caption, headers, rows) {
+        const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+        const t = document.createElement('table'), c = t.createCaption(); c.textContent = caption;
+        const tr = t.createTHead().insertRow();
+        for (const text of headers) { const th = document.createElement('th'); th.scope = 'col'; th.textContent = text; tr.append(th); }
+        const body = t.createTBody();
+        for (const row of rows) { const tr = body.insertRow(); for (const text of row) tr.insertCell().textContent = text; }
+        wrap.append(t); parent.append(wrap);
+    }
+    function show(data) {
+        $('results').replaceChildren();
+        const reports = data.reports || [data];
+        if (!Array.isArray(reports) || reports.some(r => r.schemaVersion !== 1)) throw new Error('Unsupported report schema');
+        for (const report of reports) {
+            const group = document.createElement('div'), title = document.createElement('h3');
+            title.textContent = `${report.engine || 'Local browser'} · ${report.startedAt || ''} · ${report.status}`; group.append(title);
+            const meta = document.createElement('p'); meta.textContent = `${report.environment?.userAgent || ''}. ${report.config?.iterations || '?'} samples after ${report.config?.warmups || 0} warmups. Working Canvas filters: ${report.environment?.canvasFiltersWork ? 'yes' : 'no'}.`; group.append(meta);
+            table(group, 'Surface pipeline — milliseconds, including output readback',
+                ['Raster', 'Content', 'Effect', 'Backend', 'First', 'Median', 'p95', 'PNG encode', 'Image decode'],
+                (report.surface || []).map(r => [r.size, r.content, r.effect, r.skipped ? `${r.backend}: unsupported` : r.backend,
+                    number(r.firstMs), number(r.medianMs), number(r.p95Ms), number(r.medianEncodeMs), number(r.medianDecodeMs)]));
+            table(group, 'Full DOM capture — release and draft are not visually equivalent for effects',
+                ['Scenario', 'Version', 'Median ms', 'p95 ms', 'Actual path', 'Center alpha / 255'],
+                (report.endToEnd || []).map(r => [r.scenario, r.version, number(r.medianMs), number(r.p95Ms), r.observedPath, r.centerAlpha]));
+            const details = document.createElement('details'), summary = document.createElement('summary'), pre = document.createElement('pre');
+            summary.textContent = 'Environment / provenance'; pre.textContent = JSON.stringify({host:data.host,provenance:report.provenance,environment:report.environment}, null, 2);
+            details.append(summary, pre); group.append(details); $('results').append(group);
+        }
+        if (downloadURL) URL.revokeObjectURL(downloadURL);
+        downloadURL = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}));
+        $('download').href = downloadURL; $('download').download = 'filter-performance.json'; $('download').hidden = false;
+    }
+    if (!new URLSearchParams(location.search).has('cli')) {
+        $('run').onclick = async () => {
+            controller = new AbortController(); $('run').disabled = true; $('stop').disabled = false; $('import').disabled = true;
+            $('results').replaceChildren(); $('download').hidden = true;
+            try {
+                const report = await runPerformance({iterations:Number($('iterations').value), endToEnd:$('scope').value === 'full',
+                    signal:controller.signal, onProgress:message => { $('status').textContent = message; }});
+                show(report); $('status').textContent = 'Completed. Rendering-path checks passed; timings are informational, not a performance approval.';
+            } catch (error) {
+                if (error.report) show(error.report);
+                $('status').textContent = controller.signal.aborted ? 'Stopped. Partial observations only.' : `Failed: ${error.message}`;
+            } finally { $('run').disabled = false; $('stop').disabled = true; $('import').disabled = false; }
+        };
+        $('stop').onclick = () => controller?.abort();
+        $('import').onchange = async () => {
+            try { show(JSON.parse(await $('import').files[0].text())); $('status').textContent = 'Saved observations loaded. Check their environment and revision.'; }
+            catch (error) { $('status').textContent = `Cannot load report: ${error.message}`; }
+        };
+    }
+</script>
+</body></html>

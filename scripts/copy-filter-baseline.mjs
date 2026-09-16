@@ -3,6 +3,7 @@ import { copyFile, mkdir, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rolldown } from 'rolldown';
 
 const require = createRequire(import.meta.url);
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -16,3 +17,11 @@ await mkdir(output, { recursive: true });
 await copyFile(path.join(baselineDist, 'html2canvas-pro.esm.js'), path.join(output, 'html2canvas-pro-baseline.esm.js'));
 await copyFile(path.join(baselineDist, 'html2canvas-pro.esm.js.map'), path.join(output, 'html2canvas-pro.esm.js.map'));
 console.log('Prepared unmodified published html2canvas-pro 2.4.3 for the before/after demo');
+
+// Benchmark the actual helper, not a reimplementation. This test-only entry is never published in dist/.
+const bundle = await rolldown({ input: path.join(root, 'src/render/canvas/filter-surface.ts') });
+try {
+    await bundle.write({ file: path.join(output, 'filter-surface-benchmark.js'), format: 'esm' });
+} finally {
+    await bundle.close();
+}

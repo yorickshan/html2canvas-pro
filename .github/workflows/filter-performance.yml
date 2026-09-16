@@ -1,0 +1,40 @@
+name: Filter performance
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/manual/filter-performance*'
+      - 'scripts/filter-performance.mjs'
+      - 'scripts/copy-filter-baseline.mjs'
+      - '.github/workflows/filter-performance.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: filter-performance-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  benchmark:
+    name: Informational filter timings
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: node scripts/filter-performance.mjs
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: filter-performance
+          path: tmp/filter-surface-regressions/performance/
+          if-no-files-found: warn
+          retention-days: 30
