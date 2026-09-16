@@ -4,6 +4,8 @@ on:
     paths:
       - 'src/**'
       - 'tests/manual/filter-performance*'
+      - 'tests/manual/filter-overbudget.js'
+      - 'scripts/filter-overbudget.mjs'
       - 'scripts/filter-performance.mjs'
       - 'scripts/filter-native-regressions.mjs'
       - 'scripts/filter-probe-server.mjs'
@@ -33,6 +35,7 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: node scripts/filter-native-regressions.mjs
+      - run: node scripts/filter-overbudget.mjs
       - run: node scripts/filter-performance.mjs
         env:
           BENCH_ENGINES: chromium,firefox,webkit
