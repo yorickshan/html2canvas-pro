@@ -263,6 +263,9 @@ try {
             }
             await page.goto(server.url + '/tests/reftests/filter/surface-regressions.html');
             const lifecycle = await page.evaluate(async () => {
+                // Explicitly exercise the SVG decoder lifecycle, even on native-capable engines.
+                // This fresh page has not cached a capability result yet; navigation resets the override.
+                delete CanvasRenderingContext2D.prototype.filter;
                 const rows = [];
                 for (const id of ['combined', 'text-box-shadow']) {
                     const stage = document.getElementById(id);
@@ -329,6 +332,9 @@ try {
             }
             await page.goto(server.url + '/tests/reftests/filter/surface-regressions.html?csp');
             const csp = await page.evaluate(async () => {
+                // Keep the real CSP-blocked SVG fallback regression. Native rendering under
+                // this policy is covered independently by filter-native-regressions.mjs.
+                delete CanvasRenderingContext2D.prototype.filter;
                 const violations = [];
                 document.addEventListener('securitypolicyviolation', (e) => violations.push(e.blockedURI));
                 const stage = document.getElementById('combined');

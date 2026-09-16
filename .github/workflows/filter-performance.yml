@@ -5,6 +5,8 @@ on:
       - 'src/**'
       - 'tests/manual/filter-performance*'
       - 'scripts/filter-performance.mjs'
+      - 'scripts/filter-native-regressions.mjs'
+      - 'scripts/filter-probe-server.mjs'
       - 'scripts/copy-filter-baseline.mjs'
       - '.github/workflows/filter-performance.yml'
       - 'package.json'
@@ -17,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   benchmark:
-    name: Informational filter timings
+    name: Native/SVG validity and informational timings
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -29,8 +31,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - run: node scripts/filter-native-regressions.mjs
       - run: node scripts/filter-performance.mjs
+        env:
+          BENCH_ENGINES: chromium,firefox,webkit
       - uses: actions/upload-artifact@v6
         if: always()
         with:

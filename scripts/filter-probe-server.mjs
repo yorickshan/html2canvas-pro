@@ -27,6 +27,7 @@ export async function startFilterServer() {
                 '/tests/reftests/filter/surface-nesting.html',
                 '/tests/test.js',
                 '/dist/html2canvas-pro.js',
+                '/build/filter-surface-benchmark.js',
                 '/build/html2canvas-pro-baseline.esm.js',
                 '/tests/manual/filter-compositing.js',
                 '/tests/manual/filter-lab.html',

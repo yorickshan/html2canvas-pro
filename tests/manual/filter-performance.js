@@ -1,5 +1,5 @@
-// Shared by the manual page and the CLI. The SVG implementation is bundled from production source.
-import { renderFilterSurface, releaseSurface } from '../../build/filter-surface-benchmark.js';
+// Shared by the manual page and the CLI. Both backends are bundled from production source.
+import { renderFilterSurface, renderSvgFilterSurface, supportsNativeFilters, releaseSurface } from '../../build/filter-surface-benchmark.js';
 import draft from '../../dist/html2canvas-pro.esm.js';
 import baseline from '../../build/html2canvas-pro-baseline.esm.js';
 
@@ -24,11 +24,7 @@ function canvas(size) {
     const result = document.createElement('canvas'); result.width = result.height = size; return result;
 }
 function supportsNative() {
-    const c = canvas(32), ctx = c.getContext('2d');
-    if (!ctx || !('filter' in ctx)) { releaseSurface(c); return false; }
-    ctx.filter = 'blur(2px)'; ctx.fillRect(12, 12, 8, 8);
-    const supported = ctx.getImageData(10, 16, 1, 1).data[3] > 0;
-    releaseSurface(c); return supported;
+    return supportsNativeFilters();
 }
 function sourceCanvas(size, content) {
     const c = canvas(size), ctx = c.getContext('2d'), edge = size - 192;
@@ -44,15 +40,9 @@ function sourceCanvas(size, content) {
     }
     return c;
 }
-function nativeSurface(source, filter) {
-    const filtered = canvas(source.width), output = canvas(source.width);
-    try {
-        // Filter first, opacity second. Applying alpha before shadow merge is not the same operation.
-        const ctx = filtered.getContext('2d'); ctx.filter = filterText(filter); ctx.drawImage(source, 0, 0);
-        const out = output.getContext('2d'); out.globalAlpha = .5; out.drawImage(filtered, 0, 0);
-        return output;
-    } catch (error) { releaseSurface(output); throw error; }
-    finally { releaseSurface(filtered); }
+function nativeSurface(source, filter, signal) {
+    // Measure the production dispatcher, not a duplicate native implementation.
+    return renderFilterSurface(source, filter, .5, 1, signal);
 }
 async function measure(render, signal, source, realms = [window]) {
     let encodeMs = 0, decodeMs = 0, svgEncodes = 0;
@@ -106,6 +96,7 @@ export async function runPerformance({ iterations = 9, warmups = 2, sizes = [512
     check(Number.isInteger(warmups) && warmups >= 0 && warmups <= 10, 'warmups must be 0..10');
     check(sizes.length > 0 && sizes.every(n => Number.isInteger(n) && n >= 256 && n <= 2000), 'sizes must be 256..2000 raster pixels');
     const report = { schemaVersion: 1, startedAt: new Date().toISOString(),
+        implementation: 'production-native-with-svg-fallback',
         environment: { userAgent: navigator.userAgent, platform: navigator.platform,
             hardwareConcurrency: navigator.hardwareConcurrency, devicePixelRatio,
             viewport: [innerWidth, innerHeight], canvasFiltersWork: supportsNative() },
@@ -129,8 +120,8 @@ export async function runPerformance({ iterations = 9, warmups = 2, sizes = [512
                     const pixels = {};
                     for (let offset = 0; offset < backends.length; offset++) {
                         const backend = backends[(round + offset) % backends.length];
-                        const render = () => backend === 'canvas' ? nativeSurface(source, filter) :
-                            renderFilterSurface(source, backend === 'copy' ? { blur: 0 } : filter, .5, 1, signal);
+                        const render = () => backend === 'canvas' ? nativeSurface(source, filter, signal) :
+                            renderSvgFilterSurface(source, backend === 'copy' ? { blur: 0 } : filter, .5, 1, signal);
                         const sample = await measure(render, signal, source), row = rows[backend];
                         const middle = ((size / 2 | 0) * size + (size / 2 | 0)) * 4 + 3;
                         const outside = ((size / 2 | 0) * size + 94) * 4 + 3;
@@ -202,12 +193,15 @@ export async function runPerformance({ iterations = 9, warmups = 2, sizes = [512
                             const centerAlpha = sample.pixels[((size / 2 | 0) * size + (size / 2 | 0)) * 4 + 3];
                             const expectedSurface = !scenario.startsWith('control') && scenario !== 'over-budget';
                             if (version === 'draft') {
-                                check((sample.timing.svgEncodes > 0) === expectedSurface, `${scenario}: unexpected SVG/fallback path`);
+                                const expectsSvg = expectedSurface && !report.environment.canvasFiltersWork;
+                                check((sample.timing.svgEncodes > 0) === expectsSvg, `${scenario}: unexpected production backend`);
                                 if (scenario.startsWith('combined')) check(centerAlpha === 128, `${scenario}: opacity regression`);
                             }
                             check(doc.querySelectorAll('.html2canvas-container').length === 0, 'Leaked clone iframe');
                             const row = rows[version]; row.centerAlpha = centerAlpha;
-                            row.observedPath = sample.timing.svgEncodes > 0 ? 'svg-surface' : scenario === 'over-budget' ? 'legacy-fallback' : 'legacy/no-filter';
+                            row.observedPath = sample.timing.svgEncodes > 0 ? 'svg-surface' :
+                                version === 'draft' && expectedSurface && report.environment.canvasFiltersWork ? 'native-surface' :
+                                scenario === 'over-budget' ? 'legacy-fallback' : 'legacy/no-filter';
                             if (!round) row.firstMs = sample.timing.totalMs;
                             if (round > warmups) row.samples.push(sample.timing);
                         }
