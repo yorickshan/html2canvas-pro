@@ -1,28 +1,31 @@
 # Filter-surface performance
 
-These are reproducible observations, not a universal performance approval. The benchmark does not change the production renderer; its Canvas alternative is test-only.
+These are reproducible observations, not a universal performance approval.
+
+**Current implementation:** production native filtering with a verified SVG fallback landed in `1720a27`. See [the native fast-path report](./filter-native-fastpath.md) for current measurements, verification and remaining limits. The tables below preserve the historical pre-fast-path run at `ec0183e`, when the Canvas alternative was benchmark-only. The current harness measures the actual production dispatcher and explicit SVG helper instead; its JSON reports include an `implementation` label.
 
 ## Reproduce
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm build
-pnpm exec playwright install --with-deps chromium webkit
-node scripts/filter-performance.mjs
+pnpm exec playwright install --with-deps chromium firefox webkit
+node scripts/filter-native-regressions.mjs
+BENCH_ENGINES=chromium,firefox,webkit node scripts/filter-performance.mjs
 ```
 
 Optional: `BENCH_ENGINES=chromium BENCH_ITERATIONS=21 BENCH_WARMUPS=3 node scripts/filter-performance.mjs`.
-Firefox can also be selected after installing its Playwright browser. The default run covers Chromium and WebKit, not system Safari, real WKWebView, iOS or Android.
+Without `BENCH_ENGINES`, the CLI defaults to Chromium and WebKit; the workflow explicitly covers all three engines. These are not system Safari, real WKWebView, iOS or Android performance measurements.
 
 For the browser UI, run the normal test server and open `/tests/manual/filter-performance.html`, linked from the filter lab's Performance section. No benchmark starts automatically. Keep the tab visible and avoid other CPU-intensive work. The page supports cancellation and JSON export/import.
 
-CLI output is `tmp/filter-surface-regressions/performance/results.json` and `summary.md`. The Ubuntu-only `Filter performance` workflow retains both in its `filter-performance` artifact. It is not a dependency of NPM publication. Timings are informational; invalid execution, rendering paths or pixel sanity checks fail the job, not a speed threshold.
+CLI output is `tmp/filter-surface-regressions/performance/results.json` and `summary.md`. The Ubuntu-only `Filter performance` workflow retains both in its `filter-performance` artifact, together with `native-regressions.json`. It is not a dependency of NPM publication. Timings are informational; invalid execution, rendering paths or pixel sanity checks fail the job, not a speed threshold.
 
 ## Protocol
 
 The build bundles the actual `src/render/canvas/filter-surface.ts` into the ignored `build/filter-surface-benchmark.js`. There is no copied SVG implementation, new public export or new published dependency.
 
-**Surface microbenchmark:** 512, 1000 and 2000 raster pixels per side, scale 1. Compare flat fill and deterministic high-entropy RGB noise, with blur(4px), or blur plus one shadow (12px, 8px, 8px, alpha 0.6), then layer opacity 0.5. Source creation is excluded. The opacity-only copy is a cost floor, not an equivalent visual result. The Canvas alternative filters at alpha 1 before a second opacity pass, preserving operation order.
+**Surface microbenchmark:** 512, 1000 and 2000 raster pixels per side, scale 1. Compare flat fill and deterministic high-entropy RGB noise, with blur(4px), or blur plus one shadow (12px, 8px, 8px, alpha 0.6), then layer opacity 0.5. Source creation is excluded. The opacity-only copy is a cost floor, not an equivalent visual result. Native filtering happens at alpha 1 before a second opacity pass, preserving operation order. Before `1720a27` the native implementation was test-only; the current harness invokes the production dispatcher.
 
 **Full capture:** identical DOM, dimensions and scale for the pinned unmodified 2.4.3 and the draft. Cases cover no-effects controls, combined effects, 50 sparse layers, 12 nested filters and a 2600-pixel over-budget capture. Cloning and rendering are timed. The 2000-pixel filtered DOM fixture has inset content so its padded intermediate surface fits the existing budget; output is exactly 2000 by 2000.
 
@@ -34,7 +37,7 @@ The build bundles the actual `src/render/canvas/filter-surface.ts` into the igno
 
 **Limits:** shared headless runners do not represent every device. Noise is an encoding stress case, not a claim that every photograph costs this much. This benchmark does not measure peak process or SVG-decoder memory; readbacks themselves allocate buffers. The existing 64 MiB reservation is not total process RSS. Release captures can omit effects or compound opacity, so their speed ratios do not isolate compositing overhead. Memory-budget fallback is not a successful filtered-rendering optimization.
 
-## Cross-engine CI — 16 September 2026
+## Historical cross-engine CI — 16 September 2026, before native integration
 
 [Run 35085900932](https://github.com/yorickshan/html2canvas-pro/actions/runs/35085900932) completed both engines with valid observations. Environment: Ubuntu, AMD EPYC 7763, four exposed logical CPUs, Node 24.20.0. PR head `ec0183e90f8d7c017de53c1999588ed55b909952`; GitHub test-merge checkout `c39a63e97dec134c3dab64b21a49673b49e58316`. Nine measured samples after two warmups. Chromium 148.0.7778.96 and Playwright WebKit 26.4.
 
@@ -51,7 +54,7 @@ All times are milliseconds, including output readback.
 | Noise, blur | 925.6 / 1021.9 | 49.4 / 52.4 | 2023.0 / 2105.0 |
 | Noise, blur + shadow | 954.1 / 1053.6 | 109.0 / 111.1 | 2106.0 / 2179.0 |
 
-In Chromium, the high-entropy combined case was about 8.8 times slower through SVG than the test-only native path; isolated blur was about 18.7 times slower. These are fixture-specific comparisons, not general browser rankings. The measured SVG/Canvas pairs stayed below 0.001/255 mean RGB error on white in this microbenchmark; broader native-path correctness still needs validation.
+In Chromium, the high-entropy combined case was about 8.8 times slower through SVG than the test-only native path; isolated blur was about 18.7 times slower. These are fixture-specific comparisons, not general browser rankings. The measured SVG/Canvas pairs stayed below 0.001/255 mean RGB error on white in this microbenchmark; broader native-path correctness still needed validation at this revision.
 
 For noisy combined effects, median PNG encoding / `Image.decode()` waits were 133.1 / 502.5 ms in Chromium and 668.0 / 832.0 ms in WebKit. Flat sources measured 14.5 / 5.6 ms and 185.0 / 4.0 ms respectively. Substantial work can also occur in serialization, drawing or readback; these stage medians do not sum to the total median.
 
@@ -81,8 +84,8 @@ The `filter-performance` artifact contains all raw samples, stage timings, quali
 
 A separate local preflight used Chromium 144.0.7559.96 on headless Linux with the exact prior CI artifacts from [run 35074811940](https://github.com/yorickshan/html2canvas-pro/actions/runs/35074811940), loaded as in-memory modules in Python Playwright. Renderer and benchmark hashes matched the cross-engine run. It independently showed the same issue: noisy combined 2000-pixel SVG surfaces had median 1014.1 ms versus 138.0 ms on the Canvas alternative, while flat combined surfaces measured 198.4 versus 147.2 ms. This pilot is not a WebKit measurement.
 
-## Engineering conclusion
+## Historical finding and current status
 
-There is a material high-entropy SVG round-trip cost. Do not describe the current implementation as having no significant performance risk. A native Canvas fast path is worth implementing and validating separately where filters actually work, retaining SVG for unsupported runtimes. That optimization is not enabled by this benchmark, and correctness, memory, CSP, taint and cancellation requirements are unchanged.
+The historical run established a material high-entropy SVG round-trip cost and motivated a native Canvas fast path. That production optimization is now implemented in `1720a27`, with a separate [validation and performance report](./filter-native-fastpath.md). The SVG fallback itself is not made faster by selecting Canvas on capable engines, and the over-budget legacy path remains separate.
 
-Representative devices and system Safari/WKWebView still need performance measurements. A successful benchmark job means valid observations, not speed certification.
+Representative devices and system Safari/WKWebView still need performance measurements. A successful benchmark job means valid observations, not speed certification. Correctness, resource cleanup, CSP, taint and cancellation remain requirements for either backend.
