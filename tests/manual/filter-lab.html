@@ -143,6 +143,58 @@
                 <div id="matrix"></div>
                 <a id="report-download" hidden>Download runtime + settings report (JSON)</a>
             </section>
+            <section class="card" id="performance" aria-labelledby="performance-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">03 / Performance</p>
+                        <h2 id="performance-title">Measure the cost, not just the output</h2>
+                    </div>
+                    <a href="./filter-performance.html">Run the benchmark ↗</a>
+                </div>
+                <p>
+                    Compare the production SVG surface helper with an opacity-only copy and a benchmark-only Canvas
+                    filter alternative. The full-capture suite also compares published 2.4.3 with this draft, including
+                    no-effects controls, sparse and nested layers, and an explicitly labeled memory-budget fallback.
+                </p>
+                <p>
+                    <strong>CI measurements: Chromium 148 and Playwright WebKit 26.4 on Ubuntu, 4 vCPUs.</strong>
+                    Medians below include full output readback, after two warmups and nine measured samples.
+                    PR head <code>ec0183e</code>; this is Linux WebKit, not a macOS Safari or WKWebView measurement.
+                    These are observations on a shared runner, not a universal speed guarantee.
+                </p>
+                <div style="overflow-x: auto">
+                    <table style="width: 100%; text-align: left; border-spacing: 12px">
+                        <caption>2000 × 2000 surface: median milliseconds</caption>
+                        <thead><tr><th scope="col">Source / effect</th><th scope="col">Chromium SVG</th><th scope="col">Chromium Canvas</th><th scope="col">WebKit SVG</th></tr></thead>
+                        <tbody>
+                            <tr><th scope="row">Flat · blur</th><td>99.4</td><td>49.1</td><td>415.0</td></tr>
+                            <tr><th scope="row">Flat · blur + shadow</th><td>173.7</td><td>111.7</td><td>467.0</td></tr>
+                            <tr><th scope="row">Noise · blur</th><td>925.6</td><td>49.4</td><td>2023.0</td></tr>
+                            <tr><th scope="row">Noise · blur + shadow</th><td>954.1</td><td>109.0</td><td>2106.0</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>
+                    <strong>The high-entropy SVG round trip has a material cost.</strong> Noise stresses PNG encoding
+                    and the large SVG data image; it does not mean every photograph costs this much. A native fast path
+                    is worth evaluating, but is not enabled in the production renderer by this benchmark.
+                    Canvas filters are explicitly unsupported in the tested WebKit runtime, not counted as fast no-ops.
+                </p>
+                <p>
+                    Full 2000 × 2000 capture without effects measured 66.6 ms before / 66.8 ms after in Chromium,
+                    and 74.0 / 72.0 ms in WebKit. With combined effects it measured 70.3 / 196.2 ms in Chromium
+                    and 868.0 / 278.0 ms in WebKit. The release's combined result has incorrect opacity
+                    (center alpha 252 instead of 128), so filtered rows are not equivalent visual workloads.
+                    The over-budget case is reported separately and must not be interpreted as successful filtering.
+                </p>
+                <p class="footnote">
+                    The benchmark page records first observations, median/p95, encoding/decoding and all raw samples,
+                    with JSON export/import and a Stop button. With nine samples p95 is the maximum, not a stable tail estimate.
+                    <a href="../../docs/filter-performance.md">Protocol and detailed findings</a> ·
+                    <a href="https://github.com/yorickshan/html2canvas-pro/actions/runs/35085900932">Cross-engine CI and raw artifact</a>.
+                    The benchmark never starts automatically.
+                </p>
+            </section>
             <footer>
                 Experimental, AI-assisted work in
                 <a href="https://github.com/yorickshan/html2canvas-pro/pull/239">draft PR #239</a>. This branch includes
