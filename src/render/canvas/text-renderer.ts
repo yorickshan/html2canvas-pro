@@ -51,8 +51,8 @@ const TEXT_OVERFLOW_EPSILON = 1;
 
 /**
  * Detect CJK (Chinese, Japanese, Korean) characters in a string.
- * CJK characters use the ideographic baseline in browsers, which differs
- * from the alphabetic baseline used for Latin script.
+ * Vertical writing modes use it to keep CJK glyphs upright and on the
+ * ideographic baseline while other scripts are rotated.
  *
  * Covers:
  *   U+2E80–U+2FFF  CJK Radicals Supplement, Kangxi Radicals
@@ -172,15 +172,17 @@ export class TextRenderer {
     }
 
     /**
-     * Iterate grapheme clusters one-by-one, applying correct letter-spacing and
-     * per-script baseline for each character.
+     * Iterate grapheme clusters one-by-one, applying correct letter-spacing.
      *
      * Issue #73: When letter-spacing is non-zero, text must be rendered character by
-     * character. This helper centralises two fixes applied during that iteration:
-     *   1. Add `letterSpacing` to each character's advance width (was previously
-     *      omitted, causing characters to render without any spacing).
-     *   2. Switch to the ideographic baseline for CJK glyphs so their vertical
-     *      position matches how browsers lay them out in the DOM.
+     * character, adding `letterSpacing` to each character's advance width.
+     *
+     * In horizontal text every glyph keeps the alphabetic baseline, CJK included:
+     * inline layout aligns a whole line on its alphabetic baseline regardless of
+     * script, and `baseline` was measured for that. Drawing CJK graphemes at the
+     * same y with `textBaseline = 'ideographic'` lifts them above the Latin text
+     * next to them, and away from where the `letterSpacing === 0` whole-string
+     * path draws them.
      *
      * The `renderFn` callback receives (letter, x, y) and performs the actual draw
      * call (fillText or strokeText), allowing fill and stroke paths to share one
@@ -203,14 +205,7 @@ export class TextRenderer {
         const fontString = this.ctx.font;
         let left = text.bounds.left;
         for (const letter of letters) {
-            if (hasCJKCharacters(letter)) {
-                const savedBaseline = this.ctx.textBaseline;
-                this.ctx.textBaseline = 'ideographic';
-                renderFn(letter, left, y);
-                this.ctx.textBaseline = savedBaseline;
-            } else {
-                renderFn(letter, left, y);
-            }
+            renderFn(letter, left, y);
             left += this.cachedMeasureText(letter, fontString) + letterSpacing;
         }
     }
@@ -274,7 +269,7 @@ export class TextRenderer {
     /**
      * Render text with letter-spacing applied (fill pass).
      * When letterSpacing is 0 the whole string is drawn in one call; otherwise each
-     * grapheme is drawn individually so spacing and CJK baseline are applied correctly.
+     * grapheme is drawn individually so spacing is applied correctly.
      */
     renderTextWithLetterSpacing(
         text: TextBounds,
