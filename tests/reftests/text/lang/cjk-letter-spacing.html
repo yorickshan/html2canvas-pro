@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>CJK text with letter-spacing</title>
+    <script type="text/javascript" src="../../../test.js"></script>
+    <style>
+        body {
+            font-family: Arial, "PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo", "Noto Sans CJK SC", sans-serif;
+        }
+
+        .sample {
+            font-size: 32px;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <p>CJK glyphs share the alphabetic baseline with the Latin text on the same line, with or without letter-spacing.</p>
+    <div class="sample" style="letter-spacing: 0">Latin 中文 Text</div>
+    <div class="sample" style="letter-spacing: -0.025em">Latin 中文 Text</div>
+    <div class="sample" style="letter-spacing: 2px">Latin 中文 Text</div>
+    <div class="sample" style="letter-spacing: 1px">Tokyo 東京タワー</div>
+    <div class="sample" style="letter-spacing: 1px">Seoul 서울타워</div>
+</body>
+</html>

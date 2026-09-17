@@ -118,7 +118,7 @@ describe('renderTextWithLetterSpacing', () => {
         });
     });
 
-    it('should use ideographic baseline for CJK characters (Issue #73 Bug2)', () => {
+    it('should keep CJK characters on the alphabetic baseline in horizontal text', () => {
         const baselineChanges: string[] = [];
         let currentBaseline: CanvasTextBaseline = 'alphabetic';
 
@@ -149,12 +149,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         renderer.renderTextWithLetterSpacing(text, 10, 20);
 
-        // Should have switched to ideographic for each CJK char and restored
-        // Pattern: [ideographic, alphabetic, ideographic, alphabetic]
-        ok(baselineChanges.includes('ideographic'), 'should switch to ideographic baseline for CJK');
-        // Should restore alphabetic after each CJK char
-        const ideographicIdx = baselineChanges.indexOf('ideographic');
-        strictEqual(baselineChanges[ideographicIdx + 1], 'alphabetic');
+        deepStrictEqual(baselineChanges, [], 'should not switch baseline for CJK in horizontal text');
     });
 
     it('should not change textBaseline for non-CJK characters', () => {
@@ -252,8 +247,8 @@ describe('renderTextWithLetterSpacing', () => {
         strictEqual(fillCalls[1].x, 107);
     });
 
-    it('should handle mixed CJK and Latin text with correct baseline per character', () => {
-        const baselineAtRender: Record<string, string> = {};
+    it('should draw mixed CJK and Latin text on the same baseline as the whole-string path', () => {
+        const calls: Array<{ text: string; y: number; baseline: CanvasTextBaseline }> = [];
         let currentBaseline: CanvasTextBaseline = 'alphabetic';
 
         const ctx = {
@@ -265,8 +260,8 @@ describe('renderTextWithLetterSpacing', () => {
             set textBaseline(value: CanvasTextBaseline) {
                 currentBaseline = value;
             },
-            fillText(text: string, _x: number, _y: number) {
-                baselineAtRender[text] = currentBaseline;
+            fillText(text: string, _x: number, y: number) {
+                calls.push({ text, y, baseline: currentBaseline });
             },
             measureText(_text: string) {
                 return { width: 12 };
@@ -283,11 +278,15 @@ describe('renderTextWithLetterSpacing', () => {
         // Mixed: Latin 'A', CJK '快', Latin 'B'
         const text = new TextBounds('A快B', bounds);
 
+        renderer.renderTextWithLetterSpacing(text, 0, 20);
+        const [wholeString] = calls.splice(0);
+
         renderer.renderTextWithLetterSpacing(text, 5, 20);
 
-        strictEqual(baselineAtRender['A'], 'alphabetic', 'Latin char should use alphabetic baseline');
-        strictEqual(baselineAtRender['快'], 'ideographic', 'CJK char should use ideographic baseline');
-        strictEqual(baselineAtRender['B'], 'alphabetic', 'Latin char after CJK should restore alphabetic baseline');
+        deepStrictEqual(
+            calls,
+            ['A', '快', 'B'].map((letter) => ({ text: letter, y: wholeString.y, baseline: wholeString.baseline }))
+        );
     });
 
     it('should handle empty string without errors', () => {
