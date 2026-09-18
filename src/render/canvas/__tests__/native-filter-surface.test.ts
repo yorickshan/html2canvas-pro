@@ -63,9 +63,7 @@ describe('native filter surface', () => {
             vi.mocked(context.getImageData).mockImplementation((x: number) => {
                 if (broken === 'readback') throw new Error('readback unavailable');
                 return pixels(
-                    x === 6
-                        ? [255, 255, 255, broken === 'blur' ? 0 : 30]
-                        : [255, 0, 0, broken === 'shadow' ? 0 : 128]
+                    x === 6 ? [255, 255, 255, broken === 'blur' ? 0 : 30] : [255, 0, 0, broken === 'shadow' ? 0 : 128]
                 );
             });
         };
