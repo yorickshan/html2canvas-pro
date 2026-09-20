@@ -27,6 +27,7 @@ const context = () => ({
     drawImage: vi.fn(),
     scale: vi.fn(),
     translate: vi.fn(),
+    setTransform: vi.fn(),
     shadowOffsetX: 0,
     shadowOffsetY: 0,
     shadowBlur: 0,
@@ -63,7 +64,11 @@ const setup = (scale = 2) => {
     const sourceCtx = context();
     const source = { width: 0, height: 0, getContext: vi.fn(() => sourceCtx) };
     const createElement = vi.fn(() => source);
-    const ctx = { ...context(), canvas: { ownerDocument: { createElement } } };
+    const ctx = {
+        ...context(),
+        getTransform: vi.fn(() => ({ a: scale, b: 0, c: 0, d: scale, e: -40 * scale, f: -30 * scale })),
+        canvas: { width: 320 * scale, height: 260 * scale, ownerDocument: { createElement } }
+    };
     const options = { x: 40, y: 30, width: 320, height: 260, scale };
     const budget = { pixels: 0 };
     const filtered = { width: 320, height: 260 } as HTMLCanvasElement;
@@ -82,13 +87,76 @@ describe('box-shadow painter', () => {
     it.each([0.5, 1, 2, 3])('scales native shadow metrics at capture scale %s', async (scale) => {
         const s = setup(scale);
         await s.run();
-        expect(s.ctx.shadowOffsetX).toBe((18 + SHADOW_MASK_OFFSET) * scale);
+        expect(s.ctx.shadowOffsetX).toBe(SHADOW_MASK_OFFSET + 18 * scale);
         expect(s.ctx.shadowOffsetY).toBe(-12 * scale);
         expect(s.ctx.shadowBlur).toBe(12 * scale);
         expect(s.ctx.clip).toHaveBeenCalledWith('evenodd');
         expect(s.createElement).not.toHaveBeenCalled();
         expect(s.budget.pixels).toBe(0);
         expect(s.ctx.restore).toHaveBeenCalledOnce();
+    });
+
+    it('uses the effective matrix when CSS scale cancels capture scale', async () => {
+        const s = setup(2);
+        s.ctx.getTransform.mockReturnValue({ a: 1, b: 0, c: 0, d: 1, e: -40, f: -30 });
+        await s.run();
+        expect(s.ctx.shadowOffsetX).toBe(SHADOW_MASK_OFFSET + 18);
+        expect(s.ctx.shadowOffsetY).toBe(-12);
+        expect(s.ctx.shadowBlur).toBe(12);
+        expect(s.ctx.setTransform).toHaveBeenNthCalledWith(1, 1, 0, 0, 1, -40 - SHADOW_MASK_OFFSET, -30);
+        expect(s.ctx.setTransform).toHaveBeenLastCalledWith(1, 0, 0, 1, -40, -30);
+    });
+
+    it('rotates offsets but keeps source-mask displacement in output pixels', async () => {
+        const s = setup();
+        s.ctx.getTransform.mockReturnValue({ a: 0, b: 2, c: -2, d: 0, e: 500, f: 0 });
+        await s.run();
+        expect(s.ctx.shadowOffsetX).toBe(SHADOW_MASK_OFFSET + 24);
+        expect(s.ctx.shadowOffsetY).toBe(36);
+        expect(s.ctx.shadowBlur).toBe(24);
+        expect(s.ctx.setTransform).toHaveBeenNthCalledWith(1, 0, 2, -2, 0, 500 - SHADOW_MASK_OFFSET, 0);
+    });
+
+    it('uses local inverse viewport bounds instead of the capture origin', async () => {
+        const s = setup(1);
+        s.options.x = 1000;
+        s.ctx.getTransform.mockReturnValue({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
+        await s.run(shadow(true));
+        expect(renderFilterSurface).toHaveBeenCalledOnce();
+        expect(s.ctx.drawImage).toHaveBeenCalledOnce();
+        expect(s.source.width).toBeGreaterThan(0);
+        expect(s.budget.pixels).toBe(0);
+    });
+
+    it('rasterizes nonuniform outer blur locally before transforming the result', async () => {
+        const s = setup();
+        s.ctx.getTransform.mockReturnValue({ a: 2, b: 0, c: 0, d: 1, e: 0, f: 0 });
+        await s.run();
+        expect(renderFilterSurface).toHaveBeenCalledWith(s.source, { blur: 6 }, 1, 2, undefined);
+        expect(s.ctx.drawImage).toHaveBeenCalledOnce();
+        expect(s.ctx.fill).not.toHaveBeenCalled();
+        expect(s.budget.pixels).toBe(0);
+    });
+
+    it('preserves rotated offsets when the surface budget rejects an inset', async () => {
+        const s = setup();
+        s.ctx.getTransform.mockReturnValue({ a: 0, b: 2, c: -2, d: 0, e: 500, f: 0 });
+        s.budget.pixels = 64 * 1024 * 1024;
+        await s.run(shadow(true));
+        expect(s.createElement).not.toHaveBeenCalled();
+        expect(s.ctx.shadowOffsetX).toBe(SHADOW_MASK_OFFSET + 24);
+        expect(s.ctx.shadowOffsetY).toBe(36);
+        expect(s.ctx.fill).toHaveBeenCalledOnce();
+        expect(s.budget.pixels).toBe(64 * 1024 * 1024);
+    });
+
+    it('does not allocate or paint for a singular transform', async () => {
+        const s = setup();
+        s.ctx.getTransform.mockReturnValue({ a: 0, b: 0, c: 0, d: 1, e: 0, f: 0 });
+        await s.run(shadow(true));
+        expect(s.ctx.fill).not.toHaveBeenCalled();
+        expect(s.createElement).not.toHaveBeenCalled();
+        expect(s.budget.pixels).toBe(0);
     });
 
     it('paints a hard inset once without an intermediate canvas', async () => {

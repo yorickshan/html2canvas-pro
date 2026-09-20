@@ -1,0 +1,71 @@
+name: Box-shadow correctness
+
+on:
+  push:
+    branches: [main, box-shadow-rendering-pr, box-shadow-transform-validation]
+  pull_request:
+    paths:
+      - 'src/render/**'
+      - 'src/css/**'
+      - 'scripts/box-shadow-*.mjs'
+      - '.github/workflows/box-shadow.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: box-shadow-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pixels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      SKIP_PREPARE: 'true'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      BOX_SHADOW_BROWSERS: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+      - name: Original native DOM shadow comparisons
+        run: node scripts/box-shadow-regressions.mjs
+      - name: Extended shadow geometry and inset comparisons
+        if: ${{ !cancelled() }}
+        run: node scripts/box-shadow-extended-regressions.mjs
+      - name: Transforms, fractional scales and filter failure
+        if: ${{ !cancelled() }}
+        run: node scripts/box-shadow-transform-regressions.mjs
+      - name: Exact issue 230 guard
+        if: ${{ !cancelled() && matrix.browser == 'chromium' }}
+        run: node scripts/box-shadow-issue-230.mjs
+      - name: Recursive source lint
+        if: ${{ !cancelled() && matrix.browser == 'chromium' }}
+        run: pnpm exec eslint 'src/**/*.ts' --max-warnings 0
+      - name: Unit tests
+        if: ${{ !cancelled() && matrix.browser == 'chromium' }}
+        run: pnpm unittest
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: box-shadow-${{ matrix.browser }}
+          if-no-files-found: error
+          path: |
+            tmp/box-shadow-regressions/
+            tmp/box-shadow-extended/
+            tmp/box-shadow-transforms/

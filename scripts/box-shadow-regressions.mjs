@@ -57,7 +57,14 @@ const cases = [
     { id: 'offset-crop-surface', shadow: '-18px -12px 12px 6px rgba(0, 0, 0, .65)', layer: 'opacity:.5', crop: { x: 85, y: 65, width: 165, height: 145 } }
 ];
 
+// Additional suites supply fixtures, not alternative metrics or tolerances.
+const selectedCases = process.env.BOX_SHADOW_FIXTURES ? JSON.parse(process.env.BOX_SHADOW_FIXTURES) : cases;
+assert.ok(Array.isArray(selectedCases) && selectedCases.length > 0, 'Expected a non-empty fixture list');
+const scales = [...new Set(selectedCases.flatMap((test) => test.scales || [1, 2]))];
+assert.ok(scales.every((scale) => Number.isFinite(scale) && scale > 0), 'Invalid capture scale');
+
 const html = (test) => `<!doctype html><meta charset="utf-8"><title>${test.id}</title>
+${test.fallback ? '<meta http-equiv="Content-Security-Policy" content="img-src \'none\'">' : ''}
 <style>
 * { box-sizing:border-box } html,body { margin:0;background:transparent }
 #stage { position:relative;width:320px;height:260px;margin:40px;background:transparent }
@@ -71,7 +78,7 @@ const server = http.createServer((req, res) => {
     if (url.pathname === '/bundle.js') {
         res.writeHead(200, { 'Content-Type': 'text/javascript' }).end(bundle);
     } else {
-        const test = cases.find((item) => '/' + item.id === url.pathname);
+        const test = selectedCases.find((item) => '/' + item.id === url.pathname);
         if (!test) return res.writeHead(404).end();
         res.writeHead(200, { 'Content-Type': 'text/html' }).end(html(test));
     }
@@ -189,16 +196,17 @@ try {
         try {
             browser = await engines[name].launch({ headless: true });
             metadata.browsers[name] = browser.version();
-            for (const scale of [1, 2]) {
-                for (const test of cases) {
+            for (const scale of scales) {
+                for (const test of selectedCases) {
+                    if (!(test.scales || [1, 2]).includes(scale)) continue;
                     const key = `${name}-${scale}x-${test.id}`;
-                    const entry = { key, browser: name, scale, id: test.id, backend: test.svg ? 'forced-svg' : 'auto', referenceMethod: name === 'firefox' ? 'dual-background-alpha' : 'transparent-screenshot', passed: false };
+                    const entry = { key, browser: name, scale, id: test.id, backend: test.fallback ? 'forced-native-shadow-fallback' : test.svg ? 'forced-svg' : 'auto', referenceMethod: name === 'firefox' ? 'dual-background-alpha' : 'transparent-screenshot', passed: false };
                     const page = await browser.newPage({ viewport: { width: 500, height: 420 }, deviceScaleFactor: scale });
                     const pageErrors = [];
                     page.on('pageerror', (error) => pageErrors.push(error.message));
                     page.setDefaultTimeout(15000);
                     try {
-                        if (test.svg) await page.addInitScript(() => {
+                        if (test.svg || test.fallback) await page.addInitScript(() => {
                             Object.defineProperty(CanvasRenderingContext2D.prototype, 'filter', {
                                 configurable: true, get() { return 'none'; }, set() {}
                             });
@@ -218,10 +226,20 @@ try {
                             return canvas.toDataURL();
                         }, { scale, region: test.crop });
                         const actual = decode(await capture());
-                        const neutralizer = await page.addStyleTag({ content: '.box { box-shadow:none !important }' });
+                        // Firefox's addStyleTag observes unrelated delayed CSP image
+                        // errors. Change the fixture inline instead; do not suppress
+                        // page errors or weaken the native/capture comparisons.
+                        const originalStyle = await page.locator('.box').evaluate((element) => {
+                            const style = element.getAttribute('style');
+                            element.style.setProperty('box-shadow', 'none', 'important');
+                            return style;
+                        });
                         const nativeControl = await nativeDOM(page, stage, name, key + '-native-no-shadow', test.crop, scale);
                         const actualControl = decode(await capture());
-                        await neutralizer.evaluate((element) => element.remove());
+                        await page.locator('.box').evaluate((element, style) => {
+                            if (style === null) element.removeAttribute('style');
+                            else element.setAttribute('style', style);
+                        }, originalStyle);
                         const { diff, ...metrics } = measure(native, actual, nativeControl, actualControl);
                         entry.metrics = metrics;
                         entry.errors = violations(metrics, test.id === 'none');
