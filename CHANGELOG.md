@@ -1,3 +1,19 @@
+## [2.4.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.3...v2.4.4) (2026-09-20)
+
+### Bug Fixes
+
+* bound shadow mask displacement inside filter surfaces ([69786e5](https://github.com/yorickshan/html2canvas-pro/commit/69786e536d2e89081677f56a0006739c0365945f))
+* composite supported filters and opacity on layer surfaces ([0fe14a9](https://github.com/yorickshan/html2canvas-pro/commit/0fe14a9459c8f1532817ed34392cedaa5c299bce))
+* harden filter surfaces and verify native WebKit rendering ([ceaef3c](https://github.com/yorickshan/html2canvas-pro/commit/ceaef3c49675df782588128ba77758ebe456f879))
+* rasterize box shadows within bounded filter surfaces ([8d9aebe](https://github.com/yorickshan/html2canvas-pro/commit/8d9aebe434f41a5ee1786b4db43f9ff4bd6642c8))
+* **text-renderer:** keep CJK on the alphabetic baseline with letter-spacing ([7710c4b](https://github.com/yorickshan/html2canvas-pro/commit/7710c4b2b605f0e575aaa613a899f99de8ebc7bc))
+* wait for cloned demo styles before capture ([c4ed25b](https://github.com/yorickshan/html2canvas-pro/commit/c4ed25b70b955ac94287df6e0deaf01185d9b5a7))
+
+### Performance Improvements
+
+* add reproducible surface and full-capture benchmarks ([288bf60](https://github.com/yorickshan/html2canvas-pro/commit/288bf60a71c6eab2625cd1f1d2c28521e19f8f6c))
+* use native layer filters with a verified SVG fallback ([9568fb6](https://github.com/yorickshan/html2canvas-pro/commit/9568fb6b3efbab0e8ce5eaf6c72c779970052a7e))
+
 ## [2.4.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.2...v2.4.3) (2026-09-13)
 
 ### Bug Fixes
