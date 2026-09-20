@@ -2,6 +2,7 @@ import { ElementPaint, parseStackingContexts, StackingContext } from '../stackin
 import { Color } from '../../css/types/color';
 import { asString, isTransparent } from '../../css/types/color-utilities';
 import { ElementContainer } from '../../dom/element-container';
+import { BoxShadow } from '../../css/property-descriptors/box-shadow';
 import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
 import { Path, transformPath } from '../path';
 import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
@@ -10,7 +11,21 @@ import { CSSImageType, CSSURLImage } from '../../css/types/image';
 import { getBackgroundValueForIndex } from '../background';
 import { contentBox } from '../box-sizing';
 import { ReplacedElementContainer } from '../../dom/replaced-elements';
-import { EffectTarget } from '../effects';
+import { EffectTarget, isClipEffect, isFilterEffect, isOpacityEffect } from '../effects';
+import { CLIP_PATH_TYPE } from '../../css/property-descriptors/clip-path';
+import { MIX_BLEND_MODE } from '../../css/property-descriptors/mix-blend-mode';
+import {
+    FilterSurfaceError,
+    filterOutset,
+    parseSimpleFilter,
+    releaseSurface,
+    renderFilterSurface,
+    SimpleFilter
+} from './filter-surface';
+import { cropSurface, reserveSurface, surfaceBounds, SurfaceBudget } from './surface-bounds';
+import { Bounds } from '../../css/layout/bounds';
+import { DISPLAY } from '../../css/property-descriptors/display';
+import { contains } from '../../core/bitwise';
 import { TextRenderer } from './text-renderer';
 import { Context } from '../../core/context';
 import { BackgroundRenderer } from './background-renderer';
@@ -66,13 +81,21 @@ export class CanvasRenderer {
     private readonly borderImageRenderer: BorderImageRenderer;
     private readonly effectsRenderer: EffectsRenderer;
     private readonly textRenderer: TextRenderer;
+    private legacySubtree = false;
 
-    constructor(context: Context, options: RenderConfigurations) {
+    constructor(
+        context: Context,
+        options: RenderConfigurations,
+        private readonly surfaceRoot?: ElementPaint,
+        private readonly surfaceBudget: SurfaceBudget = { pixels: 0 }
+    ) {
         this.context = context;
         this.options = options;
         this.canvas = options.canvas ? options.canvas : document.createElement('canvas');
         const ctx = this.canvas.getContext('2d');
         if (!ctx) {
+            if (!options.canvas) releaseSurface(this.canvas);
+            if (surfaceRoot) throw new FilterSurfaceError('Filter surface canvas is unavailable');
             throw new Error('Failed to get 2D rendering context from canvas');
         }
         this.ctx = ctx;
@@ -131,7 +154,120 @@ export class CanvasRenderer {
     async renderStack(stack: StackingContext): Promise<void> {
         const styles = stack.element.container.styles;
         if (styles.isVisible()) {
+            const filter = parseSimpleFilter(styles.filter);
+            if (
+                stack.element !== this.surfaceRoot &&
+                !this.legacySubtree &&
+                filter &&
+                (styles.filter || styles.opacity < 1) &&
+                this.canComposite(stack.element)
+            ) {
+                if (!(await this.renderCompositedStack(stack, filter))) {
+                    // A rejected optional surface must preserve the previous subtree path.
+                    this.legacySubtree = true;
+                    try {
+                        await this.renderStackContent(stack);
+                    } finally {
+                        this.legacySubtree = false;
+                    }
+                }
+                return;
+            }
             await this.renderStackContent(stack);
+        }
+    }
+
+    // Draft scope: transformed, blended and clip-path subtrees keep the old path.
+    // The surface root owns its filter/opacity; ancestors are applied at composition.
+    private canComposite(paint: ElementPaint): boolean {
+        const supported = (container: ElementContainer): boolean => {
+            const styles = container.styles;
+            return (
+                !styles.isTransformed() &&
+                styles.zoom === 1 &&
+                styles.mixBlendMode === MIX_BLEND_MODE.NORMAL &&
+                styles.clipPath.type === CLIP_PATH_TYPE.NONE &&
+                !contains(styles.display, DISPLAY.LIST_ITEM) &&
+                parseSimpleFilter(styles.filter) !== null
+            );
+        };
+        const subtree = (container: ElementContainer): boolean =>
+            supported(container) && container.elements.every(subtree);
+        let ancestor = paint.parent;
+        while (ancestor && ancestor !== this.surfaceRoot) {
+            if (!supported(ancestor.container)) return false;
+            ancestor = ancestor.parent;
+        }
+        return subtree(paint.container);
+    }
+
+    private async renderCompositedStack(stack: StackingContext, filter: SimpleFilter): Promise<boolean> {
+        const signal = this.options.signal;
+        if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+        const bounds = cropSurface(
+            surfaceBounds(stack.element.container),
+            new Bounds(this.options.x, this.options.y, this.options.width, this.options.height),
+            filterOutset(filter),
+            this.options.scale
+        );
+        if (!bounds.width || !bounds.height) return true;
+        const reserved = reserveSurface(
+            this.surfaceBudget,
+            Math.ceil(bounds.width * this.options.scale),
+            Math.ceil(bounds.height * this.options.scale)
+        );
+        if (!reserved) {
+            this.context.logger.info('Filter surface budget exceeded; using the existing renderer');
+            return false;
+        }
+        const options = {
+            ...this.options,
+            canvas: undefined,
+            backgroundColor: null,
+            x: bounds.left,
+            y: bounds.top,
+            width: bounds.width,
+            height: bounds.height
+        };
+        let source: CanvasRenderer | undefined;
+        let filtered: HTMLCanvasElement | undefined;
+        try {
+            source = new CanvasRenderer(this.context, options, stack.element, this.surfaceBudget);
+            await source.renderStackContent(stack);
+            source.effectsRenderer.applyEffects([]);
+            filtered = await renderFilterSurface(
+                source.canvas,
+                filter,
+                stack.element.container.styles.opacity,
+                options.scale,
+                signal
+            );
+            if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+            const own = stack.element.effects;
+            const effects = stack.element
+                .getEffects(EffectTarget.CONTENT, this.surfaceRoot)
+                .filter(
+                    (effect) =>
+                        !own.includes(effect) ||
+                        (!isFilterEffect(effect) && !isOpacityEffect(effect) && !isClipEffect(effect))
+                );
+            this.effectsRenderer.applyEffects(effects);
+            this.ctx.drawImage(
+                filtered,
+                options.x,
+                options.y,
+                filtered.width / options.scale,
+                filtered.height / options.scale
+            );
+            return true;
+        } catch (error) {
+            if (!(error instanceof FilterSurfaceError)) throw error;
+            this.context.logger.info(`${error.message}; using the existing renderer`);
+            return false;
+        } finally {
+            if (source) releaseSurface(source.canvas);
+            if (filtered) releaseSurface(filtered);
+            this.surfaceBudget.pixels -= reserved;
         }
     }
 
@@ -179,7 +315,7 @@ export class CanvasRenderer {
     }
 
     async renderNodeContent(paint: ElementPaint): Promise<void> {
-        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.CONTENT));
+        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.CONTENT, this.surfaceRoot));
         const container = paint.container;
         const curves = paint.curves;
         const styles = container.styles;
@@ -295,8 +431,74 @@ export class CanvasRenderer {
         formatCanvasPath(this.ctx, paths);
     }
 
+    private async renderSurfaceBoxShadow(paint: ElementPaint, shadow: BoxShadow[number]): Promise<void> {
+        // Rasterize a visible silhouette, then blur it. Linux WebKit can drop the
+        // interior of Canvas shadows whose solid mask is outside a cropped canvas.
+        const spread = shadow.spread.number;
+        const blur = shadow.blur.number / 2;
+        const margin = Math.ceil(3 * blur) + 1;
+        const box = paint.container.bounds.add(-spread, -spread, 2 * spread, 2 * spread);
+        if (box.width <= 0 || box.height <= 0) return;
+        const scale = this.options.scale;
+        const bounds = cropSurface(
+            box.add(-margin, -margin, 2 * margin, 2 * margin),
+            new Bounds(
+                this.options.x - shadow.offsetX.number,
+                this.options.y - shadow.offsetY.number,
+                this.options.width,
+                this.options.height
+            ),
+            margin,
+            scale
+        );
+        if (!bounds.width || !bounds.height) return;
+        const width = Math.ceil(bounds.width * scale),
+            height = Math.ceil(bounds.height * scale);
+        const reserved = reserveSurface(this.surfaceBudget, width, height);
+        if (!reserved) throw new FilterSurfaceError('Box shadow surface budget exceeded');
+        let source: HTMLCanvasElement | undefined;
+        let filtered: HTMLCanvasElement | undefined;
+        try {
+            source = document.createElement('canvas');
+            source.width = width;
+            source.height = height;
+            const ctx = source.getContext('2d');
+            if (!ctx) throw new FilterSurfaceError('Box shadow surface canvas is unavailable');
+            ctx.scale(scale, scale);
+            ctx.translate(-bounds.left, -bounds.top);
+            createCanvasPath(
+                ctx,
+                transformPath(calculateBorderBoxPath(paint.curves), -spread, -spread, 2 * spread, 2 * spread)
+            );
+            ctx.fillStyle = asString(shadow.color);
+            ctx.fill();
+            filtered = await renderFilterSurface(source, { blur }, 1, scale, this.options.signal);
+            this.ctx.save();
+            try {
+                this.ctx.beginPath();
+                this.ctx.rect(this.options.x, this.options.y, this.options.width, this.options.height);
+                formatCanvasPath(this.ctx, calculateBorderBoxPath(paint.curves));
+                this.ctx.closePath();
+                this.ctx.clip('evenodd');
+                this.ctx.drawImage(
+                    filtered,
+                    bounds.left + shadow.offsetX.number,
+                    bounds.top + shadow.offsetY.number,
+                    filtered.width / scale,
+                    filtered.height / scale
+                );
+            } finally {
+                this.ctx.restore();
+            }
+        } finally {
+            if (source) releaseSurface(source);
+            if (filtered) releaseSurface(filtered);
+            this.surfaceBudget.pixels -= reserved;
+        }
+    }
+
     async renderNodeBackgroundAndBorders(paint: ElementPaint): Promise<void> {
-        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.BACKGROUND_BORDERS));
+        this.effectsRenderer.applyEffects(paint.getEffects(EffectTarget.BACKGROUND_BORDERS, this.surfaceRoot));
         const styles = paint.container.styles;
         const hasBackground = !isTransparent(styles.backgroundColor) || styles.backgroundImage.length;
         const hasTextClip = hasTextBackgroundClip(styles);
@@ -330,40 +532,44 @@ export class CanvasRenderer {
                 this.ctx.restore();
             }
 
-            styles.boxShadow
-                .slice(0)
-                .reverse()
-                .forEach((shadow) => {
-                    this.ctx.save();
-                    const borderBoxArea = calculateBorderBoxPath(paint.curves);
-                    const maskOffset = shadow.inset ? 0 : SHADOW_MASK_OFFSET;
-                    const shadowPaintingArea = transformPath(
-                        borderBoxArea,
-                        -maskOffset + (shadow.inset ? 1 : -1) * shadow.spread.number,
-                        (shadow.inset ? 1 : -1) * shadow.spread.number,
-                        shadow.spread.number * (shadow.inset ? -2 : 2),
-                        shadow.spread.number * (shadow.inset ? -2 : 2)
-                    );
+            for (const shadow of styles.boxShadow.slice(0).reverse()) {
+                if (this.surfaceRoot && !shadow.inset) {
+                    await this.renderSurfaceBoxShadow(paint, shadow);
+                    continue;
+                }
+                this.ctx.save();
+                const borderBoxArea = calculateBorderBoxPath(paint.curves);
+                const maskOffset = shadow.inset ? 0 : SHADOW_MASK_OFFSET;
+                const shadowPaintingArea = transformPath(
+                    borderBoxArea,
+                    -maskOffset + (shadow.inset ? 1 : -1) * shadow.spread.number,
+                    (shadow.inset ? 1 : -1) * shadow.spread.number,
+                    shadow.spread.number * (shadow.inset ? -2 : 2),
+                    shadow.spread.number * (shadow.inset ? -2 : 2)
+                );
 
-                    if (shadow.inset) {
-                        this.path(borderBoxArea);
-                        this.ctx.clip();
-                        this.mask(shadowPaintingArea);
-                    } else {
-                        this.mask(borderBoxArea);
-                        this.ctx.clip();
-                        this.path(shadowPaintingArea);
-                    }
+                if (shadow.inset) {
+                    this.path(borderBoxArea);
+                    this.ctx.clip();
+                    this.mask(shadowPaintingArea);
+                } else {
+                    this.mask(borderBoxArea);
+                    this.ctx.clip();
+                    this.path(shadowPaintingArea);
+                }
 
-                    this.ctx.shadowOffsetX = shadow.offsetX.number + maskOffset;
-                    this.ctx.shadowOffsetY = shadow.offsetY.number;
-                    this.ctx.shadowColor = asString(shadow.color);
-                    this.ctx.shadowBlur = shadow.blur.number;
-                    this.ctx.fillStyle = shadow.inset ? asString(shadow.color) : 'rgba(0,0,0,1)';
+                // Canvas shadow metrics ignore the transform. Surface sources
+                // need capture-pixel offsets, including the displaced mask.
+                const shadowScale = this.surfaceRoot ? this.options.scale : 1;
+                this.ctx.shadowOffsetX = (shadow.offsetX.number + maskOffset) * shadowScale;
+                this.ctx.shadowOffsetY = shadow.offsetY.number * shadowScale;
+                this.ctx.shadowColor = asString(shadow.color);
+                this.ctx.shadowBlur = shadow.blur.number * shadowScale;
+                this.ctx.fillStyle = shadow.inset ? asString(shadow.color) : 'rgba(0,0,0,1)';
 
-                    this.ctx.fill();
-                    this.ctx.restore();
-                });
+                this.ctx.fill();
+                this.ctx.restore();
+            }
         }
 
         // Render border-image if present (replaces traditional borders per CSS spec)
@@ -457,16 +663,23 @@ export class CanvasRenderer {
     }
 
     async render(element: ElementContainer): Promise<HTMLCanvasElement> {
-        if (this.options.backgroundColor) {
-            this.ctx.fillStyle = asString(this.options.backgroundColor);
-            this.ctx.fillRect(this.options.x, this.options.y, this.options.width, this.options.height);
+        try {
+            if (this.options.backgroundColor) {
+                this.ctx.fillStyle = asString(this.options.backgroundColor);
+                this.ctx.fillRect(this.options.x, this.options.y, this.options.width, this.options.height);
+            }
+
+            const stack = parseStackingContexts(element);
+
+            await this.renderStack(stack);
+            this.effectsRenderer.applyEffects([]);
+            return this.canvas;
+        } catch (error) {
+            // Failed captures have no returned canvas. Release only our backing
+            // store; a canvas supplied by the caller remains caller-owned.
+            if (!this.options.canvas) releaseSurface(this.canvas);
+            throw error;
         }
-
-        const stack = parseStackingContexts(element);
-
-        await this.renderStack(stack);
-        this.effectsRenderer.applyEffects([]);
-        return this.canvas;
     }
 
     /**

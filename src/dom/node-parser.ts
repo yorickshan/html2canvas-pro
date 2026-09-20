@@ -134,6 +134,7 @@ const createsRealStackingContext = (node: Element, container: ElementContainer, 
     return (
         container.styles.isPositionedWithZIndex() ||
         container.styles.opacity < 1 ||
+        Boolean(container.styles.filter) ||
         container.styles.isTransformed() ||
         (isBodyElement(node) && root.styles.isTransparent())
     );

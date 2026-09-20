@@ -2,6 +2,8 @@
 
 Below is a list of all the supported CSS properties and values.
 
+> **CSS filters and layer opacity:** PR #239 adds a limited surface-compositing path; this is not a claim about the published 2.4.3 release. The filter functions listed below are broader than that new path. See [CSS filters and layer opacity](./filter-support.md) for supported combinations, subtree restrictions, and the difference between SVG backend fallback and returning to the previous renderer.
+
  - background
    - background-clip (incl. `text`)
    - background-blend-mode
@@ -36,7 +38,7 @@ Below is a list of all the supported CSS properties and values.
  - content
  - color
  - display
- - filter
+ - filter ([surface-compositing scope and fallback behavior](./filter-support.md))
    - blur()
    - brightness()
    - contrast()
@@ -112,7 +114,7 @@ All previously listed unsupported properties are now implemented:
  - **border-image** — 9-slice border image rendering with stretch/repeat/round
  - **box-decoration-break** — Parsed (`slice` / `clone`); no visual difference in single-element rendering
  - **box-shadow** — Full support including inset shadows
- - **filter** — CSS filter functions: `blur()`, `brightness()`, `contrast()`, `drop-shadow()`, `grayscale()`, `hue-rotate()`, `invert()`, `opacity()`, `saturate()`, `sepia()`
+ - **filter** — CSS filter functions: `blur()`, `brightness()`, `contrast()`, `drop-shadow()`, `grayscale()`, `hue-rotate()`, `invert()`, `opacity()`, `saturate()`, `sepia()`. This list does not imply general filter-chain or group-opacity equivalence; see [surface-compositing limits](./filter-support.md).
  - **font-variant-ligatures** — Parsed; Canvas text rendering is handled by the browser font engine
  - **object-position** — Controls alignment of replaced elements (images, canvas, SVG) within their content box
  - **repeating-linear-gradient()** — Repeating linear gradient backgrounds
@@ -159,7 +161,7 @@ html2canvas(element, {
 const gameCanvas = document.getElementById('game');
 const screenshot = await html2canvas(gameCanvas, {
     imageSmoothing: false,
-    scale: 2,  // 2x upscale while keeping pixels sharp
+    scale: 2,  // Upscale 2x without blur
     backgroundColor: '#000000'
 });
 document.body.appendChild(screenshot);

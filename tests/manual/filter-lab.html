@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Filter lab · html2canvas-pro</title>
+        <link rel="stylesheet" href="./filter-lab.css" />
+        <script src="../../dist/html2canvas-pro.js" defer></script>
+        <script src="./filter-lab.js" type="module"></script>
+    </head>
+    <body>
+        <main>
+            <header class="page-header">
+                <div>
+                    <p class="eyebrow">html2canvas-pro · Rendering experiments</p>
+                    <h1>Filter compositing lab</h1>
+                </div>
+                <a class="draft" href="https://github.com/yorickshan/html2canvas-pro/pull/239">Draft PR #239 ↗</a>
+            </header>
+            <p class="intro">
+                Explore how shadows, blur and opacity combine. Compare the live element with the published 2.4.3 release
+                and the proposed fix in PR #239.
+            </p>
+            <aside class="compatibility">
+                <strong>Safari &amp; WebKit webviews are a compatibility focus.</strong>
+                <p>
+                    This branch uses Canvas filters on complete layers after verifying actual blur and shadow pixels,
+                    retaining SVG for unsupported runtimes or recoverable native failures. The baseline overlap and
+                    clipping defects also reproduce in Chromium, so this is not exclusively a webview issue.
+                </p>
+                <p id="capability" class="capability">Checking Canvas filter support…</p>
+                <details>
+                    <summary>Runtime and scope</summary>
+                    <p id="runtime"></p>
+                    <p>
+                        Test the actual embedded webview: a browser name alone does not prove support. This demo uses
+                        one untransformed layer and local assets. The branch includes an initial renderer integration;
+                        transforms, blend modes, general filter chains and SVG overflow remain unfinished.
+                    </p>
+                    <p>
+                        <a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/filter"
+                            >Canvas filter compatibility</a
+                        >
+                        · <a href="https://bugs.webkit.org/show_bug.cgi?id=198416">WebKit implementation tracker</a> ·
+                        <a href="../reftests/filter/compositing.html?run=false">Minimal reproductions</a>
+                    </p>
+                </details>
+            </aside>
+
+            <section class="card" aria-labelledby="playground-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">01 / Playground</p>
+                        <h2 id="playground-title">Build a combination</h2>
+                    </div>
+                    <button id="capture" type="button" class="primary">Capture comparison</button>
+                </div>
+                <fieldset id="controls">
+                    <legend class="visually-hidden">Source and effects</legend>
+                    <div class="controls-grid">
+                        <label
+                            >Source<select id="source">
+                                <option value="cta">CTA with text</option>
+                                <option value="overlap" selected>Overlapping children</option>
+                                <option value="svg">Inline SVG</option>
+                                <option value="image">Raster image</option>
+                            </select></label
+                        >
+                        <label
+                            >Capture scale<select id="scale">
+                                <option value="1">1×</option>
+                                <option value="2">2×</option>
+                            </select></label
+                        >
+                        <label for="blur"
+                            >Layer blur <output id="blur-value" for="blur">4 px</output
+                            ><input id="blur" type="range" min="0" max="8" step="1" value="4"
+                        /></label>
+                        <label for="opacity"
+                            >Layer opacity <output id="opacity-value" for="opacity">50%</output
+                            ><input id="opacity" type="range" min="0" max="100" step="1" value="50"
+                        /></label>
+                        <label class="check"><input id="shadow" type="checkbox" checked /> Drop shadow</label>
+                        <label for="shadow-blur"
+                            >Shadow blur <output id="shadow-blur-value" for="shadow-blur">8 px</output
+                            ><input id="shadow-blur" type="range" min="0" max="10" step="1" value="8"
+                        /></label>
+                        <label for="shadow-x"
+                            >Shadow X <output id="shadow-x-value" for="shadow-x">12 px</output
+                            ><input id="shadow-x" type="range" min="-20" max="20" step="1" value="12"
+                        /></label>
+                        <label for="shadow-y"
+                            >Shadow Y <output id="shadow-y-value" for="shadow-y">8 px</output
+                            ><input id="shadow-y" type="range" min="-20" max="20" step="1" value="8"
+                        /></label>
+                    </div>
+                    <div id="presets" class="presets" role="group" aria-label="Effect presets"></div>
+                </fieldset>
+                <code id="css-value" class="css-value"></code>
+                <p id="status" role="status" aria-live="polite">Preparing comparison…</p>
+                <div class="comparison" id="comparison">
+                    <figure>
+                        <figcaption><span class="dot live"></span>Live DOM</figcaption>
+                        <div class="frame">
+                            <div class="scene" id="playground"><div class="layer"></div></div>
+                        </div>
+                        <p class="metric">Native CSS in this runtime</p>
+                    </figure>
+                    <figure>
+                        <figcaption><span class="dot before"></span>Before · 2.4.3</figcaption>
+                        <div class="frame" id="before-output"><p class="placeholder">Capture to compare</p></div>
+                        <p class="metric" id="before-metric">—</p>
+                        <a id="before-download" hidden>Download PNG</a>
+                    </figure>
+                    <figure>
+                        <figcaption><span class="dot after"></span>After · PR #239</figcaption>
+                        <div class="frame" id="after-output"><p class="placeholder">Capture to compare</p></div>
+                        <p class="metric" id="after-metric">—</p>
+                        <a id="after-download" hidden>Download PNG</a>
+                    </figure>
+                </div>
+                <p class="footnote">
+                    Same DOM, dimensions, scale and stylesheet readiness checks for both captures. Only the library
+                    version changes. PNGs retain transparency; examples without effects should look the same.
+                </p>
+            </section>
+
+            <section class="card" aria-labelledby="matrix-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">02 / Combination matrix</p>
+                        <h2 id="matrix-title">Eight ways to combine effects</h2>
+                    </div>
+                    <button id="capture-matrix" type="button">Capture all eight</button>
+                </div>
+                <p>
+                    Presets use the selected source and scale. Blur = 4 px, shadow = (12, 8) / 8 px, opacity = 50% when
+                    enabled.
+                </p>
+                <p id="matrix-status" role="status" aria-live="polite">
+                    Choose Capture all eight to generate the PNG comparisons.
+                </p>
+                <div id="matrix"></div>
+                <a id="report-download" hidden>Download runtime + settings report (JSON)</a>
+            </section>
+            <section class="card" id="performance" aria-labelledby="performance-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">03 / Performance</p>
+                        <h2 id="performance-title">Measure the cost, not just the output</h2>
+                    </div>
+                    <a href="./filter-performance.html">Run the benchmark ↗</a>
+                </div>
+                <p>
+                    Compare the production SVG fallback and native Canvas dispatcher with an opacity-only copy.
+                    The full-capture suite also compares published 2.4.3 with this draft, including no-effects controls,
+                    sparse and nested layers, and an explicitly labeled memory-budget fallback.
+                </p>
+                <p>
+                    <strong>Native filtering is implemented in <code>1720a27</code>, not just a benchmark prototype.</strong>
+                    The dispatcher verifies blur and colored-shadow pixels, filters at full alpha and applies layer
+                    opacity separately. SVG remains available when the probe or native rendering fails.
+                    <a href="https://github.com/m0rg0t/html2canvas-pro/blob/codex/filter-compositing-draft/docs/filter-native-fastpath.md">Read the native-path measurements and validation</a> ·
+                    <a href="https://github.com/yorickshan/html2canvas-pro/actions/runs/35088872866">Three-engine benchmark and raw observations</a>.
+                </p>
+                <p>
+                    <strong>Historical measurements below: before native integration, at <code>ec0183e</code>.</strong>
+                    Chromium 148 and Playwright WebKit 26.4 on Ubuntu, 4 vCPUs; the Canvas column was then test-only.
+                    Medians include full output readback, after two warmups and nine measured samples.
+                    This is Linux WebKit, not a macOS Safari or WKWebView measurement.
+                    These are observations on a shared runner, not a universal speed guarantee.
+                </p>
+                <div style="overflow-x: auto">
+                    <table style="width: 100%; text-align: left; border-spacing: 12px">
+                        <caption>Historical 2000 × 2000 surface: median milliseconds</caption>
+                        <thead><tr><th scope="col">Source / effect</th><th scope="col">Chromium SVG</th><th scope="col">Chromium Canvas prototype</th><th scope="col">WebKit SVG</th></tr></thead>
+                        <tbody>
+                            <tr><th scope="row">Flat · blur</th><td>99.4</td><td>49.1</td><td>415.0</td></tr>
+                            <tr><th scope="row">Flat · blur + shadow</th><td>173.7</td><td>111.7</td><td>467.0</td></tr>
+                            <tr><th scope="row">Noise · blur</th><td>925.6</td><td>49.4</td><td>2023.0</td></tr>
+                            <tr><th scope="row">Noise · blur + shadow</th><td>954.1</td><td>109.0</td><td>2106.0</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>
+                    <strong>The high-entropy SVG round trip has a material cost.</strong> Noise stresses PNG encoding
+                    and the large SVG data image; it does not mean every photograph costs this much. The native path
+                    removes that round trip where supported, but does not optimize the SVG fallback itself.
+                    Canvas filters are explicitly unsupported in the tested WebKit runtime, not counted as fast no-ops.
+                </p>
+                <p>
+                    In the historical run, full 2000 × 2000 capture without effects measured 66.6 ms before / 66.8 ms
+                    after in Chromium, and 74.0 / 72.0 ms in WebKit. With combined effects it measured 70.3 / 196.2 ms
+                    in Chromium and 868.0 / 278.0 ms in WebKit. The release's combined result has incorrect opacity
+                    (center alpha 252 instead of 128), so filtered rows are not equivalent visual workloads.
+                    The over-budget case is reported separately and must not be interpreted as successful filtering.
+                </p>
+                <p class="footnote">
+                    The benchmark page records first observations, median/p95, encoding/decoding and all raw samples,
+                    with JSON export/import and a Stop button. With nine samples p95 is the maximum, not a stable tail estimate.
+                    <a href="../../docs/filter-performance.md">Protocol and historical findings</a> ·
+                    <a href="https://github.com/yorickshan/html2canvas-pro/actions/runs/35085900932">Historical CI and raw artifact</a>.
+                    The benchmark never starts automatically.
+                </p>
+            </section>
+            <footer>
+                Experimental, AI-assisted work in
+                <a href="https://github.com/yorickshan/html2canvas-pro/pull/239">draft PR #239</a>. This branch includes
+                an initial renderer integration and is not ready to merge. All examples run locally; the demo sends no
+                telemetry.
+            </footer>
+        </main>
+    </body>
+</html>

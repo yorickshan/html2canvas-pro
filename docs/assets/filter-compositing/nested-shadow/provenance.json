@@ -1,0 +1,38 @@
+{
+    "codeRevision": "05ab767061672b68cb619d8934d12cc2e10d27e7",
+    "ciRun": "https://github.com/yorickshan/html2canvas-pro/actions/runs/34973159143",
+    "fixture": "nested-outset",
+    "scale": 2,
+    "originals": [
+        {
+            "name": "wkwebview-native-2x.png",
+            "artifactPath": "wkwebview/2-nested-outset-native.png",
+            "sha256": "abcd8f744fa78821ce67f4b7fdf6fa490a2482e06a9d7588c2158ff342a420e8"
+        },
+        {
+            "name": "wkwebview-before-2x.png",
+            "artifactPath": "wkwebview/2-nested-outset-before.png",
+            "sha256": "16bc743530266bf6e128b81a26b293d7d3aab52f7a84b0e34afcd131ef022710"
+        },
+        {
+            "name": "wkwebview-after-2x.png",
+            "artifactPath": "wkwebview/2-nested-outset-capture.png",
+            "sha256": "ac942d7413164abf6717c6226a5d152497cd4d08cb69278a5a09a6dfe98af9e9"
+        },
+        {
+            "name": "chromium-native-2x.png",
+            "artifactPath": "portable/filter-surface-regressions/chromium-2-nested-outset-native.png",
+            "sha256": "3825bac2316d1d05da07c81a6067af18928dbd2e670903b756f1bb4b8e599309"
+        },
+        {
+            "name": "linux-webkit-native-2x.png",
+            "artifactPath": "portable/filter-surface-regressions/webkit-2-nested-outset-native.png",
+            "sha256": "6c3b4577187d97fca2e6d407f3bc22913d823cc0b431e118525732a88a56df4c"
+        },
+        {
+            "name": "linux-webkit-after-2x.png",
+            "artifactPath": "portable/filter-surface-regressions/webkit-2-nested-outset.png",
+            "sha256": "aa1183ef8439ebc7a9e2dabe285fdd290d7bbe355ff865c0f0bc3e3ab4fb24fc"
+        }
+    ]
+}

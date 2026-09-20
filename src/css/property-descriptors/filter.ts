@@ -24,7 +24,7 @@ export const filter: IPropertyListDescriptor<FilterValue> = {
                 // Canvas API supports the same CSS filter string format
                 switch (fn.name) {
                     case 'blur':
-                        parts.push(`blur(${renderedArgs}px)`);
+                        parts.push(`blur(${renderedArgs})`);
                         break;
                     case 'brightness':
                     case 'contrast':
@@ -38,7 +38,7 @@ export const filter: IPropertyListDescriptor<FilterValue> = {
                         parts.push(`grayscale(${renderedArgs})`);
                         break;
                     case 'hue-rotate':
-                        parts.push(`hue-rotate(${renderedArgs}deg)`);
+                        parts.push(`hue-rotate(${renderedArgs})`);
                         break;
                     case 'drop-shadow':
                         parts.push(`drop-shadow(${renderedArgs})`);
@@ -61,9 +61,16 @@ const renderFilterArgs = (values: CSSValue[]): string => {
     const parts: string[] = [];
     for (const v of values) {
         if (v.type === TokenType.WHITESPACE_TOKEN) {
+            parts.push(' ');
             continue;
         }
-        if (v.type === TokenType.DIMENSION_TOKEN) {
+        if (v.type === TokenType.FUNCTION) {
+            parts.push(`${v.name}(${renderFilterArgs(v.values)})`);
+        } else if (v.type === TokenType.COMMA_TOKEN) {
+            parts.push(',');
+        } else if (v.type === TokenType.DELIM_TOKEN) {
+            parts.push(v.value);
+        } else if (v.type === TokenType.DIMENSION_TOKEN) {
             parts.push(`${v.number}${v.unit}`);
         } else if (v.type === TokenType.NUMBER_TOKEN) {
             parts.push(`${v.number}`);
@@ -75,5 +82,5 @@ const renderFilterArgs = (values: CSSValue[]): string => {
             parts.push(`#${v.value}`);
         }
     }
-    return parts.join(' ');
+    return parts.join('').trim();
 };

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Filter compositing, opacity and SVG clipping</title>
+        <script src="../../test.js"></script>
+        <style>
+            body {
+                margin: 24px;
+                font:
+                    16px Arial,
+                    sans-serif;
+                background: white;
+            }
+            .samples {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 24px;
+            }
+            h1 {
+                margin: 0 0 16px;
+                font-size: 32px;
+                line-height: 40px;
+            }
+            h2 {
+                margin: 0 0 12px;
+                font-size: 20px;
+                line-height: 28px;
+                min-height: 56px;
+            }
+            p {
+                margin: 0 0 12px;
+                line-height: 24px;
+            }
+            .sample {
+                width: 280px;
+            }
+            .stage {
+                position: relative;
+                width: 280px;
+                height: 200px;
+            }
+            .layer {
+                position: absolute;
+                left: 80px;
+                top: 70px;
+                width: 120px;
+                height: 60px;
+            }
+            .layer svg {
+                display: block;
+                width: 120px;
+                height: 60px;
+            }
+            .piece {
+                position: absolute;
+                top: 0;
+                width: 80px;
+                height: 60px;
+                background: #176b70;
+            }
+            .piece:last-child {
+                left: 40px;
+            }
+            .result {
+                display: block;
+                width: 280px;
+                height: 200px;
+                margin-top: 8px;
+            }
+            pre {
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Filter the complete element before applying opacity</h1>
+        <p>Click to compare DOM and capture in the standard reftest viewer.</p>
+        <p>
+            The overlapping rectangles should look like one solid rectangle. The SVG shadow should extend outside its
+            box.
+        </p>
+        <div class="samples">
+            <section class="sample">
+                <h2>SVG shadow</h2>
+                <div class="stage" id="shadow">
+                    <div class="layer" style="filter: drop-shadow(12px 8px 8px rgba(0, 0, 0, 0.6))">
+                        <svg xmlns="http://www.w3.org/2000/svg">
+                            <rect width="120" height="60" rx="12" fill="#176b70" />
+                        </svg>
+                    </div>
+                </div>
+            </section>
+            <section class="sample">
+                <h2>Blurred overlapping children</h2>
+                <div class="stage" id="blur">
+                    <div class="layer" style="filter: blur(4px)">
+                        <div class="piece"></div>
+                        <div class="piece"></div>
+                    </div>
+                </div>
+            </section>
+            <section class="sample">
+                <h2>Blur, shadow and opacity</h2>
+                <div class="stage" id="combined">
+                    <div
+                        class="layer"
+                        style="filter: blur(4px) drop-shadow(12px 8px 8px rgba(0, 0, 0, 0.6)); opacity: 0.5"
+                    >
+                        <div class="piece"></div>
+                        <div class="piece"></div>
+                    </div>
+                </div>
+            </section>
+            <section class="sample">
+                <h2>Visible SVG overflow</h2>
+                <div class="stage" id="overflow">
+                    <div class="layer">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="overflow: visible">
+                            <rect width="120" height="60" fill="#176b70" stroke="#e19d18" stroke-width="20" />
+                        </svg>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <script type="module">
+            if (new URLSearchParams(location.search).has('prototype')) {
+                import('../../manual/filter-compositing.js').then(({ showPrototype }) => showPrototype());
+            }
+        </script>
+    </body>
+</html>

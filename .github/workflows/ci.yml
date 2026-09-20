@@ -167,11 +167,48 @@ jobs:
                   if-no-files-found: error
                   compression-level: 6
                   overwrite: false
+    filter-pixels:
+        runs-on: ubuntu-latest
+        name: Filter pixels (Chromium and WebKit)
+        timeout-minutes: 20
+        needs: build
+        steps:
+            - uses: actions/checkout@v5
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
+            - uses: actions/download-artifact@v7
+              with:
+                  name: dist
+                  path: dist
+            - uses: actions/download-artifact@v7
+              with:
+                  name: build
+                  path: build
+            - run: pnpm exec playwright install --with-deps chromium webkit
+            - run: node scripts/filter-descriptor-regressions.mjs
+            - run: node scripts/filter-compositing-probe.mjs
+            - run: node scripts/filter-surface-regressions.mjs
+            - run: node scripts/filter-surface-benchmark.mjs
+            - uses: actions/upload-artifact@v6
+              if: always()
+              with:
+                  name: filter-pixels-and-memory
+                  path: |
+                      tmp/filter-compositing-probe
+                      tmp/filter-surface-regressions
+                  if-no-files-found: warn
+
+    # Native WKWebView diagnostics run separately on v* tags or manual dispatch.
+    # See wkwebview-pixels.yml; they do not gate NPM publication.
     publish:
         runs-on: ubuntu-latest
         name: Publish NPM
         if: startsWith(github.ref, 'refs/tags/v')
-        needs: browser-test
+        needs: [browser-test, filter-pixels]
         permissions:
             contents: write
             # Required for OIDC trusted publishing to npm
