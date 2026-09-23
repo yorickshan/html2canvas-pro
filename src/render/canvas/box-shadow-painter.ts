@@ -132,18 +132,19 @@ export const paintBoxShadow = async (
     )
         return;
     // getTransform includes capture scale, CSS transforms and their origins.
-    // Preserve the old capture-only behavior on contexts without that API.
-    const matrix =
-        typeof ctx.getTransform === 'function'
-            ? ctx.getTransform()
-            : {
-                  a: options.scale,
-                  b: 0,
-                  c: 0,
-                  d: options.scale,
-                  e: -options.x * options.scale,
-                  f: -options.y * options.scale
-              };
+    // Without it the CTM is unknown: approximate it with the capture transform
+    // and only ever move the mask relative to the real CTM (see below).
+    const knownTransform = typeof ctx.getTransform === 'function';
+    const matrix = knownTransform
+        ? ctx.getTransform()
+        : {
+              a: options.scale,
+              b: 0,
+              c: 0,
+              d: options.scale,
+              e: -options.x * options.scale,
+              f: -options.y * options.scale
+          };
     const space = shadowSpace(matrix, ctx.canvas.width, ctx.canvas.height);
     // Singular transforms have zero painted area; never attempt to invert them.
     if (!space) return;
@@ -198,11 +199,15 @@ export const paintBoxShadow = async (
             complement(ctx, viewport, calculateBorderBoxPath(paint.curves));
             ctx.clip('evenodd');
         }
-        // Current paths retain their device coordinates across setTransform.
-        ctx.setTransform(a, b, c, d, e - displacement, f);
+        // Current paths retain their device coordinates across transform changes.
+        // setTransform with an approximate matrix would discard CSS transforms
+        // on the real CTM, so the legacy path translates relative to it instead.
+        if (knownTransform) ctx.setTransform(a, b, c, d, e - displacement, f);
+        else ctx.translate(-displacement / a, 0);
         if (shadow.inset) complement(ctx, sourceBounds, insetHole(paint, shadow));
         else createCanvasPath(ctx, spreadShadowPath(calculateBorderBoxPath(paint.curves), spread));
-        ctx.setTransform(a, b, c, d, e, f);
+        if (knownTransform) ctx.setTransform(a, b, c, d, e, f);
+        else ctx.translate(displacement / a, 0);
         ctx.shadowOffsetX = displacement + a * shadow.offsetX.number + c * shadow.offsetY.number;
         ctx.shadowOffsetY = b * shadow.offsetX.number + d * shadow.offsetY.number;
         // Allocation/filter-failure fallback remains bounded-memory. Its blur is

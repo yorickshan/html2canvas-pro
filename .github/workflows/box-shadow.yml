@@ -2,7 +2,7 @@ name: Box-shadow correctness
 
 on:
   push:
-    branches: [main, box-shadow-rendering-pr, box-shadow-transform-validation]
+    branches: [main]
   pull_request:
     paths:
       - 'src/render/**'

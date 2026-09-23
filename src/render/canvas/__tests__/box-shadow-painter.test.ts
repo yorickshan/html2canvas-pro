@@ -107,6 +107,18 @@ describe('box-shadow painter', () => {
         expect(s.ctx.setTransform).toHaveBeenLastCalledWith(1, 0, 0, 1, -40, -30);
     });
 
+    it('moves the mask relative to the existing CTM when getTransform is unavailable', async () => {
+        const s = setup(2);
+        const ctx = { ...s.ctx, getTransform: undefined };
+        await paintBoxShadow(ctx as unknown as CanvasRenderingContext2D, paint, shadow(), s.options, s.budget);
+        expect(ctx.setTransform).not.toHaveBeenCalled();
+        expect(ctx.translate).toHaveBeenNthCalledWith(1, -SHADOW_MASK_OFFSET / 2, 0);
+        expect(ctx.translate).toHaveBeenLastCalledWith(SHADOW_MASK_OFFSET / 2, 0);
+        expect(ctx.shadowOffsetX).toBe(SHADOW_MASK_OFFSET + 36);
+        expect(ctx.shadowOffsetY).toBe(-24);
+        expect(ctx.fill).toHaveBeenCalledOnce();
+    });
+
     it('rotates offsets but keeps source-mask displacement in output pixels', async () => {
         const s = setup();
         s.ctx.getTransform.mockReturnValue({ a: 0, b: 2, c: -2, d: 0, e: 500, f: 0 });
