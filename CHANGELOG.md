@@ -1,3 +1,11 @@
+## [2.4.5](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.4...v2.4.5) (2026-09-23)
+
+### Bug Fixes
+
+* correct box-shadow scaling, clipping and inset rendering ([a12e968](https://github.com/yorickshan/html2canvas-pro/commit/a12e968e80e8365437fca549dbf5ed128e8932c3))
+* keep CSS transforms when getTransform is unavailable ([fb85d91](https://github.com/yorickshan/html2canvas-pro/commit/fb85d911790a3a339ae74969e50fc76a868eb83a))
+* preserve box shadows through effective canvas transforms ([a81ef16](https://github.com/yorickshan/html2canvas-pro/commit/a81ef165d471333bd2f46448ba5dd7091256475c))
+
 ## [2.4.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.3...v2.4.4) (2026-09-20)
 
 ### Bug Fixes
