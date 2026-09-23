@@ -35,7 +35,7 @@ import { EffectsRenderer } from './effects-renderer';
 import { createCanvasPath, formatCanvasPath } from './canvas-path';
 import { calculateObjectFitRendering } from '../object-fit';
 import { renderReplacedElements, renderFormElements, renderListMarker } from './content-renderer';
-import { SHADOW_MASK_OFFSET } from '../../core/constants';
+import { paintBoxShadow } from './box-shadow-painter';
 import { DIRECTION } from '../../css/property-descriptors/direction';
 import { isVerticalWritingMode, WRITING_MODE } from '../../css/property-descriptors/writing-mode';
 import { measureBaseline } from './font-utils';
@@ -537,38 +537,7 @@ export class CanvasRenderer {
                     await this.renderSurfaceBoxShadow(paint, shadow);
                     continue;
                 }
-                this.ctx.save();
-                const borderBoxArea = calculateBorderBoxPath(paint.curves);
-                const maskOffset = shadow.inset ? 0 : SHADOW_MASK_OFFSET;
-                const shadowPaintingArea = transformPath(
-                    borderBoxArea,
-                    -maskOffset + (shadow.inset ? 1 : -1) * shadow.spread.number,
-                    (shadow.inset ? 1 : -1) * shadow.spread.number,
-                    shadow.spread.number * (shadow.inset ? -2 : 2),
-                    shadow.spread.number * (shadow.inset ? -2 : 2)
-                );
-
-                if (shadow.inset) {
-                    this.path(borderBoxArea);
-                    this.ctx.clip();
-                    this.mask(shadowPaintingArea);
-                } else {
-                    this.mask(borderBoxArea);
-                    this.ctx.clip();
-                    this.path(shadowPaintingArea);
-                }
-
-                // Canvas shadow metrics ignore the transform. Surface sources
-                // need capture-pixel offsets, including the displaced mask.
-                const shadowScale = this.surfaceRoot ? this.options.scale : 1;
-                this.ctx.shadowOffsetX = (shadow.offsetX.number + maskOffset) * shadowScale;
-                this.ctx.shadowOffsetY = shadow.offsetY.number * shadowScale;
-                this.ctx.shadowColor = asString(shadow.color);
-                this.ctx.shadowBlur = shadow.blur.number * shadowScale;
-                this.ctx.fillStyle = shadow.inset ? asString(shadow.color) : 'rgba(0,0,0,1)';
-
-                this.ctx.fill();
-                this.ctx.restore();
+                await paintBoxShadow(this.ctx, paint, shadow, this.options, this.surfaceBudget);
             }
         }
 
