@@ -14,7 +14,10 @@ const fixtures = [
     { id: 'outer-rotated-blur', shadow: blurredOuter, css: 'transform:rotate(30deg)' },
     { id: 'outer-nonuniform-blur', shadow: blurredOuter, css: 'transform:scale(1.4,.75);border-radius:20px' },
     { id: 'outer-sheared-blur', shadow: blurredOuter, css: 'transform:skewX(20deg);border-radius:20px' },
-    { id: 'outer-nested-transform', shadow: outer, css: 'transform:rotate(-15deg)', layer: 'transform:scale(.75);transform-origin:0 0' },
+    // The parent scale(.75) maps this 24x16 offset to the same 18x12 output band
+    // as the other hard-shadow fixtures. A thinner band only raises the share of
+    // rotated edge pixels, where engines' antialiasing coverage legitimately differs.
+    { id: 'outer-nested-transform', shadow: '24px 16px 0 0 rgb(30,70,210)', css: 'transform:rotate(-15deg)', layer: 'transform:scale(.75);transform-origin:0 0' },
     { id: 'translated-inset-into-view', shadow: inset, css: 'left:600px;transform:translateX(-500px)' },
     { id: 'translated-inset-positive', shadow: inset, css: 'left:-400px;transform:translateX(500px)' },
     { id: 'translated-inset-partial', shadow: inset, css: 'left:300px;transform:translateX(-200px)' },
