@@ -1,8 +1,6 @@
 // Karma configuration
 // Generated on Sat Aug 05 2017 23:42:26 GMT+0800 (Malay Peninsula Standard Time)
 
-const simctl = require('node-simctl');
-const iosSimulator = require('appium-ios-simulator');
 const listenAddress = 'localhost';
 const port = 9876;
 
@@ -140,6 +138,10 @@ module.exports = function(config) {
             this._process.kill();
             return;
         }
+        // Only needed when an iOS simulator launcher actually runs; keeps
+        // config parsing working when these optional deps are absent.
+        const simctl = require('node-simctl');
+        const iosSimulator = require('appium-ios-simulator');
         baseBrowserDecorator(this);
         this.on('start', url => {
             simctl.getDevices(args.sdk, args.platform).then(devices => {
