@@ -276,6 +276,7 @@ export class Tokenizer {
                 ) {
                     this.consumeCodePoint();
                     this.consumeCodePoint();
+                    this.consumeCodePoint();
                     return CDO_TOKEN;
                 }
                 break;
@@ -315,7 +316,7 @@ export class Tokenizer {
                 const u2 = this.peekCodePoint(1);
                 if (u1 === PLUS_SIGN && (isHex(u2) || u2 === QUESTION_MARK)) {
                     this.consumeCodePoint();
-                    this.consumeUnicodeRangeToken();
+                    return this.consumeUnicodeRangeToken();
                 }
                 this.reconsumeCodePoint(codePoint);
                 return this.consumeIdentLikeToken();
@@ -400,8 +401,7 @@ export class Tokenizer {
         }
 
         const start = parseInt(fromCodePoint(...digits), 16);
-        if (this.peekCodePoint(0) === HYPHEN_MINUS && isHex(this.peekCodePoint(1))) {
-            this.consumeCodePoint();
+        if (codePoint === HYPHEN_MINUS && isHex(this.peekCodePoint(0))) {
             codePoint = this.consumeCodePoint();
             const endDigits = [];
             while (isHex(codePoint) && endDigits.length < 6) {

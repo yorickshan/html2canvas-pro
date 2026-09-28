@@ -18,8 +18,12 @@ export const parseColorStop = (context: Context, args: CSSValue[]): UnprocessedG
 };
 
 export const processColorStops = (stops: UnprocessedGradientColorStop[], lineLength: number): GradientColorStop[] => {
-    const first = stops[0];
-    const last = stops[stops.length - 1];
+    // Work on a copy: callers pass shared parsed declarations, and resolving
+    // the implicit first/last stops must not mutate them (it would also make
+    // identical gradient cache keys diverge after the first render).
+    const resolvedStops: UnprocessedGradientColorStop[] = stops.map((stop) => ({ color: stop.color, stop: stop.stop }));
+    const first = resolvedStops[0];
+    const last = resolvedStops[resolvedStops.length - 1];
     if (first.stop === null) {
         first.stop = ZERO_LENGTH;
     }
@@ -30,8 +34,8 @@ export const processColorStops = (stops: UnprocessedGradientColorStop[], lineLen
 
     const processStops: (number | null)[] = [];
     let previous = 0;
-    for (let i = 0; i < stops.length; i++) {
-        const stop = stops[i].stop;
+    for (let i = 0; i < resolvedStops.length; i++) {
+        const stop = resolvedStops[i].stop;
         if (stop !== null) {
             const absoluteValue = getAbsoluteValue(stop, lineLength);
             if (absoluteValue > previous) {
@@ -63,7 +67,7 @@ export const processColorStops = (stops: UnprocessedGradientColorStop[], lineLen
         }
     }
 
-    return stops.map(({ color }, i) => {
+    return resolvedStops.map(({ color }, i) => {
         return { color, stop: Math.max(Math.min(1, (processStops[i] as number) / lineLength), 0) };
     });
 };

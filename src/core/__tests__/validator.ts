@@ -1,5 +1,5 @@
 import { strictEqual } from 'assert';
-import { createDefaultValidator, createStrictValidator } from '../validator';
+import { Validator, createDefaultValidator, createStrictValidator } from '../validator';
 
 describe('Validator', () => {
     describe('URL validation', () => {
@@ -339,8 +339,9 @@ describe('Validator', () => {
         const strictValidator = createStrictValidator(['trusted.com']);
 
         it('should reject data URLs in strict mode', () => {
-            // Note: This would need implementation in createStrictValidator
-            // Currently it doesn't disable data URLs
+            const result = strictValidator.validateUrl('data:image/png;base64,iVBORw0KGgo=', 'image');
+            strictEqual(result.valid, false);
+            strictEqual(result.error, 'Data URLs are not allowed');
         });
 
         it('should enforce shorter timeout in strict mode', () => {
@@ -354,6 +355,345 @@ describe('Validator', () => {
 
             const denied = strictValidator.validateUrl('https://untrusted.com/proxy', 'proxy');
             strictEqual(denied.valid, false);
+        });
+    });
+
+    describe('Data URL policy', () => {
+        it('should reject data URLs when allowDataUrls is false', () => {
+            const validator = new Validator({ allowDataUrls: false });
+            const result = validator.validateUrl('data:text/html,<h1>hi</h1>', 'image');
+            strictEqual(result.valid, false);
+            strictEqual(result.error, 'Data URLs are not allowed');
+        });
+
+        it('should still accept blob URLs when data URLs are disallowed', () => {
+            const validator = new Validator({ allowDataUrls: false });
+            const result = validator.validateUrl('blob:http://example.com/uuid', 'general');
+            strictEqual(result.valid, true);
+            strictEqual(result.sanitized, 'blob:http://example.com/uuid');
+        });
+    });
+
+    describe('Proxy context behavior', () => {
+        it('should mark valid proxy URLs with requiresRuntimeCheck', () => {
+            const validator = createDefaultValidator();
+            const result = validator.validateUrl('https://8.8.8.8/proxy', 'proxy');
+            strictEqual(result.valid, true);
+            strictEqual(result.requiresRuntimeCheck, true);
+            strictEqual(result.sanitized, 'https://8.8.8.8/proxy');
+        });
+
+        it('should not mark general/image URLs with requiresRuntimeCheck', () => {
+            const validator = createDefaultValidator();
+            const general = validator.validateUrl('https://example.com/test.jpg');
+            strictEqual(general.valid, true);
+            strictEqual(general.requiresRuntimeCheck, undefined);
+
+            const image = validator.validateUrl('https://example.com/test.jpg', 'image');
+            strictEqual(image.valid, true);
+            strictEqual(image.requiresRuntimeCheck, undefined);
+        });
+
+        it('should allow localhost proxy when allowLocalhostProxy is set (dev/test)', () => {
+            const validator = new Validator({ allowLocalhostProxy: true });
+            const result = validator.validateUrl('http://127.0.0.1:9876/proxy', 'proxy');
+            strictEqual(result.valid, true);
+            strictEqual(result.requiresRuntimeCheck, true);
+        });
+
+        it('should skip private IP checks when allowLocalhostProxy is set', () => {
+            const validator = new Validator({ allowLocalhostProxy: true });
+            const localhost = validator.validateUrl('http://localhost:8081/proxy', 'proxy');
+            strictEqual(localhost.valid, true);
+
+            const privateIp = validator.validateUrl('http://10.0.0.5/proxy', 'proxy');
+            strictEqual(privateIp.valid, true);
+        });
+
+        it('should apply allowLocalhostProxy bypass to ::1 too', () => {
+            const validator = new Validator({ allowLocalhostProxy: true });
+            const result = validator.validateUrl('http://[::1]/proxy', 'proxy');
+            strictEqual(result.valid, true);
+        });
+    });
+
+    describe('Invalid URL error messages', () => {
+        it('should report Unknown error when URL constructor throws a non-Error', () => {
+            const originalUrl = global.URL;
+            class ThrowingUrl {
+                constructor() {
+                    throw 'boom-not-an-error';
+                }
+            }
+            (global as any).URL = ThrowingUrl;
+            try {
+                const validator = createDefaultValidator();
+                const result = validator.validateUrl('http://example.com', 'image');
+                strictEqual(result.valid, false);
+                strictEqual(result.error, 'Invalid URL format: Unknown error');
+            } finally {
+                (global as any).URL = originalUrl;
+            }
+        });
+
+        it('should include the Error message when URL constructor throws an Error', () => {
+            const originalUrl = global.URL;
+            class ThrowingUrl {
+                constructor() {
+                    throw new Error('custom parse failure');
+                }
+            }
+            (global as any).URL = ThrowingUrl;
+            try {
+                const validator = createDefaultValidator();
+                const result = validator.validateUrl('http://example.com', 'image');
+                strictEqual(result.valid, false);
+                strictEqual(result.error, 'Invalid URL format: custom parse failure');
+            } finally {
+                (global as any).URL = originalUrl;
+            }
+        });
+    });
+
+    describe('Private IP classification (SSRF)', () => {
+        const validator = createDefaultValidator();
+
+        const rejectProxy = (host: string) => {
+            const result = validator.validateUrl(`http://${host}/proxy`, 'proxy');
+            strictEqual(result.valid, false, `expected ${host} to be rejected`);
+        };
+
+        const acceptProxy = (host: string) => {
+            const result = validator.validateUrl(`http://${host}/proxy`, 'proxy');
+            strictEqual(result.valid, true, `expected ${host} to be accepted`);
+        };
+
+        it('should reject remaining private/reserved IPv4 ranges via proxy context', () => {
+            rejectProxy('0.1.2.3'); // 0.0.0.0/8
+            rejectProxy('100.64.0.1'); // CGNAT lower bound
+            rejectProxy('100.127.255.254'); // CGNAT upper bound
+            rejectProxy('192.0.0.1'); // IETF protocol assignments
+            rejectProxy('192.0.2.1'); // TEST-NET-1
+            rejectProxy('198.18.0.1'); // network benchmark lower
+            rejectProxy('198.19.255.254'); // network benchmark upper
+            rejectProxy('198.51.100.7'); // TEST-NET-2
+            rejectProxy('203.0.113.9'); // TEST-NET-3
+            rejectProxy('224.0.0.1'); // multicast
+            rejectProxy('239.255.255.255'); // multicast upper
+            rejectProxy('240.0.0.1'); // reserved
+            rejectProxy('255.255.255.255'); // broadcast
+        });
+
+        it('should accept public addresses just outside private ranges', () => {
+            acceptProxy('100.63.0.1'); // below CGNAT
+            acceptProxy('100.128.0.1'); // above CGNAT
+            acceptProxy('172.32.0.1'); // above 172.16/12
+            acceptProxy('198.20.0.1'); // outside 198.18/15
+            acceptProxy('198.51.101.1'); // outside TEST-NET-2
+            acceptProxy('203.0.114.1'); // outside TEST-NET-3
+            acceptProxy('8.8.4.4');
+        });
+
+        it('should reject ULA, link-local and multicast IPv6 hosts via proxy context', () => {
+            rejectProxy('[fc00::1]');
+            rejectProxy('[fd12:3456:789a::1]');
+            rejectProxy('[fe80::1]');
+            rejectProxy('[febf:ffff::1]');
+            rejectProxy('[ff02::1]');
+            rejectProxy('[::]');
+        });
+
+        it('should accept public and non-link-local IPv6 hosts via proxy context', () => {
+            acceptProxy('[2001:db8::1]');
+            acceptProxy('[fec0::1]'); // deprecated site-local, not matched by the fe80::/10 check
+            acceptProxy('[::ffff:102:304]'); // IPv4-mapped canonicalized by URL
+        });
+
+        it('should classify IPv6 helper paths directly', () => {
+            const v = validator as any;
+            // full loopback/unspecified forms (URL canonicalizes these to ::1 / ::)
+            strictEqual(v.isPrivateIPv6('0:0:0:0:0:0:0:1'), true);
+            strictEqual(v.isPrivateIPv6('0:0:0:0:0:0:0:0'), true);
+            // zone IDs are stripped before matching (both raw and URL-encoded forms)
+            strictEqual(v.isPrivateIPv6('fe80::1%eth0'), true);
+            strictEqual(v.isPrivateIPv6('fe80::1%25eth0'), true);
+            // expansion succeeds: fc00::/7, fe80::/10, ff00::/8 boundaries
+            strictEqual(v.isPrivateIPv6('fc00::1'), true);
+            strictEqual(v.isPrivateIPv6('fdff::1'), true);
+            strictEqual(v.isPrivateIPv6('fbff::1'), false); // below fc00
+            strictEqual(v.isPrivateIPv6('fe00::1'), false); // fe but second byte 0x00 not in 0x80-0xbf
+            strictEqual(v.isPrivateIPv6('fe80::1'), true);
+            strictEqual(v.isPrivateIPv6('febf::1'), true); // upper link-local boundary
+            strictEqual(v.isPrivateIPv6('fec0::1'), false);
+            strictEqual(v.isPrivateIPv6('ff02::1'), true);
+            strictEqual(v.isPrivateIPv6('2001:db8::1'), false);
+            // "fc::1" expands to 0000:...:00fc:0001 -> first byte 0x00, public
+            strictEqual(v.isPrivateIPv6('fc::1'), false);
+            // compressed expansion with both left and right groups
+            strictEqual(v.isPrivateIPv6('fd12::a'), true);
+        });
+
+        it('should fall back to prefix matching when expansion fails', () => {
+            const v = validator as any;
+            strictEqual(v.isPrivateIPv6('1::2::3'), false); // double :: -> unclassifiable, public fallback
+            strictEqual(v.isPrivateIPv6('fc00::1::2'), true); // fc prefix fallback
+            strictEqual(v.isPrivateIPv6('fdab::1::2'), true); // fd prefix fallback
+            strictEqual(v.isPrivateIPv6('fe80::1::2'), true); // fe8x prefix fallback
+            strictEqual(v.isPrivateIPv6('ff02::1::3'), true); // ff prefix fallback
+            strictEqual(v.isPrivateIPv6('1234::1::5'), false); // no matching prefix
+        });
+
+        it('should reject malformed IPv6 input in expandIPv6', () => {
+            const v = validator as any;
+            strictEqual(v.expandIPv6('1:2:3'), null); // too few groups without ::
+            strictEqual(v.expandIPv6('1:2:3:4:5:6:7:8:9::'), null); // more than 8 groups
+            strictEqual(v.expandIPv6('1:2:3::4:5'), '0001:0002:0003:0000:0000:0000:0004:0005');
+            strictEqual(v.expandIPv6('1:2:3:4:5:6:7:8'), '0001:0002:0003:0004:0005:0006:0007:0008');
+            strictEqual(v.expandIPv6(null), null); // non-string input hits the catch guard
+        });
+
+        it('should route IPv6 hostnames through the IPv6 classifier', () => {
+            const v = validator as any;
+            strictEqual(v.isPrivateIP('fe80::1'), true);
+            strictEqual(v.isPrivateIP('8.8.8.8'), false);
+        });
+    });
+
+    describe('Element validation with DOM', () => {
+        const validator = createDefaultValidator();
+
+        it('should accept a real attached HTMLElement', () => {
+            const el = document.createElement('div');
+            const result = validator.validateElement(el);
+            strictEqual(result.valid, true);
+            strictEqual(result.error, undefined);
+        });
+
+        it('should reject a real element detached from its document', () => {
+            const el = document.createElement('div');
+            Object.defineProperty(el, 'ownerDocument', { value: null, configurable: true });
+            const result = validator.validateElement(el);
+            strictEqual(result.valid, false);
+            strictEqual(result.error, 'Element must be attached to a document');
+        });
+
+        it('should reject numbers as elements', () => {
+            const result = validator.validateElement(42 as any);
+            strictEqual(result.valid, false);
+            strictEqual(result.error, 'Element must be an object');
+        });
+
+        it('should reject element-like objects without ownerDocument', () => {
+            const result = validator.validateElement({ nodeType: 1 } as any);
+            strictEqual(result.valid, false);
+            strictEqual(result.error, 'Element must be attached to a document (ownerDocument required)');
+        });
+
+        it('should reject elements whose document has no defaultView', () => {
+            const result = validator.validateElement({ ownerDocument: {} } as any);
+            strictEqual(result.valid, false);
+            strictEqual(result.error, 'Document must be attached to a window (ownerDocument.defaultView required)');
+        });
+
+        it('should accept element-like objects with ownerDocument.defaultView', () => {
+            const result = validator.validateElement({
+                ownerDocument: { defaultView: window }
+            } as any);
+            strictEqual(result.valid, true);
+            strictEqual(result.error, undefined);
+        });
+    });
+
+    describe('Options validation edge cases', () => {
+        it('should ignore null, non-string and empty proxy values', () => {
+            const validator = createDefaultValidator();
+            strictEqual(validator.validateOptions({ proxy: null }).valid, true);
+            strictEqual(validator.validateOptions({ proxy: 123 as any }).valid, true);
+            strictEqual(validator.validateOptions({ proxy: '' }).valid, true);
+        });
+
+        it('should validate a string proxy and report failures with a Proxy prefix', () => {
+            const validator = createDefaultValidator();
+            const good = validator.validateOptions({ proxy: 'http://8.8.8.8/proxy' });
+            strictEqual(good.valid, true);
+
+            const bad = validator.validateOptions({ proxy: 'http://localhost/proxy' });
+            strictEqual(bad.valid, false);
+            strictEqual(bad.error?.startsWith('Proxy:'), true);
+            strictEqual(bad.error?.includes('Localhost'), true);
+        });
+
+        it('should default missing width or height when only one is provided', () => {
+            const validator = createDefaultValidator();
+            const widthOnly = validator.validateOptions({ width: 1024 });
+            strictEqual(widthOnly.valid, true);
+
+            const heightOnly = validator.validateOptions({ height: 768 });
+            strictEqual(heightOnly.valid, true);
+
+            const nullWidth = validator.validateOptions({ width: null as any, height: 600 });
+            strictEqual(nullWidth.valid, true); // null coalesces to default 800
+        });
+
+        it('should reject invalid dimensions provided via options', () => {
+            const validator = createDefaultValidator();
+            const result = validator.validateOptions({ height: 40000 });
+            strictEqual(result.valid, false);
+            strictEqual(result.error?.startsWith('Dimensions:'), true);
+        });
+
+        it('should validate cspNonce via options', () => {
+            const validator = createDefaultValidator();
+            const good = validator.validateOptions({ cspNonce: 'AbCdEfGhIjKlMnOpQrSt' });
+            strictEqual(good.valid, true);
+
+            const bad = validator.validateOptions({ cspNonce: 'short' });
+            strictEqual(bad.valid, false);
+            strictEqual(bad.error?.startsWith('CSP nonce:'), true);
+        });
+
+        it('should reject non-numeric imageTimeout via options', () => {
+            const validator = createDefaultValidator();
+            const result = validator.validateOptions({ imageTimeout: null as any });
+            strictEqual(result.valid, false);
+            strictEqual(result.error, 'Image timeout: Image timeout must be a number');
+        });
+
+        it('should run customValidator and merge its errors', () => {
+            const failing = new Validator({
+                customValidator: () => ({ valid: false, error: 'nope' })
+            });
+            const result = failing.validateOptions({});
+            strictEqual(result.valid, false);
+            strictEqual(result.error, 'Custom validation: nope');
+
+            const passing = new Validator({
+                customValidator: () => ({ valid: true })
+            });
+            strictEqual(passing.validateOptions({}).valid, true);
+        });
+
+        it('should pass the raw options object to customValidator', () => {
+            let received: unknown;
+            const validator = new Validator({
+                customValidator: (value, type) => {
+                    received = value;
+                    strictEqual(type, 'options');
+                    return { valid: true };
+                }
+            });
+            const options = { scale: 1 };
+            validator.validateOptions(options);
+            strictEqual(received, options);
+        });
+    });
+
+    describe('Image timeout configuration', () => {
+        it('should skip the maximum check when maxImageTimeout is disabled', () => {
+            const validator = new Validator({ maxImageTimeout: undefined });
+            const result = validator.validateImageTimeout(99999999);
+            strictEqual(result.valid, true);
+            strictEqual(result.sanitized, 99999999);
         });
     });
 });

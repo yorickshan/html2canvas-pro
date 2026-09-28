@@ -182,11 +182,14 @@ export class BackgroundRenderer {
         const [path, x, y, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
         const [lineLength, x0, x1, y0, y1] = calculateGradientDirection(backgroundImage.angle, width, height);
 
-        // Determine the repeating pattern length from color stops
+        // Determine the repeating pattern length from color stops.
+        // processColorStops normalises stops to [0, 1] of the gradient line,
+        // so scale the span back to absolute pixels for the pattern canvas.
         const processedStops = processColorStops(backgroundImage.stops, lineLength || 1);
         const lastStop = processedStops[processedStops.length - 1];
         const firstStop = processedStops[0];
-        const patternLength = lastStop.stop - firstStop.stop;
+        const stopSpan = lastStop.stop - firstStop.stop;
+        const patternLength = stopSpan * (lineLength || 1);
 
         if (patternLength <= 0) {
             // Fallback: render as normal linear gradient
@@ -225,7 +228,7 @@ export class BackgroundRenderer {
 
             // Normalize stops to [0, 1] range for one repeating unit
             processedStops.forEach((colorStop) => {
-                gradient.addColorStop((colorStop.stop - firstStop.stop) / patternLength, asString(colorStop.color));
+                gradient.addColorStop((colorStop.stop - firstStop.stop) / stopSpan, asString(colorStop.color));
             });
 
             ctx.fillStyle = gradient;
