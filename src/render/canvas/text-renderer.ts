@@ -222,7 +222,7 @@ export class TextRenderer {
         const rotationAngle = writingMode === WRITING_MODE.SIDEWAYS_LR ? -Math.PI / 2 : Math.PI / 2;
         let top = text.bounds.top;
 
-        for (let i = 0; i < letters.length; ) {
+        for (let i = 0; i < letters.length;) {
             const letter = letters[i];
             const isSideways =
                 isSidewaysWritingMode(writingMode) || (!hasCJKCharacters(letter) && letter.trim().length > 0);

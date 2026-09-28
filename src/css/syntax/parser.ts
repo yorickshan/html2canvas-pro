@@ -9,9 +9,7 @@ import {
 } from './tokenizer';
 
 export type CSSBlockType =
-    | TokenType.LEFT_PARENTHESIS_TOKEN
-    | TokenType.LEFT_SQUARE_BRACKET_TOKEN
-    | TokenType.LEFT_CURLY_BRACKET_TOKEN;
+    TokenType.LEFT_PARENTHESIS_TOKEN | TokenType.LEFT_SQUARE_BRACKET_TOKEN | TokenType.LEFT_CURLY_BRACKET_TOKEN;
 
 export interface CSSBlock {
     type: CSSBlockType;

@@ -77,12 +77,7 @@ export interface PathClipPath {
 }
 
 export type ClipPathValue =
-    | NoneClipPath
-    | InsetClipPath
-    | CircleClipPath
-    | EllipseClipPath
-    | PolygonClipPath
-    | PathClipPath;
+    NoneClipPath | InsetClipPath | CircleClipPath | EllipseClipPath | PolygonClipPath | PathClipPath;
 
 const NONE: NoneClipPath = { type: CLIP_PATH_TYPE.NONE };
 
