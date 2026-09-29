@@ -20,16 +20,29 @@ export class Context {
     readonly onError?: (error: Error) => void;
 
     private static instanceCount = 1;
+    private _windowBounds: Bounds;
 
-    constructor(
-        options: ContextOptions,
-        public windowBounds: Bounds,
-        config: Html2CanvasConfig
-    ) {
+    constructor(options: ContextOptions, windowBounds: Bounds, config: Html2CanvasConfig) {
         this.config = config;
         this.logger = new Logger({ id: this.instanceName, enabled: options.logging });
         this.originChecker = new OriginChecker(config.window);
         this.cache = options.cache ?? config.cache ?? new Cache(this, options);
         this.onError = options.onError;
+        this._windowBounds = windowBounds;
+    }
+
+    /** Viewport bounds in page coordinates; added to client rects during bounds parsing. */
+    get windowBounds(): Bounds {
+        return this._windowBounds;
+    }
+
+    /**
+     * Compensate window bounds for a page scroll that the browser performed
+     * underneath us. Used by the document cloner: WebKit's scroll anchoring can
+     * scroll the cloned iframe after `onclone`, and the offset must be applied
+     * to subsequent bounds parsing (the only sanctioned mutation of this value).
+     */
+    adjustWindowBounds(left: number, top: number): void {
+        this._windowBounds = this._windowBounds.add(left, top, 0, 0);
     }
 }

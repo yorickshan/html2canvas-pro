@@ -19,13 +19,16 @@ import { CounterState } from '../css/types/functions/counter';
 import { CSSParsedCounterDeclaration } from '../css/index';
 import { Context } from '../core/context';
 import { DebuggerType, isDebugging } from '../core/debugger';
-import { IGNORE_ATTRIBUTE, SlotCloner } from './slot-cloner';
+import { SlotCloner } from './slot-cloner';
 import { copyCSSStyles } from './copy-css-styles';
 import { PseudoContentResolver, PseudoElementType, createPseudoHideStyles } from './pseudo-content';
+
+import { mountCloneInIFrame } from './iframe-mount';
 
 // Re-exported for backwards compatibility: existing consumers import these
 // from the cloner module.
 export { copyCSSStyles } from './copy-css-styles';
+export { serializeDoctype } from './iframe-mount';
 
 export interface CloneOptions {
     ignoreElements?: (element: Element) => boolean;
@@ -45,15 +48,6 @@ export type CloneConfigurations = CloneOptions & {
     inlineImages: boolean;
     copyStyles: boolean;
     cspNonce?: string;
-};
-
-/**
- * Trusted Types factory (getPolicy / createPolicy) for document.write in strict CSP environments.
- * Used in toIFrame() when writing initial HTML to the cloned document.
- */
-type TrustedTypesFactory = {
-    getPolicy?: (name: string) => unknown;
-    createPolicy: (name: string, config: object) => unknown;
 };
 
 /**
@@ -117,124 +111,14 @@ export class DocumentCloner {
     }
 
     toIFrame(ownerDocument: Document, windowSize: Bounds): Promise<HTMLIFrameElement> {
-        const iframe: HTMLIFrameElement = createIFrameContainer(
-            ownerDocument,
-            windowSize,
-            this.options.iframeContainer
-        );
-
-        if (!iframe.contentWindow) {
-            throw new Error('Unable to find iframe window');
-        }
-
-        const scrollX = (ownerDocument.defaultView as Window).pageXOffset;
-        const scrollY = (ownerDocument.defaultView as Window).pageYOffset;
-
-        const cloneWindow = iframe.contentWindow;
-        const documentClone: Document = cloneWindow.document;
-
-        /* Chrome doesn't detect relative background-images assigned in inline <style> sheets when fetched through getComputedStyle
-         if window url is about:blank, we can assign the url to current by writing onto the document
-         */
-
-        const iframeLoad = iframeLoader(iframe).then(async () => {
-            this.scrolledElements.forEach(restoreNodeScroll);
-            if (cloneWindow) {
-                cloneWindow.scrollTo(windowSize.left, windowSize.top);
-            }
-
-            const onclone = this.options.onclone;
-
-            const referenceElement = this.clonedReferenceElement;
-
-            if (typeof referenceElement === 'undefined') {
-                throw new Error(`Error finding the ${this.referenceElement.nodeName} in the cloned document`);
-            }
-
-            if (documentClone.fonts && documentClone.fonts.ready) {
-                await documentClone.fonts.ready;
-            }
-
-            if (/(AppleWebKit)/g.test(navigator.userAgent)) {
-                await imagesReady(documentClone);
-            }
-
-            if (typeof onclone === 'function') {
-                await Promise.resolve().then(() => onclone(documentClone, referenceElement));
-            }
-
-            // onclone can change layout above the viewport and trigger browser scroll
-            // anchoring. Reapply the requested offset after the callback so element
-            // bounds stay aligned with the window bounds used by the renderer.
-            cloneWindow.scrollTo(windowSize.left, windowSize.top);
-            if (
-                /AppleWebKit/g.test(navigator.userAgent) &&
-                (cloneWindow.scrollY !== windowSize.top || cloneWindow.scrollX !== windowSize.left)
-            ) {
-                this.context.logger.warn('Unable to restore scroll position for cloned document');
-                this.context.windowBounds = this.context.windowBounds.add(
-                    cloneWindow.scrollX - windowSize.left,
-                    cloneWindow.scrollY - windowSize.top,
-                    0,
-                    0
-                );
-            }
-
-            return iframe;
+        return mountCloneInIFrame(this.context, ownerDocument, windowSize, {
+            documentElement: this.documentElement,
+            clonedReferenceElement: this.clonedReferenceElement,
+            referenceElementName: this.referenceElement.nodeName,
+            scrolledElements: this.scrolledElements,
+            onclone: this.options.onclone,
+            container: this.options.iframeContainer
         });
-        /**
-         * The base URI used for resolving relative URLs (e.g. background-image) in the clone.
-         * Must come from the source document: the iframe document is about:blank, so
-         * documentClone.baseURI would break getComputedStyle() for relative background URLs.
-         */
-        const baseUri = ownerDocument.baseURI;
-        documentClone.open();
-        // rawHTML is always a static, internally-generated string:
-        // serializeDoctype(document.doctype) + '<html></html>'
-        // No user-controlled input — safe for document.write in the sandbox iframe.
-        const rawHTML = serializeDoctype(document.doctype) + '<html></html>';
-        try {
-            const ownerWindow = this.referenceElement.ownerDocument?.defaultView;
-            const trustedTypesFactory =
-                ownerWindow && (ownerWindow as Window & { trustedTypes?: TrustedTypesFactory }).trustedTypes;
-            let policy = trustedTypesFactory?.getPolicy?.('html2canvas-pro');
-            if (!policy && trustedTypesFactory) {
-                policy = trustedTypesFactory.createPolicy('html2canvas-pro', {
-                    createHTML: (s: string) => s
-                });
-            }
-            // Prefer Trusted Types when available; fallback is the same static HTML.
-            const html = policy ? (policy as { createHTML: (s: string) => string }).createHTML(rawHTML) : rawHTML;
-            // CodeQL:no - rawHTML is a static internal string, never user-controlled
-            documentClone.write(html as string);
-        } catch (_e) {
-            // CodeQL:no - rawHTML is a static internal string, never user-controlled
-            documentClone.write(rawHTML);
-        }
-        // Chrome scrolls the parent document for some reason after the write to the cloned window???
-        restoreOwnerScroll(this.referenceElement.ownerDocument, scrollX, scrollY);
-        /**
-         * IMPORTANT: documentClone.close() MUST be called BEFORE adoptNode().
-         *
-         * In Chrome, calling adoptNode() while the document is still "open"
-         * (between document.open() and document.close()) causes CSS rules with
-         * uppercase characters in class names (e.g. ".MyClass") to not match
-         * correctly. Chrome's CSS engine only enters a fully-resolved matching
-         * mode once the document is closed.
-         *
-         * Correct order: open() → write() → close() → adoptNode() → replaceChild()
-         *
-         * Timing: close() queues the iframe 'load' event; because JS is single-threaded,
-         * the synchronous adoptNode() and replaceChild() below complete before that
-         * event is dispatched. iframeLoader's setInterval will therefore see the body
-         * already populated on its first tick.
-         */
-        documentClone.close();
-        const adoptedNode = documentClone.adoptNode(this.documentElement);
-        addBase(adoptedNode, baseUri);
-        documentClone.replaceChild(adoptedNode, documentClone.documentElement);
-
-        return iframeLoad;
     }
 
     createElementClone<T extends HTMLElement | SVGElement>(node: T): HTMLElement | SVGElement {
@@ -520,124 +404,3 @@ export class DocumentCloner {
         return false;
     }
 }
-
-const createIFrameContainer = (
-    ownerDocument: Document,
-    bounds: Bounds,
-    customContainer?: HTMLElement | ShadowRoot
-): HTMLIFrameElement => {
-    const cloneIframeContainer = ownerDocument.createElement('iframe');
-
-    cloneIframeContainer.className = 'html2canvas-container';
-    cloneIframeContainer.style.visibility = 'hidden';
-    cloneIframeContainer.style.position = 'fixed';
-    cloneIframeContainer.style.left = '-10000px';
-    cloneIframeContainer.style.top = '0px';
-    cloneIframeContainer.style.border = '0';
-    cloneIframeContainer.width = bounds.width.toString();
-    cloneIframeContainer.height = bounds.height.toString();
-    cloneIframeContainer.scrolling = 'no'; // ios won't scroll without it
-    cloneIframeContainer.setAttribute(IGNORE_ATTRIBUTE, 'true');
-
-    // Use custom container if provided, otherwise use body
-    const container = customContainer || ownerDocument.body;
-    container.appendChild(cloneIframeContainer);
-
-    return cloneIframeContainer;
-};
-
-const imageReady = (img: HTMLImageElement): Promise<Event | void | string> => {
-    return new Promise((resolve) => {
-        if (img.complete) {
-            resolve();
-            return;
-        }
-        if (!img.src) {
-            resolve();
-            return;
-        }
-        img.onload = resolve;
-        img.onerror = resolve;
-    });
-};
-
-const imagesReady = (document: HTMLDocument): Promise<unknown[]> => {
-    return Promise.all([].slice.call(document.images, 0).map(imageReady));
-};
-
-const iframeLoader = (iframe: HTMLIFrameElement): Promise<HTMLIFrameElement> => {
-    return new Promise((resolve, reject) => {
-        const cloneWindow = iframe.contentWindow;
-
-        if (!cloneWindow) {
-            return reject(`No window assigned for iframe`);
-        }
-
-        const documentClone = cloneWindow.document;
-
-        cloneWindow.onload = iframe.onload = () => {
-            cloneWindow.onload = iframe.onload = null;
-            const MAX_POLL_ATTEMPTS = 600; // 30 seconds at 50ms intervals
-            let attempts = 0;
-            const interval = setInterval(() => {
-                attempts++;
-                if (documentClone.body.childNodes.length > 0 && documentClone.readyState === 'complete') {
-                    clearInterval(interval);
-                    resolve(iframe);
-                } else if (attempts >= MAX_POLL_ATTEMPTS) {
-                    clearInterval(interval);
-                    resolve(iframe); // resolve anyway to avoid hanging
-                }
-            }, 50);
-        };
-    });
-};
-
-/**
- * Serialise a document type declaration to an HTML string.
- * @internal – exported for testing only, not part of the public API.
- */
-export const serializeDoctype = (doctype?: DocumentType | null): string => {
-    let str = '';
-    if (doctype) {
-        str += '<!DOCTYPE ';
-        if (doctype.name) {
-            str += doctype.name;
-        }
-        if (doctype.internalSubset) {
-            str += ' ' + doctype.internalSubset.replace(/"/g, '&quot;').replace(/>/g, '&gt;');
-        }
-        if (doctype.publicId) {
-            str += ' PUBLIC "' + doctype.publicId.replace(/"/g, '&quot;') + '"';
-            if (doctype.systemId) {
-                str += ' "' + doctype.systemId.replace(/"/g, '&quot;') + '"';
-            }
-        } else if (doctype.systemId) {
-            str += ' SYSTEM "' + doctype.systemId.replace(/"/g, '&quot;') + '"';
-        }
-        str += '>';
-    }
-    return str;
-};
-
-const restoreOwnerScroll = (ownerDocument: Document | null, x: number, y: number) => {
-    if (
-        ownerDocument &&
-        ownerDocument.defaultView &&
-        (x !== ownerDocument.defaultView.pageXOffset || y !== ownerDocument.defaultView.pageYOffset)
-    ) {
-        ownerDocument.defaultView.scrollTo(x, y);
-    }
-};
-
-const restoreNodeScroll = ([element, x, y]: [Element, number, number]) => {
-    element.scrollLeft = x;
-    element.scrollTop = y;
-};
-
-const addBase = (targetELement: HTMLElement, baseUri: string) => {
-    const baseNode = targetELement.ownerDocument.createElement('base');
-    baseNode.href = baseUri;
-    const headEle = targetELement.getElementsByTagName('head').item(0);
-    headEle?.insertBefore(baseNode, headEle?.firstChild ?? null);
-};
