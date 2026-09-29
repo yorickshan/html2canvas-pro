@@ -1,5 +1,18 @@
 import { defineConfig } from 'vitest/config';
 
+/**
+ * Layered coverage thresholds.
+ *
+ * Unit tests (jsdom) cannot exercise canvas painting, so the browser-only
+ * render orchestrators sit far below the layers they drag down. Those files
+ * are gated by the karma reftest suite (115 HTML reftests in a real browser,
+ * run in CI on a browser matrix) instead of by unit coverage.
+ *
+ * Layer gates measure each subtree's aggregate at its real unit-testable
+ * level (~1.5–2pp headroom), so pure-logic modules are no longer implicitly
+ * taxed by the browser-only files under the global threshold. The global
+ * values remain as a coarse backstop over the whole tree.
+ */
 export default defineConfig({
     test: {
         globals: true,
@@ -17,10 +30,48 @@ export default defineConfig({
                 'src/global.d.ts'
             ],
             thresholds: {
+                // Global backstop (includes the browser-only render files).
                 branches: 70,
                 functions: 75,
                 lines: 60,
-                statements: 60
+                statements: 60,
+                // Pure CSS parsing / typed values — no browser dependency.
+                'src/css/**': {
+                    branches: 82,
+                    functions: 92,
+                    statements: 90,
+                    lines: 90
+                },
+                // Pipeline orchestration, caching, validation — jsdom-testable.
+                'src/core/**': {
+                    branches: 88,
+                    functions: 92,
+                    statements: 92,
+                    lines: 92
+                },
+                // DOM snapshot containers; document-cloner relies on iframe
+                // quirks that only reftests can fully exercise.
+                'src/dom/**': {
+                    branches: 52,
+                    functions: 68,
+                    statements: 62,
+                    lines: 61
+                },
+                // Render-domain pure logic (paths, curves, effects, bounds).
+                'src/render/*.ts': {
+                    branches: 76,
+                    functions: 88,
+                    statements: 85,
+                    lines: 85
+                },
+                // Canvas painting layer: unit mocks only reach the paint
+                // helpers; the orchestrators are covered by reftests.
+                'src/render/canvas/**': {
+                    branches: 40,
+                    functions: 57,
+                    statements: 46,
+                    lines: 46
+                }
             }
         }
     }
