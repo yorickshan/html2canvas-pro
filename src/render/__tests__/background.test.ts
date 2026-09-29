@@ -294,12 +294,12 @@ describe('background rendering calculations', () => {
 
     describe('isAuto', () => {
         it('matches the auto ident', () => {
-            expect(isAuto(parseSizeLayer('auto')[0])).toBe(true);
+            expect(isAuto(parseSizeLayer('auto')[0]!)).toBe(true);
         });
 
         it('rejects other idents and length tokens', () => {
-            expect(isAuto(parseSizeLayer('contain')[0])).toBe(false);
-            expect(isAuto(parseSizeLayer('50%')[0])).toBe(false);
+            expect(isAuto(parseSizeLayer('contain')[0]!)).toBe(false);
+            expect(isAuto(parseSizeLayer('50%')[0]!)).toBe(false);
         });
     });
 

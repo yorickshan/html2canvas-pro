@@ -167,8 +167,8 @@ export class DocumentCloner {
         // across TypeScript DOM lib versions (TS2488 on older libs).
         const attributes = clonedNode.attributes;
         for (let i = 0; i < attributes.length; i++) {
-            const attr = attributes[i];
-            if (attr.name !== 'class' && attr.name !== 'style') {
+            const attr = attributes.item(i);
+            if (attr && attr.name !== 'class' && attr.name !== 'style') {
                 clone.setAttribute(attr.name, attr.value);
             }
         }

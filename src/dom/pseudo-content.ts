@@ -105,7 +105,7 @@ export class PseudoContentResolver {
             } else if (token.type === TokenType.FUNCTION) {
                 if (token.name === 'attr') {
                     const attr = token.values.filter(isIdentToken);
-                    if (attr.length) {
+                    if (attr.length && attr[0]) {
                         anonymousReplacedElement.appendChild(
                             document.createTextNode(node.getAttribute(attr[0].value) || '')
                         );

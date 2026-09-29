@@ -3,6 +3,8 @@ import { HashToken, TokenType } from '../syntax/tokenizer';
 import safeEvalArithmetic from './safe-eval';
 import { ITypeDescriptor } from '../type-descriptor';
 import { Context } from '../../core/context';
+import { at } from '../../core/util';
+import { RGBA4 } from './color-math';
 import { srgbFromXYZ, srgbLinearFromXYZ } from './color-spaces/srgb';
 import {
     packSrgbLinear,
@@ -56,7 +58,7 @@ export const color: ITypeDescriptor<Color> = {
             }
         }
 
-        return COLORS.TRANSPARENT;
+        return TRANSPARENT_COLOR;
     }
 };
 
@@ -101,24 +103,25 @@ const rgb = (_context: Context, args: CSSValue[]): number => {
         throw new Error('Relative color not supported for rgb()');
     }
 
-    if (tokens.length === 3) {
-        const [r, g, b] = tokens.map(getTokenColorValue);
-        return pack(r, g, b, 1);
-    }
-
-    if (tokens.length === 4) {
-        const [r, g, b, a] = tokens.map(getTokenColorValue);
+    if (tokens.length === 3 || tokens.length === 4) {
+        const r = getTokenColorValue(at(tokens, 0), 0);
+        const g = getTokenColorValue(at(tokens, 1), 1);
+        const b = getTokenColorValue(at(tokens, 2), 2);
+        const a = tokens.length === 4 ? getTokenColorValue(at(tokens, 3), 3) : 1;
         return pack(r, g, b, a);
     }
 
     // Handle modern CSS syntax with / separator: rgb(r g b / alpha)
     // tokens[0] = r, tokens[1] = g, tokens[2] = b, tokens[3] = '/', tokens[4] = alpha
-    if (tokens.length === 5 && tokens[3].type === TokenType.DELIM_TOKEN && tokens[3].value === '/') {
-        const r = getTokenColorValue(tokens[0], 0);
-        const g = getTokenColorValue(tokens[1], 1);
-        const b = getTokenColorValue(tokens[2], 2);
-        const a = getTokenColorValue(tokens[4], 3);
-        return pack(r, g, b, a);
+    if (tokens.length === 5) {
+        const delim = at(tokens, 3);
+        if (delim.type === TokenType.DELIM_TOKEN && delim.value === '/') {
+            const r = getTokenColorValue(at(tokens, 0), 0);
+            const g = getTokenColorValue(at(tokens, 1), 1);
+            const b = getTokenColorValue(at(tokens, 2), 2);
+            const a = getTokenColorValue(at(tokens, 4), 3);
+            return pack(r, g, b, a);
+        }
     }
 
     return 0;
@@ -132,7 +135,8 @@ const rgb = (_context: Context, args: CSSValue[]): number => {
  */
 const _color = (context: Context, args: CSSValue[]) => {
     const tokens = args.filter(nonFunctionArgSeparator),
-        token_1_value = tokens[0].type === TokenType.IDENT_TOKEN ? tokens[0].value : 'unknown',
+        token_1 = tokens[0],
+        token_1_value = token_1 && token_1.type === TokenType.IDENT_TOKEN ? token_1.value : 'unknown',
         is_absolute = !isRelativeTransform(tokens);
 
     if (is_absolute) {
@@ -141,15 +145,21 @@ const _color = (context: Context, args: CSSValue[]) => {
         if (typeof colorSpaceFunction === 'undefined') {
             throw new Error(`Attempting to parse an unsupported color space "${color_space}" for color() function`);
         }
-        const c1 = isNumberToken(tokens[1]) ? tokens[1].number : 0,
-            c2 = isNumberToken(tokens[2]) ? tokens[2].number : 0,
-            c3 = isNumberToken(tokens[3]) ? tokens[3].number : 0,
+        const t1 = at(tokens, 1),
+            t2 = at(tokens, 2),
+            t3 = at(tokens, 3),
+            t4 = tokens[4],
+            t5 = tokens[5],
+            c1 = isNumberToken(t1) ? t1.number : 0,
+            c2 = isNumberToken(t2) ? t2.number : 0,
+            c3 = isNumberToken(t3) ? t3.number : 0,
             a =
-                tokens.length > 4 &&
-                tokens[4].type === TokenType.DELIM_TOKEN &&
-                tokens[4].value === '/' &&
-                isNumberToken(tokens[5])
-                    ? tokens[5].number
+                t4 !== undefined &&
+                t4.type === TokenType.DELIM_TOKEN &&
+                t4.value === '/' &&
+                t5 !== undefined &&
+                isNumberToken(t5)
+                    ? t5.number
                     : 1;
 
         return colorSpaceFunction([c1, c2, c3, a]);
@@ -165,7 +175,7 @@ const _color = (context: Context, args: CSSValue[]) => {
 
             if (isIdentToken(token)) {
                 const position = posFromVal(token.value);
-                return color[position];
+                return at(color, position);
             }
 
             const parseCalc = (args: CSSValue[]): string => {
@@ -200,23 +210,25 @@ const _color = (context: Context, args: CSSValue[]) => {
             return null;
         };
 
-        const from_colorspace =
-                tokens[1].type === TokenType.FUNCTION
-                    ? tokens[1].name
-                    : isIdentToken(tokens[1]) || tokens[1].type === TokenType.HASH_TOKEN
+        const from_token = at(tokens, 1),
+            from_colorspace =
+                from_token.type === TokenType.FUNCTION
+                    ? from_token.name
+                    : isIdentToken(from_token) || from_token.type === TokenType.HASH_TOKEN
                       ? 'rgb'
                       : 'unknown',
-            to_colorspace = isIdentToken(tokens[2]) ? tokens[2].value : 'unknown';
+            to_token = at(tokens, 2),
+            to_colorspace = isIdentToken(to_token) ? to_token.value : 'unknown';
 
         let from =
-            tokens[1].type === TokenType.FUNCTION ? tokens[1].values : isIdentToken(tokens[1]) ? [tokens[1]] : [];
+            from_token.type === TokenType.FUNCTION ? from_token.values : isIdentToken(from_token) ? [from_token] : [];
 
-        if (isIdentToken(tokens[1])) {
-            const named_color = COLORS[tokens[1].value.toUpperCase()];
+        if (isIdentToken(from_token)) {
+            const named_color = COLORS[from_token.value.toUpperCase()];
             if (typeof named_color === 'undefined') {
                 throw new Error(`Attempting to use unknown color in relative color 'from'`);
             } else {
-                const _c = parseColor(context, tokens[1].value),
+                const _c = parseColor(context, from_token.value),
                     alpha = 0xff & _c,
                     blue = 0xff & (_c >> 8),
                     green = 0xff & (_c >> 16),
@@ -228,8 +240,8 @@ const _color = (context: Context, args: CSSValue[]) => {
                     { type: TokenType.NUMBER_TOKEN, number: alpha > 1 ? alpha / 255 : alpha, flags: 1 }
                 ];
             }
-        } else if (tokens[1].type === TokenType.HASH_TOKEN) {
-            const [red, green, blue, alpha] = hash2rgb(tokens[1]);
+        } else if (from_token.type === TokenType.HASH_TOKEN) {
+            const [red, green, blue, alpha] = hash2rgb(from_token);
             from = [
                 { type: TokenType.NUMBER_TOKEN, number: red, flags: 1 },
                 { type: TokenType.NUMBER_TOKEN, number: green, flags: 1 },
@@ -259,18 +271,24 @@ const _color = (context: Context, args: CSSValue[]) => {
 
         const from_color: [number, number, number, number] = fromColorToXyz(context, from),
             from_final_colorspace: [number, number, number, number] = toColorFromXyz(from_color),
-            c1 = extractComponent(from_final_colorspace, tokens[3]),
-            c2 = extractComponent(from_final_colorspace, tokens[4]),
-            c3 = extractComponent(from_final_colorspace, tokens[5]),
+            c1 = extractComponent(from_final_colorspace, at(tokens, 3)),
+            c2 = extractComponent(from_final_colorspace, at(tokens, 4)),
+            c3 = extractComponent(from_final_colorspace, at(tokens, 5)),
+            t6 = tokens[6],
+            t7 = tokens[7],
             a =
-                tokens.length > 6 &&
-                tokens[6].type === TokenType.DELIM_TOKEN &&
-                tokens[6].value === '/' &&
-                isNumberToken(tokens[7])
-                    ? tokens[7].number
+                t6 !== undefined &&
+                t6.type === TokenType.DELIM_TOKEN &&
+                t6.value === '/' &&
+                t7 !== undefined &&
+                isNumberToken(t7)
+                    ? t7.number
                     : 1;
         if (c1 === null || c2 === null || c3 === null) {
             throw new Error(`Invalid relative color in color() function`);
+        }
+        if (typeof toColorPack === 'undefined') {
+            throw new Error(`Attempting to parse an unsupported color space "${to_colorspace}" for color() function`);
         }
 
         return toColorPack([c1, c2, c3, a]);
@@ -278,7 +296,7 @@ const _color = (context: Context, args: CSSValue[]) => {
 };
 
 const SUPPORTED_COLOR_SPACES_ABSOLUTE: {
-    [key: string]: (args: number[]) => number;
+    [key: string]: (args: RGBA4) => number;
 } = {
     srgb: packSrgb,
     'srgb-linear': packSrgbLinear,
@@ -332,6 +350,8 @@ const SUPPORTED_COLOR_FUNCTIONS: {
 
 export const parseColor = (context: Context, value: string): Color =>
     color.parse(context, Parser.create(value).parseComponentValue());
+
+export const TRANSPARENT_COLOR: Color = 0x00000000;
 
 export const COLORS: { [key: string]: Color } = {
     ALICEBLUE: 0xf0f8ffff,
@@ -475,7 +495,7 @@ export const COLORS: { [key: string]: Color } = {
     TEAL: 0x008080ff,
     THISTLE: 0xd8bfd8ff,
     TOMATO: 0xff6347ff,
-    TRANSPARENT: 0x00000000,
+    TRANSPARENT: TRANSPARENT_COLOR,
     TURQUOISE: 0x40e0d0ff,
     VIOLET: 0xee82eeff,
     WHEAT: 0xf5deb3ff,

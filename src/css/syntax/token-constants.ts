@@ -113,6 +113,7 @@ export {
 };
 
 import { fromCodePoint } from 'css-line-break';
+import { at } from '../../core/util';
 
 const isDigit = (codePoint: number) => codePoint >= ZERO && codePoint <= 0x0039;
 const isSurrogateCodePoint = (codePoint: number) => codePoint >= 0xd800 && codePoint <= 0xdfff;
@@ -198,10 +199,11 @@ const stringToNumber = (codePoints: number[]): number => {
         c++;
     }
 
-    const integers = [];
+    const integers: number[] = [];
 
-    while (isDigit(codePoints[c])) {
-        integers.push(codePoints[c++]);
+    while (isDigit(codePoints[c] ?? NaN)) {
+        integers.push(at(codePoints, c));
+        c++;
     }
 
     const int = integers.length ? parseInt(fromCodePoint(...integers), 10) : 0;
@@ -211,8 +213,9 @@ const stringToNumber = (codePoints: number[]): number => {
     }
 
     const fraction = [];
-    while (isDigit(codePoints[c])) {
-        fraction.push(codePoints[c++]);
+    while (isDigit(codePoints[c] ?? NaN)) {
+        fraction.push(at(codePoints, c));
+        c++;
     }
 
     const fracd = fraction.length;
@@ -231,10 +234,11 @@ const stringToNumber = (codePoints: number[]): number => {
         c++;
     }
 
-    const exponent = [];
+    const exponent: number[] = [];
 
-    while (isDigit(codePoints[c])) {
-        exponent.push(codePoints[c++]);
+    while (isDigit(codePoints[c] ?? NaN)) {
+        exponent.push(at(codePoints, c));
+        c++;
     }
 
     const exp = exponent.length ? parseInt(fromCodePoint(...exponent), 10) : 0;

@@ -13,12 +13,13 @@ export const prefixLinearGradient = (context: Context, tokens: CSSValue[]): CSSL
         if (i === 0) {
             const firstToken = arg[0];
             if (
+                firstToken &&
                 firstToken.type === TokenType.IDENT_TOKEN &&
                 ['top', 'left', 'right', 'bottom'].indexOf(firstToken.value) !== -1
             ) {
                 angle = parseNamedSide(arg);
                 return;
-            } else if (isAngle(firstToken)) {
+            } else if (firstToken && isAngle(firstToken)) {
                 angle = (angleType.parse(context, firstToken) + deg(270)) % deg(360);
                 return;
             }

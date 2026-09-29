@@ -1,4 +1,4 @@
-import { COLORS, parseColor, type Color } from '../css/types/color';
+import { parseColor, TRANSPARENT_COLOR, type Color } from '../css/types/color';
 import { isTransparent } from '../css/types/color-utilities';
 import type { Context } from './context';
 
@@ -24,16 +24,16 @@ export const parseBackgroundColor = (
     // http://www.w3.org/TR/css3-background/#special-backgrounds
     const documentBackgroundColor = ownerDocument.documentElement
         ? parseColor(context, getComputedStyle(ownerDocument.documentElement).backgroundColor as string)
-        : COLORS.TRANSPARENT;
+        : TRANSPARENT_COLOR;
     const bodyBackgroundColor = ownerDocument.body
         ? parseColor(context, getComputedStyle(ownerDocument.body).backgroundColor as string)
-        : COLORS.TRANSPARENT;
+        : TRANSPARENT_COLOR;
 
     const defaultBackgroundColor =
         typeof backgroundColorOverride === 'string'
             ? parseColor(context, backgroundColorOverride)
             : backgroundColorOverride === null
-              ? COLORS.TRANSPARENT
+              ? TRANSPARENT_COLOR
               : 0xffffffff;
 
     return element === ownerDocument.documentElement

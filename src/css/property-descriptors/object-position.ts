@@ -1,4 +1,5 @@
 import { PropertyDescriptorParsingType, IPropertyListDescriptor } from '../property-descriptor';
+import { at } from '../../core/util';
 import { CSSValue, isIdentToken } from '../syntax/parser';
 import {
     isLengthPercentage,
@@ -22,6 +23,9 @@ export const objectPosition: IPropertyListDescriptor<ObjectPosition> = {
 
         while (i < tokens.length && result.length < 2) {
             const token = tokens[i];
+            if (!token) {
+                break;
+            }
             if (isIdentToken(token)) {
                 switch (token.value) {
                     case 'left':
@@ -47,6 +51,6 @@ export const objectPosition: IPropertyListDescriptor<ObjectPosition> = {
             result.push(FIFTY_PERCENT);
         }
 
-        return [result[0], result[1]];
+        return [at(result, 0), at(result, 1)];
     }
 };

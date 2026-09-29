@@ -223,10 +223,10 @@ describe('clip-path property descriptor', () => {
             const result = parse('polygon(0% 0%, 100% 0%, 50% 100%)');
             if (result.type !== CLIP_PATH_TYPE.POLYGON) throw new Error('wrong type');
             strictEqual(result.points.length, 3);
-            strictEqual(result.points[0][0].number, 0);
-            strictEqual(result.points[0][1].number, 0);
-            strictEqual(result.points[1][0].number, 100);
-            strictEqual(result.points[2][0].number, 50);
+            strictEqual(result.points[0]?.[0]?.number, 0);
+            strictEqual(result.points[0]?.[1]?.number, 0);
+            strictEqual(result.points[1]?.[0]?.number, 100);
+            strictEqual(result.points[2]?.[0]?.number, 50);
         });
 
         it('should skip a leading fill-rule keyword', () => {
@@ -239,8 +239,8 @@ describe('clip-path property descriptor', () => {
             const result = parse('polygon(10px 20px, 100px 20px, 100px 80px, 10px 80px)');
             if (result.type !== CLIP_PATH_TYPE.POLYGON) throw new Error('wrong type');
             strictEqual(result.points.length, 4);
-            strictEqual(result.points[0][0].number, 10);
-            strictEqual(result.points[0][1].number, 20);
+            strictEqual(result.points[0]?.[0]?.number, 10);
+            strictEqual(result.points[0]?.[1]?.number, 20);
         });
 
         it('should return empty points array for empty polygon', () => {

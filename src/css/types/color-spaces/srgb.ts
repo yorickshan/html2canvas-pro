@@ -2,7 +2,7 @@
  * SRGB related functions
  */
 
-import { clamp, multiplyMatrices } from '../color-math';
+import { clamp, multiplyMatrices, RGB3, RGBA4 } from '../color-math';
 
 /**
  * Convert XYZ to linear-light sRGB
@@ -39,13 +39,15 @@ export const rgbLinear2xyz = (xyz: [number, number, number]): [number, number, n
  *
  * @param rgb
  */
-export const srgbLinear2rgb = (rgb: [number, number, number]): number[] => {
-    return rgb.map((c: number) => {
+export const srgbLinear2rgb = (rgb: RGB3): RGB3 => {
+    const [r, g, b] = rgb;
+    const transfer = (c: number): number => {
         const sign = c < 0 ? -1 : 1,
             abs = Math.abs(c);
 
         return abs > 0.0031308 ? sign * (1.055 * abs ** (1 / 2.4) - 0.055) : 12.92 * c;
-    });
+    };
+    return [transfer(r), transfer(g), transfer(b)];
 };
 
 /**
@@ -53,13 +55,15 @@ export const srgbLinear2rgb = (rgb: [number, number, number]): number[] => {
  *
  * @param rgb
  */
-export const rgb2rgbLinear = (rgb: [number, number, number]): number[] => {
-    return rgb.map((c: number) => {
+export const rgb2rgbLinear = (rgb: RGB3): RGB3 => {
+    const [r, g, b] = rgb;
+    const transfer = (c: number): number => {
         const sign = c < 0 ? -1 : 1,
             abs = Math.abs(c);
 
         return abs <= 0.04045 ? c / 12.92 : sign * ((abs + 0.055) / 1.055) ** 2.4;
-    });
+    };
+    return [transfer(r), transfer(g), transfer(b)];
 };
 
 /**
@@ -67,7 +71,7 @@ export const rgb2rgbLinear = (rgb: [number, number, number]): number[] => {
  *
  * @param args
  */
-export const srgbFromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+export const srgbFromXYZ = (args: RGBA4): RGBA4 => {
     const [r, g, b] = srgbLinear2rgb(xyz2rgbLinear([args[0], args[1], args[2]]));
     return [r, g, b, args[3]];
 };
@@ -76,7 +80,7 @@ export const srgbFromXYZ = (args: [number, number, number, number]): [number, nu
  * XYZ to SRGB-Linear
  * @param args
  */
-export const srgbLinearFromXYZ = (args: [number, number, number, number]): [number, number, number, number] => {
+export const srgbLinearFromXYZ = (args: RGBA4): RGBA4 => {
     const [r, g, b] = xyz2rgbLinear([args[0], args[1], args[2]]);
     return [
         clamp(Math.round(r * 255), 0, 255),

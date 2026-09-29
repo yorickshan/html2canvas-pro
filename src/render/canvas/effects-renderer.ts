@@ -20,6 +20,7 @@ import {
     isTransformEffect
 } from '../effects';
 import { Path } from '../path';
+import { at } from '../../core/util';
 
 /**
  * Dependencies required for EffectsRenderer
@@ -109,7 +110,7 @@ export class EffectsRenderer {
 
         // ── 3. Apply each effect ──────────────────────────────────────
         for (let i = 0; i < effects.length; i++) {
-            const effect = effects[i];
+            const effect = at(effects, i);
             if (isHeavy(effect)) {
                 if (!this.didSave) {
                     this.ctx.save();

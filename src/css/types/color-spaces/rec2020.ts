@@ -3,6 +3,7 @@
  */
 
 import { multiplyMatrices, packXYZ } from '../color-utilities';
+import { RGB3, RGBA4 } from '../color-math';
 
 const _a = 1.09929682680944;
 const _b = 0.018053968510807;
@@ -12,10 +13,9 @@ const _b = 0.018053968510807;
  *
  * @param rgb
  */
-export const rec20202rec2020Linear = (rgb: [number, number, number]): number[] => {
-    return rgb.map(function (c) {
-        return c < _b * 4.5 ? c / 4.5 : Math.pow((c + _a - 1) / _a, 1 / 0.45);
-    });
+export const rec20202rec2020Linear = (rgb: RGB3): RGB3 => {
+    const transfer = (c: number): number => (c < _b * 4.5 ? c / 4.5 : Math.pow((c + _a - 1) / _a, 1 / 0.45));
+    return [transfer(rgb[0]), transfer(rgb[1]), transfer(rgb[2])];
 };
 
 /**
@@ -23,10 +23,9 @@ export const rec20202rec2020Linear = (rgb: [number, number, number]): number[] =
  *
  * @param rgb
  */
-export const rec2020Linear2rec2020 = (rgb: [number, number, number]): number[] => {
-    return rgb.map(function (c) {
-        return c >= _b ? _a * Math.pow(c, 0.45) - (_a - 1) : 4.5 * c;
-    });
+export const rec2020Linear2rec2020 = (rgb: RGB3): RGB3 => {
+    const transfer = (c: number): number => (c >= _b ? _a * Math.pow(c, 0.45) - (_a - 1) : 4.5 * c);
+    return [transfer(rgb[0]), transfer(rgb[1]), transfer(rgb[2])];
 };
 
 /**
@@ -64,7 +63,7 @@ export const xyzToRec2020Linear = (xyz: [number, number, number]): [number, numb
  *
  * @param args
  */
-export const rec2020ToXYZ = (args: number[]): [number, number, number] => {
+export const rec2020ToXYZ = (args: RGB3): RGB3 => {
     const rec2020_linear = rec20202rec2020Linear([args[0], args[1], args[2]]);
     return rec2020LinearToXyz([rec2020_linear[0], rec2020_linear[1], rec2020_linear[2]]);
 };
@@ -84,7 +83,7 @@ export const rec2020FromXYZ = (args: [number, number, number, number]): [number,
  *
  * @param args
  */
-export const convertRec2020 = (args: number[]): number => {
+export const convertRec2020 = (args: RGBA4): number => {
     const xyz = rec2020ToXYZ([args[0], args[1], args[2]]);
     return packXYZ([xyz[0], xyz[1], xyz[2], args[3]]);
 };

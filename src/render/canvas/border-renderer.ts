@@ -9,6 +9,7 @@
  */
 
 import { Color } from '../../css/types/color';
+import { at } from '../../core/util';
 import { asString } from '../../css/types/color-utilities';
 import { BoundCurves } from '../bound-curves';
 import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
@@ -119,19 +120,19 @@ export class BorderRenderer {
 
         // Extract start and end coordinates
         let startX, startY, endX, endY;
-        if (isBezierCurve(boxPaths[0])) {
-            startX = (boxPaths[0] as BezierCurve).start.x;
-            startY = (boxPaths[0] as BezierCurve).start.y;
+        if (isBezierCurve(at(boxPaths, 0))) {
+            startX = (at(boxPaths, 0) as BezierCurve).start.x;
+            startY = (at(boxPaths, 0) as BezierCurve).start.y;
         } else {
-            startX = (boxPaths[0] as Vector).x;
-            startY = (boxPaths[0] as Vector).y;
+            startX = (at(boxPaths, 0) as Vector).x;
+            startY = (at(boxPaths, 0) as Vector).y;
         }
-        if (isBezierCurve(boxPaths[1])) {
-            endX = (boxPaths[1] as BezierCurve).end.x;
-            endY = (boxPaths[1] as BezierCurve).end.y;
+        if (isBezierCurve(at(boxPaths, 1))) {
+            endX = (at(boxPaths, 1) as BezierCurve).end.x;
+            endY = (at(boxPaths, 1) as BezierCurve).end.y;
         } else {
-            endX = (boxPaths[1] as Vector).x;
-            endY = (boxPaths[1] as Vector).y;
+            endX = (at(boxPaths, 1) as Vector).x;
+            endY = (at(boxPaths, 1) as Vector).y;
         }
 
         // Calculate border length
@@ -197,9 +198,9 @@ export class BorderRenderer {
 
         // Fill dashed round edge gaps
         if (style === BORDER_STYLE.DASHED) {
-            if (isBezierCurve(boxPaths[0])) {
-                const path1 = boxPaths[3] as BezierCurve;
-                const path2 = boxPaths[0] as BezierCurve;
+            if (isBezierCurve(at(boxPaths, 0))) {
+                const path1 = at(boxPaths, 3) as BezierCurve;
+                const path2 = at(boxPaths, 0) as BezierCurve;
                 this.ctx.beginPath();
                 this.pathCallbacks.formatPath([
                     new Vector(path1.end.x, path1.end.y),
@@ -207,9 +208,9 @@ export class BorderRenderer {
                 ]);
                 this.ctx.stroke();
             }
-            if (isBezierCurve(boxPaths[1])) {
-                const path1 = boxPaths[1] as BezierCurve;
-                const path2 = boxPaths[2] as BezierCurve;
+            if (isBezierCurve(at(boxPaths, 1))) {
+                const path1 = at(boxPaths, 1) as BezierCurve;
+                const path2 = at(boxPaths, 2) as BezierCurve;
                 this.ctx.beginPath();
                 this.pathCallbacks.formatPath([
                     new Vector(path1.end.x, path1.end.y),

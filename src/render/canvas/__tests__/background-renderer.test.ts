@@ -91,7 +91,7 @@ describe('BackgroundRenderer', () => {
 
     let context: Context;
     let cache: { match: ReturnType<typeof vi.fn> };
-    let onError: ReturnType<typeof vi.fn>;
+    let onError: ReturnType<typeof vi.fn> = vi.fn();
     let loggerError: ReturnType<typeof vi.fn>;
     let loggerDebug: ReturnType<typeof vi.fn>;
     let createdContexts: CanvasRenderingContext2D[];
@@ -110,7 +110,7 @@ describe('BackgroundRenderer', () => {
                 useCORS: false,
                 allowTaint: false,
                 cache: cache as unknown as Cache,
-                onError
+                onError: onError as unknown as (error: Error) => void
             },
             new Bounds(0, 0, 800, 600),
             config
@@ -196,17 +196,20 @@ describe('BackgroundRenderer', () => {
             expect(cache.match).toHaveBeenCalledWith('http://localhost/img.png');
             // pattern created from a resized canvas of the computed size
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            const [patternSource, repeatMode] = ctx.createPattern.mock.calls[0];
+            const [patternSource, repeatMode] = vi.mocked(ctx.createPattern).mock.calls[0]! as [
+                HTMLCanvasElement,
+                string
+            ];
             expect(patternSource.width).toBe(50);
             expect(patternSource.height).toBe(25);
             expect(repeatMode).toBe('no-repeat');
 
             // the image was drawn into the resize canvas
-            const resizeCtx = createdContexts[0];
+            const resizeCtx = createdContexts[0] as CanvasRenderingContext2D;
             expect(resizeCtx.drawImage).toHaveBeenCalledWith(image, 0, 0, 50, 100, 0, 0, 50, 25);
 
             // the pattern was used to fill the translated tile path
-            expect(ctx.fillStyle).toBe(ctx.createPattern.mock.results[0].value);
+            expect(ctx.fillStyle).toBe(vi.mocked(ctx.createPattern).mock.results[0]!.value);
             expect(ctx.translate).toHaveBeenCalledWith(10, 20);
             expect(ctx.translate).toHaveBeenCalledWith(-10, -20);
             expect(ctx.fill).toHaveBeenCalledTimes(1);
@@ -224,7 +227,7 @@ describe('BackgroundRenderer', () => {
                 container({ backgroundImage: [urlImage('http://localhost/img.png')], backgroundRepeat: [repeat] })
             );
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            expect(ctx.createPattern.mock.calls[0][1]).toBe(expected);
+            expect(vi.mocked(ctx.createPattern).mock.calls[0]![1]).toBe(expected);
         });
 
         it('treats NaN/zero intrinsic dimensions as one pixel', async () => {
@@ -235,8 +238,8 @@ describe('BackgroundRenderer', () => {
             );
             // auto size with 1x1 intrinsic dimensions renders at 1x1
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            expect(ctx.createPattern.mock.calls[0][0].width).toBe(1);
-            expect(ctx.createPattern.mock.calls[0][0].height).toBe(1);
+            expect(vi.mocked(ctx.createPattern).mock.calls[0]![0]?.width).toBe(1);
+            expect(vi.mocked(ctx.createPattern).mock.calls[0]![0]?.height).toBe(1);
         });
 
         it('reuses the cached pattern for identical rendering parameters', async () => {
@@ -276,7 +279,7 @@ describe('BackgroundRenderer', () => {
                     imageRendering: IMAGE_RENDERING.PIXELATED
                 })
             );
-            expect(createdContexts[0].imageSmoothingEnabled).toBe(false);
+            expect(createdContexts[0]?.imageSmoothingEnabled).toBe(false);
             expect(loggerError).not.toHaveBeenCalled();
             expect(loggerDebug).toHaveBeenCalledWith(
                 'Disabling image smoothing for background image due to CSS image-rendering'
@@ -289,7 +292,7 @@ describe('BackgroundRenderer', () => {
                     imageRendering: IMAGE_RENDERING.CRISP_EDGES
                 })
             );
-            expect(createdContexts[1].imageSmoothingEnabled).toBe(false);
+            expect(createdContexts[1]?.imageSmoothingEnabled).toBe(false);
         });
 
         it('enables image smoothing for smooth rendering and inherits quality', async () => {
@@ -301,8 +304,8 @@ describe('BackgroundRenderer', () => {
                     imageRendering: IMAGE_RENDERING.SMOOTH
                 })
             );
-            expect(createdContexts[0].imageSmoothingEnabled).toBe(true);
-            expect(createdContexts[0].imageSmoothingQuality).toBe('low');
+            expect(createdContexts[0]?.imageSmoothingEnabled).toBe(true);
+            expect(createdContexts[0]?.imageSmoothingQuality).toBe('low');
         });
 
         it('inherits smoothing from the renderer context for auto rendering', async () => {
@@ -313,7 +316,7 @@ describe('BackgroundRenderer', () => {
             await renderer.renderBackgroundImage(
                 container({ backgroundImage: [urlImage('http://localhost/img.png')] })
             );
-            expect(createdContexts[0].imageSmoothingEnabled).toBe(false);
+            expect(createdContexts[0]?.imageSmoothingEnabled).toBe(false);
         });
 
         it('logs an error and skips rendering when the image fails to load', async () => {
@@ -324,7 +327,7 @@ describe('BackgroundRenderer', () => {
             );
             expect(loggerError).toHaveBeenCalledWith('Error loading background-image http://localhost/missing.png');
             expect(onError).toHaveBeenCalledTimes(1);
-            expect((onError.mock.calls[0][0] as Error).message).toBe('network down');
+            expect((onError.mock.calls[0]?.[0] as Error)?.message).toBe('network down');
             expect(ctx.createPattern).not.toHaveBeenCalled();
             expect(ctx.fill).not.toHaveBeenCalled();
         });
@@ -348,15 +351,18 @@ describe('BackgroundRenderer', () => {
             const gradient = linearGradientImage('red', 'blue');
             await renderer.renderBackgroundImage(container({ backgroundImage: [gradient] }));
 
-            const offCtx = createdContexts[0];
+            const offCtx = createdContexts[0] as CanvasRenderingContext2D;
             expect(offCtx.createLinearGradient).toHaveBeenCalledTimes(1);
-            const offscreenGradient = (offCtx.createLinearGradient as ReturnType<typeof vi.fn>).mock.results[0].value;
+            const offscreenGradient = (offCtx.createLinearGradient as ReturnType<typeof vi.fn>).mock.results[0]?.value;
             expect(offscreenGradient.addColorStop).toHaveBeenCalledWith(0, 'rgb(255,0,0)');
             expect(offscreenGradient.addColorStop).toHaveBeenCalledWith(1, 'rgb(0,0,255)');
             expect(offCtx.fillRect).toHaveBeenCalledWith(0, 0, 100, 50);
 
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            const [patternSource, repeatMode] = ctx.createPattern.mock.calls[0];
+            const [patternSource, repeatMode] = vi.mocked(ctx.createPattern).mock.calls[0]! as [
+                HTMLCanvasElement,
+                string
+            ];
             expect(patternSource.width).toBe(100);
             expect(patternSource.height).toBe(50);
             expect(repeatMode).toBe('repeat');
@@ -389,7 +395,7 @@ describe('BackgroundRenderer', () => {
             (element as { bounds: Bounds }).bounds = new Bounds(0, 0, 0, 0);
             await renderer.renderBackgroundImage(element);
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            const [patternSource] = ctx.createPattern.mock.calls[0];
+            const [patternSource] = vi.mocked(ctx.createPattern).mock.calls[0]!;
             expect(patternSource.width).toBe(1);
             expect(patternSource.height).toBe(1);
             expect(ctx.fill).toHaveBeenCalledTimes(1);
@@ -403,13 +409,16 @@ describe('BackgroundRenderer', () => {
             const gradient = repeatingGradientImage(0, 25);
             await renderer.renderBackgroundImage(container({ backgroundImage: [gradient] }));
 
-            const offCtx = createdContexts[0];
-            const repeatingGradient = (offCtx.createLinearGradient as ReturnType<typeof vi.fn>).mock.results[0].value;
+            const offCtx = createdContexts[0] as CanvasRenderingContext2D;
+            const repeatingGradient = (offCtx.createLinearGradient as ReturnType<typeof vi.fn>).mock.results[0]?.value;
             expect(repeatingGradient.addColorStop).toHaveBeenCalledWith(0, 'rgb(255,0,0)');
             expect(repeatingGradient.addColorStop).toHaveBeenCalledWith(1, 'rgb(0,0,255)');
 
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            const [patternSource, repeatMode] = ctx.createPattern.mock.calls[0];
+            const [patternSource, repeatMode] = vi.mocked(ctx.createPattern).mock.calls[0]! as [
+                HTMLCanvasElement,
+                string
+            ];
             expect(patternSource.width).toBe(25);
             expect(patternSource.height).toBe(25);
             expect(repeatMode).toBe('repeat');
@@ -424,7 +433,7 @@ describe('BackgroundRenderer', () => {
 
             // fallback paints the full area (100x50) instead of a 20x20 cycle
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            const [patternSource] = ctx.createPattern.mock.calls[0];
+            const [patternSource] = vi.mocked(ctx.createPattern).mock.calls[0]!;
             expect(patternSource.width).toBe(100);
             expect(patternSource.height).toBe(50);
             expect(ctx.fill).toHaveBeenCalledTimes(1);
@@ -440,7 +449,7 @@ describe('BackgroundRenderer', () => {
             });
             await renderer.renderBackgroundImage(container({ backgroundImage: [radialGradientImage()] }));
 
-            const offCtx = createdContexts[0];
+            const offCtx = createdContexts[0] as CanvasRenderingContext2D;
             // center at 50%/50% of 100x50; the farthest-corner ellipse passes through the
             // corner while keeping the farthest-side aspect ratio (ry = rx / 2)
             const rx = Math.sqrt(5000);
@@ -450,7 +459,10 @@ describe('BackgroundRenderer', () => {
             expect(offCtx.fillRect).toHaveBeenCalledWith(0, 0, rx * 2, rx * 2);
 
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            const [patternSource, repeatMode] = ctx.createPattern.mock.calls[0];
+            const [patternSource, repeatMode] = vi.mocked(ctx.createPattern).mock.calls[0]! as [
+                HTMLCanvasElement,
+                string
+            ];
             expect(patternSource.width).toBe(Math.ceil(rx * 2));
             expect(patternSource.height).toBe(Math.ceil(ry * 2));
             expect(repeatMode).toBe('no-repeat');
@@ -479,7 +491,7 @@ describe('BackgroundRenderer', () => {
                 })
             );
 
-            const offCtx = createdContexts[0];
+            const offCtx = createdContexts[0] as CanvasRenderingContext2D;
             expect(offCtx.createRadialGradient).toHaveBeenCalledWith(0.01, 0.01, 0, 0.01, 0.01, 0.01);
             expect(offCtx.scale).not.toHaveBeenCalled();
             expect(offCtx.fillRect).toHaveBeenCalledWith(0, 0, 0.02, 0.02);

@@ -1,4 +1,5 @@
 import { DimensionToken, FLAG_INTEGER, NumberValueToken, TokenType } from '../syntax/tokenizer';
+import { at } from '../../core/util';
 import { CSSValue, CSSFunction, isDimensionToken } from '../syntax/parser';
 import { isLength } from './length';
 import safeEvalArithmetic from './safe-eval';
@@ -164,7 +165,7 @@ export const evaluateCalcToLengthPercentage = (calcToken: CSSFunction, contextVa
     return null;
 };
 export const parseLengthPercentageTuple = (tokens: LengthPercentage[]): LengthPercentageTuple =>
-    tokens.length > 1 ? [tokens[0], tokens[1]] : [tokens[0]];
+    tokens.length > 1 ? [at(tokens, 0), at(tokens, 1)] : [at(tokens, 0)];
 export const ZERO_LENGTH: NumberValueToken = {
     type: TokenType.NUMBER_TOKEN,
     number: 0,

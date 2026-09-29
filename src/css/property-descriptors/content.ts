@@ -17,7 +17,7 @@ export const content: IPropertyListDescriptor<Content> = {
 
         const first = tokens[0];
 
-        if (first.type === TokenType.IDENT_TOKEN && first.value === 'none') {
+        if (first && first.type === TokenType.IDENT_TOKEN && first.value === 'none') {
             return [];
         }
 

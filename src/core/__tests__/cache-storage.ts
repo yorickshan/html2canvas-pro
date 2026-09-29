@@ -134,8 +134,8 @@ describe('cache-storage', () => {
         await cache.addImage('http://example.com/test2.jpg');
 
         deepStrictEqual(images.length, 2);
-        deepStrictEqual(images[0].src, 'http://example.com/test.jpg');
-        deepStrictEqual(images[1].src, 'http://example.com/test2.jpg');
+        deepStrictEqual(images[0]?.src, 'http://example.com/test.jpg');
+        deepStrictEqual(images[1]?.src, 'http://example.com/test2.jpg');
     });
 
     it('addImage should not add duplicate entries', async () => {
@@ -144,7 +144,7 @@ describe('cache-storage', () => {
         await cache.addImage('http://example.com/test.jpg');
 
         deepStrictEqual(images.length, 1);
-        deepStrictEqual(images[0].src, 'http://example.com/test.jpg');
+        deepStrictEqual(images[0]?.src, 'http://example.com/test.jpg');
     });
 
     describe('svg', () => {
@@ -154,8 +154,8 @@ describe('cache-storage', () => {
             await cache.addImage('http://example.com/test2.svg');
 
             deepStrictEqual(images.length, 2);
-            deepStrictEqual(images[0].src, 'http://example.com/test.svg');
-            deepStrictEqual(images[1].src, 'http://example.com/test2.svg');
+            deepStrictEqual(images[0]?.src, 'http://example.com/test.svg');
+            deepStrictEqual(images[1]?.src, 'http://example.com/test2.svg');
         });
 
         it('should omit svg images if not supported', async () => {
@@ -179,8 +179,8 @@ describe('cache-storage', () => {
             });
             await cache.addImage('http://html2canvas.hertzen.com/test.jpg');
             deepStrictEqual(images.length, 1);
-            deepStrictEqual(images[0].src, 'http://html2canvas.hertzen.com/test.jpg');
-            deepStrictEqual(images[0].crossOrigin, 'anonymous');
+            deepStrictEqual(images[0]?.src, 'http://html2canvas.hertzen.com/test.jpg');
+            deepStrictEqual(images[0]?.crossOrigin, 'anonymous');
         });
 
         it('addImage should add images if tainting enabled', async () => {
@@ -190,16 +190,16 @@ describe('cache-storage', () => {
             });
             await cache.addImage('http://html2canvas.hertzen.com/test.jpg');
             deepStrictEqual(images.length, 1);
-            deepStrictEqual(images[0].src, 'http://html2canvas.hertzen.com/test.jpg');
-            deepStrictEqual(images[0].crossOrigin, undefined);
+            deepStrictEqual(images[0]?.src, 'http://html2canvas.hertzen.com/test.jpg');
+            deepStrictEqual(images[0]?.crossOrigin, undefined);
         });
 
         it('addImage should add images if cors enabled', async () => {
             const { cache } = createMockContext('http://example.com', { useCORS: true });
             await cache.addImage('http://html2canvas.hertzen.com/test.jpg');
             deepStrictEqual(images.length, 1);
-            deepStrictEqual(images[0].src, 'http://html2canvas.hertzen.com/test.jpg');
-            deepStrictEqual(images[0].crossOrigin, 'anonymous');
+            deepStrictEqual(images[0]?.src, 'http://html2canvas.hertzen.com/test.jpg');
+            deepStrictEqual(images[0]?.crossOrigin, 'anonymous');
         });
 
         it('addImage should not add images if cors enabled but not supported', async () => {
@@ -217,8 +217,8 @@ describe('cache-storage', () => {
             const { cache } = createMockContext('http://example.com', { useCORS: true });
             await cache.addImage('http://html2canvas.hertzen.com/test.jpg');
             deepStrictEqual(images.length, 1);
-            deepStrictEqual(images[0].src, 'http://html2canvas.hertzen.com/test.jpg');
-            deepStrictEqual(images[0].crossOrigin, 'anonymous');
+            deepStrictEqual(images[0]?.src, 'http://html2canvas.hertzen.com/test.jpg');
+            deepStrictEqual(images[0]?.crossOrigin, 'anonymous');
         });
 
         it('addImage should use proxy ', async () => {
@@ -226,13 +226,13 @@ describe('cache-storage', () => {
             await cache.addImage('http://html2canvas.hertzen.com/test.jpg');
             deepStrictEqual(xhr.length, 1);
             deepStrictEqual(
-                xhr[0].url,
+                xhr[0]?.url,
                 `${proxy}?url=${encodeURIComponent('http://html2canvas.hertzen.com/test.jpg')}&responseType=text`
             );
-            await xhr[0].load(200, '<data response>');
+            await xhr[0]?.load(200, '<data response>');
 
             deepStrictEqual(images.length, 1);
-            deepStrictEqual(images[0].src, '<data response>');
+            deepStrictEqual(images[0]?.src, '<data response>');
         });
 
         it('proxy should respect imageTimeout', async () => {
@@ -243,12 +243,12 @@ describe('cache-storage', () => {
 
             deepStrictEqual(xhr.length, 1);
             deepStrictEqual(
-                xhr[0].url,
+                xhr[0]?.url,
                 `${proxy}?url=${encodeURIComponent('http://html2canvas.hertzen.com/test.jpg')}&responseType=text`
             );
-            deepStrictEqual(xhr[0].timeout, 10);
-            if (xhr[0].ontimeout) {
-                xhr[0].ontimeout();
+            deepStrictEqual(xhr[0]?.timeout, 10);
+            if (xhr[0]?.ontimeout) {
+                xhr[0]?.ontimeout();
             }
             try {
                 await cache.match('http://html2canvas.hertzen.com/test.jpg');
@@ -261,8 +261,8 @@ describe('cache-storage', () => {
         const { cache } = createMockContext('http://example.com');
         await cache.addImage('http://example.com/test.jpg');
 
-        if (images[0].onload) {
-            images[0].onload();
+        if (images[0]?.onload) {
+            images[0]?.onload();
         }
 
         const response = await cache.match('http://example.com/test.jpg');
@@ -298,7 +298,7 @@ describe('cache-storage', () => {
             const warn = vi.spyOn(context.logger, 'warn');
             const cache = new Cache(context, { ...baseOptions, maxCacheSize: 20000 });
             expect(warn).toHaveBeenCalledTimes(1);
-            expect(String(warn.mock.calls[0][0])).toContain('20000');
+            expect(String(warn.mock.calls[0]?.[0])).toContain('20000');
             expect(cache.getMaxSize()).toBe(20000);
         });
 
@@ -446,8 +446,8 @@ describe('cache-storage', () => {
         const operation = cache.addImage('http://example.com/test.jpg');
         await sleep(0);
         deepStrictEqual(images.length, 1);
-        if (images[0].onload) {
-            images[0].onload();
+        if (images[0]?.onload) {
+            images[0]?.onload();
         }
         await operation;
 
@@ -462,8 +462,8 @@ describe('cache-storage', () => {
             const operation = cache.addImage('http://example.com/test.jpg');
             await sleep(0);
             deepStrictEqual(images.length, 1);
-            if (images[0].onload) {
-                images[0].onload();
+            if (images[0]?.onload) {
+                images[0]?.onload();
             }
             await operation;
             const response = await cache.match('http://example.com/test.jpg');
@@ -486,12 +486,12 @@ describe('cache-storage', () => {
             await cache.addImage('http://other.example.com/test.jpg');
 
             deepStrictEqual(images.length, 1);
-            deepStrictEqual(images[0].src, 'http://other.example.com/test.jpg');
-            deepStrictEqual(images[0].crossOrigin, undefined); // treated as same-origin
+            deepStrictEqual(images[0]?.src, 'http://other.example.com/test.jpg');
+            deepStrictEqual(images[0]?.crossOrigin, undefined); // treated as same-origin
             deepStrictEqual(calls.length, 1);
-            deepStrictEqual(calls[0][0], 'http://other.example.com/test.jpg');
-            deepStrictEqual(calls[0][1]('http://example.com/test.jpg'), true);
-            deepStrictEqual(calls[0][1]('http://other.example.com/test.jpg'), false);
+            deepStrictEqual(calls[0]?.[0], 'http://other.example.com/test.jpg');
+            deepStrictEqual(calls[0]?.[1]('http://example.com/test.jpg'), true);
+            deepStrictEqual(calls[0]?.[1]('http://other.example.com/test.jpg'), false);
         });
 
         it('should support promise-returning custom origin checkers', async () => {
@@ -502,7 +502,7 @@ describe('cache-storage', () => {
             await cache.addImage('http://other.example.com/test.jpg');
 
             deepStrictEqual(images.length, 1);
-            deepStrictEqual(images[0].crossOrigin, 'anonymous'); // CORS attempt (issue #229)
+            deepStrictEqual(images[0]?.crossOrigin, 'anonymous'); // CORS attempt (issue #229)
         });
 
         it('should skip images when the custom check reports cross-origin and CORS is unsupported', async () => {
@@ -525,7 +525,7 @@ describe('cache-storage', () => {
 
             deepStrictEqual(xhr.length, 1);
             deepStrictEqual(
-                xhr[0].url,
+                xhr[0]?.url,
                 `http://example.com/proxy?token=abc&url=${encodeURIComponent(
                     'http://html2canvas.hertzen.com/test.jpg'
                 )}&responseType=text`
@@ -539,22 +539,22 @@ describe('cache-storage', () => {
 
             deepStrictEqual(xhr.length, 1);
             deepStrictEqual(
-                xhr[0].url,
+                xhr[0]?.url,
                 `${proxy}?url=${encodeURIComponent('http://html2canvas.hertzen.com/test.jpg')}&responseType=blob`
             );
-            await xhr[0].load(200, new Blob(['image-bytes'], { type: 'image/png' }) as unknown as string);
+            await xhr[0]?.load(200, new Blob(['image-bytes'], { type: 'image/png' }) as unknown as string);
 
             for (let i = 0; i < 20 && images.length === 0; i++) {
                 await sleep(5);
             }
             deepStrictEqual(images.length, 1);
-            expect(images[0].src.startsWith('data:image/png;base64,')).toBe(true);
+            expect(images[0]?.src.startsWith('data:image/png;base64,') ?? false).toBe(true);
         });
 
         it('should reject the cache entry when the proxy responds with a non-200 status', async () => {
             const { cache } = createMockContext('http://example.com');
             await cache.addImage('http://html2canvas.hertzen.com/test.jpg');
-            await xhr[0].load(404, 'not found');
+            await xhr[0]?.load(404, 'not found');
 
             try {
                 await cache.match('http://html2canvas.hertzen.com/test.jpg');
@@ -580,8 +580,8 @@ describe('cache-storage', () => {
             await cache.addImage(src);
 
             deepStrictEqual(images.length, 1);
-            deepStrictEqual(images[0].src, src);
-            deepStrictEqual(images[0].crossOrigin, undefined);
+            deepStrictEqual(images[0]?.src, src);
+            deepStrictEqual(images[0]?.crossOrigin, undefined);
         });
 
         it('should skip inline SVG data URLs when SVG drawing is unsupported', async () => {

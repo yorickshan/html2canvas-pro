@@ -52,7 +52,7 @@ describe('createForeignObjectSVG', () => {
         expect(result.tagName).toBe('svg');
         expect(result.namespaceURI).toBe('http://www.w3.org/2000/svg');
         expect(result.childNodes.length).toBeGreaterThan(0);
-        expect(result.childNodes[0].nodeName).toBe('foreignObject');
+        expect(result.childNodes[0]?.nodeName).toBe('foreignObject');
     });
 });
 

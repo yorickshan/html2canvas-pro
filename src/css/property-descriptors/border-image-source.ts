@@ -1,4 +1,5 @@
 import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
+import { at } from '../../core/util';
 import { CSSValue, nonFunctionArgSeparator } from '../syntax/parser';
 import { image, ICSSImage, isSupportedImage } from '../types/image';
 import { Context } from '../../core/context';
@@ -21,6 +22,6 @@ export const borderImageSource: IPropertyListDescriptor<BorderImageSource> = {
             return null;
         }
 
-        return image.parse(context, filtered[0]);
+        return image.parse(context, at(filtered, 0));
     }
 };

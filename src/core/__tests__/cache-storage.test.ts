@@ -265,3 +265,61 @@ describe('Cache cross-origin image loading (issue #229)', () => {
         }
     });
 });
+
+describe('Cache.preloadAll progress callback', () => {
+    it('reports (0, total) once upfront and (settled, total) after each batch', async () => {
+        const config = new Html2CanvasConfig({ window: window });
+        const context = new Context(
+            { logging: false, imageTimeout: 15000, useCORS: false, allowTaint: false },
+            new Bounds(0, 0, 800, 600),
+            config
+        );
+        const cache = new Cache(context, { imageTimeout: 15000, useCORS: false, allowTaint: false });
+
+        class MockImage {
+            crossOrigin: string | null = null;
+            complete = false;
+            onload: (() => void) | null = null;
+            onerror: (() => void) | null = null;
+            set src(_v: string) {
+                setTimeout(() => {
+                    this.complete = true;
+                    this.onload?.();
+                }, 0);
+            }
+        }
+        vi.stubGlobal('Image', MockImage);
+        try {
+            cache.startDefer();
+            cache.addImage('https://example.com/a.png');
+            cache.addImage('https://example.com/b.png');
+            cache.addImage('https://example.com/c.png');
+
+            const events: Array<[number, number]> = [];
+            await cache.preloadAll(2, (loaded, total) => events.push([loaded, total]));
+
+            // 3 URLs at concurrency 2 → batches of 2 then 1.
+            deepStrictEqual(events, [
+                [0, 3],
+                [2, 3],
+                [3, 3]
+            ]);
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+
+    it('does not invoke the callback when nothing was collected', async () => {
+        const config = new Html2CanvasConfig({ window: window });
+        const context = new Context(
+            { logging: false, imageTimeout: 15000, useCORS: false, allowTaint: false },
+            new Bounds(0, 0, 800, 600),
+            config
+        );
+        const cache = new Cache(context, { imageTimeout: 15000, useCORS: false, allowTaint: false });
+
+        const onProgress = vi.fn();
+        await cache.preloadAll(10, onProgress);
+        strictEqual(onProgress.mock.calls.length, 0);
+    });
+});

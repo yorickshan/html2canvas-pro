@@ -1,4 +1,5 @@
 import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
+import { at } from '../../core/util';
 import { CSSValue, isIdentToken, nonWhiteSpace } from '../syntax/parser';
 import { TokenType } from '../syntax/tokenizer';
 import { Context } from '../../core/context';
@@ -12,16 +13,17 @@ export interface BorderImageSlice {
     unit: 'number' | 'percent';
 }
 
-const fillSides = (sides: number[]): number[] => {
+const fillSides = (sides: number[]): [number, number, number, number] => {
     const result = [...sides];
     if (result.length === 1) {
-        result.push(result[0], result[0], result[0]);
+        const only = at(result, 0);
+        result.push(only, only, only);
     } else if (result.length === 2) {
-        result.push(result[0], result[1]);
+        result.push(at(result, 0), at(result, 1));
     } else if (result.length === 3) {
-        result.push(result[1]);
+        result.push(at(result, 1));
     }
-    return result.slice(0, 4);
+    return [at(result, 0), at(result, 1), at(result, 2), at(result, 3)];
 };
 
 export const borderImageSlice: IPropertyListDescriptor<BorderImageSlice> = {

@@ -3,6 +3,7 @@
  */
 
 import { d50toD65, d65toD50, multiplyMatrices, packXYZ } from '../color-utilities';
+import { RGB3, RGBA4 } from '../color-math';
 
 /**
  * Convert linear-light display-p3 to XYZ D65
@@ -39,10 +40,12 @@ export const xyzToProPhotoLinear = (xyz: [number, number, number]): [number, num
  *
  * @param p3
  */
-export const proPhotoToProPhotoLinear = (p3: [number, number, number]): number[] => {
-    return p3.map((c: number) => {
+export const proPhotoToProPhotoLinear = (p3: RGB3): RGB3 => {
+    const [p30, p31, p32] = p3;
+    const transfer = (c: number): number => {
         return c < 16 / 512 ? c / 16 : c ** 1.8;
-    });
+    };
+    return [transfer(p30), transfer(p31), transfer(p32)];
 };
 
 /**
@@ -50,10 +53,12 @@ export const proPhotoToProPhotoLinear = (p3: [number, number, number]): number[]
  *
  * @param p3
  */
-export const proPhotoLinearToProPhoto = (p3: [number, number, number]): number[] => {
-    return p3.map((c: number) => {
+export const proPhotoLinearToProPhoto = (p3: RGB3): RGB3 => {
+    const [p30, p31, p32] = p3;
+    const transfer = (c: number): number => {
         return c > 1 / 512 ? c ** (1 / 1.8) : c * 16;
-    });
+    };
+    return [transfer(p30), transfer(p31), transfer(p32)];
 };
 
 /**
@@ -61,7 +66,7 @@ export const proPhotoLinearToProPhoto = (p3: [number, number, number]): number[]
  *
  * @param args
  */
-export const proPhotoToXYZ = (args: number[]): [number, number, number] => {
+export const proPhotoToXYZ = (args: RGB3): RGB3 => {
     const prophoto_linear = proPhotoToProPhotoLinear([args[0], args[1], args[2]]);
     return d50toD65(proPhotoLinearToXyz([prophoto_linear[0], prophoto_linear[1], prophoto_linear[2]]));
 };
@@ -81,7 +86,7 @@ export const proPhotoFromXYZ = (args: [number, number, number, number]): [number
  *
  * @param args
  */
-export const convertProPhoto = (args: number[]): number => {
+export const convertProPhoto = (args: RGBA4): number => {
     const xyz = proPhotoToXYZ([args[0], args[1], args[2]]);
     return packXYZ([xyz[0], xyz[1], xyz[2], args[3]]);
 };

@@ -3,6 +3,7 @@
  */
 
 import { srgbLinear2rgb } from './srgb';
+import { RGB3, RGBA4 } from '../color-math';
 import { multiplyMatrices, packXYZ } from '../color-utilities';
 
 /**
@@ -39,8 +40,8 @@ export const xyzToP3Linear = (xyz: [number, number, number]): [number, number, n
  *
  * @param p3
  */
-export const p32p3Linear = (p3: [number, number, number]): number[] => {
-    return p3.map((c: number) => {
+export const p32p3Linear = (p3: RGB3): RGB3 => {
+    const transfer = (c: number): number => {
         const sign = c < 0 ? -1 : 1,
             abs = c * sign;
 
@@ -49,7 +50,8 @@ export const p32p3Linear = (p3: [number, number, number]): number[] => {
         }
 
         return sign * ((c + 0.055) / 1.055) ** 2.4 || 0;
-    });
+    };
+    return [transfer(p3[0]), transfer(p3[1]), transfer(p3[2])];
 };
 
 /**
@@ -57,7 +59,7 @@ export const p32p3Linear = (p3: [number, number, number]): number[] => {
  *
  * @param p3l
  */
-export const p3Linear2p3 = (p3l: [number, number, number]): number[] => {
+export const p3Linear2p3 = (p3l: RGB3): RGB3 => {
     return srgbLinear2rgb(p3l);
 };
 
@@ -66,7 +68,7 @@ export const p3Linear2p3 = (p3l: [number, number, number]): number[] => {
  *
  * @param args
  */
-export const p3ToXYZ = (args: number[]): number[] => {
+export const p3ToXYZ = (args: RGB3): RGB3 => {
     const p3_linear = p32p3Linear([args[0], args[1], args[2]]);
     return p3LinearToXyz([p3_linear[0], p3_linear[1], p3_linear[2]]);
 };
@@ -86,7 +88,7 @@ export const p3FromXYZ = (args: [number, number, number, number]): [number, numb
  *
  * @param args
  */
-export const convertP3 = (args: number[]): number => {
+export const convertP3 = (args: RGBA4): number => {
     const xyz = p3ToXYZ([args[0], args[1], args[2]]);
     return packXYZ([xyz[0], xyz[1], xyz[2], args[3]]);
 };

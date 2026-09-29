@@ -6,7 +6,7 @@
         "noUnusedParameters": true,
         "strictNullChecks": true,
         "strictPropertyInitialization": true,
-        "noUncheckedIndexedAccess": false,
+        "noUncheckedIndexedAccess": true,
         "types": ["node", "vitest/globals"],
         "target": "es2020",
         "module": "esnext",

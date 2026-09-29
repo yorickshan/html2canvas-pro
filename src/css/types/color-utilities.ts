@@ -4,7 +4,8 @@ import { rgb2rgbLinear, rgbLinear2xyz, srgbLinear2rgb, xyz2rgbLinear } from './c
 import { TokenType } from '../syntax/tokenizer';
 import { angle, deg } from './angle';
 import { getAbsoluteValue, isLengthPercentage } from './length-percentage';
-import { clamp, multiplyMatrices } from './color-math';
+import { clamp, multiplyMatrices, RGB3, RGBA4 } from './color-math';
+import { at } from '../../core/util';
 
 type Color = number;
 
@@ -34,13 +35,15 @@ export const getTokenColorValue = (token: CSSValue, i: number): number => {
     return 0;
 };
 
-export const isRelativeTransform = (tokens: CSSValue[]): boolean =>
-    (tokens[0].type === TokenType.IDENT_TOKEN ? tokens[0].value : 'unknown') === 'from';
+export const isRelativeTransform = (tokens: CSSValue[]): boolean => {
+    const first = tokens[0];
+    return (first && first.type === TokenType.IDENT_TOKEN ? first.value : 'unknown') === 'from';
+};
 
 // Re-export from color-math to maintain backward compatibility
 export { clamp, multiplyMatrices };
 
-export const packSrgb = (args: number[]): number => {
+export const packSrgb = (args: RGBA4): number => {
     return pack(
         clamp(Math.round(args[0] * 255), 0, 255),
         clamp(Math.round(args[1] * 255), 0, 255),
@@ -49,7 +52,7 @@ export const packSrgb = (args: number[]): number => {
     );
 };
 
-export const packSrgbLinear = (args: number[]): number => {
+export const packSrgbLinear = (args: RGBA4): number => {
     const [r, g, b, a] = args;
     const rgb = srgbLinear2rgb([r, g, b]);
     return pack(
@@ -60,7 +63,7 @@ export const packSrgbLinear = (args: number[]): number => {
     );
 };
 
-export const packXYZ = (args: number[]): number => {
+export const packXYZ = (args: RGBA4): number => {
     const srgb_linear = xyz2rgbLinear([args[0], args[1], args[2]]);
     return packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
 };
@@ -125,13 +128,18 @@ export const packLch = (_context: Context, args: CSSValue[]): number => {
     );
 };
 
-export const extractHslComponents = (context: Context, args: CSSValue[]): [number, number, number, number] => {
+export const extractHslComponents = (context: Context, args: CSSValue[]): RGBA4 => {
     const tokens = args.filter(nonFunctionArgSeparator),
-        [hue, saturation, lightness, alpha] = tokens,
-        h = (hue.type === TokenType.NUMBER_TOKEN ? deg(hue.number) : angle.parse(context, hue)) / (Math.PI * 2),
-        s = isLengthPercentage(saturation) ? saturation.number / 100 : 0,
-        l = isLengthPercentage(lightness) ? lightness.number / 100 : 0,
-        a = typeof alpha !== 'undefined' && isLengthPercentage(alpha) ? getAbsoluteValue(alpha, 1) : 1;
+        hue = tokens[0],
+        saturation = tokens[1],
+        lightness = tokens[2],
+        alpha = tokens[3],
+        h = hue
+            ? (hue.type === TokenType.NUMBER_TOKEN ? deg(hue.number) : angle.parse(context, hue)) / (Math.PI * 2)
+            : 0,
+        s = saturation !== undefined && isLengthPercentage(saturation) ? saturation.number / 100 : 0,
+        l = lightness !== undefined && isLengthPercentage(lightness) ? lightness.number / 100 : 0,
+        a = alpha !== undefined && isLengthPercentage(alpha) ? getAbsoluteValue(alpha, 1) : 1;
     return [h, s, l, a];
 };
 
@@ -144,52 +152,72 @@ export const packHSL = (context: Context, args: CSSValue[]): number => {
     return pack(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255, s === 0 ? 1 : a);
 };
 
-export const extractLchComponents = (args: CSSValue[]): [number, number, number, number] => {
+export const extractLchComponents = (args: CSSValue[]): RGBA4 => {
     const tokens = args.filter(nonFunctionArgSeparator),
-        l = isLengthPercentage(tokens[0]) ? tokens[0].number : 0,
-        c = isLengthPercentage(tokens[1]) ? tokens[1].number : 0,
-        h = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
-        a = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
+        t0 = tokens[0],
+        t1 = tokens[1],
+        t2 = tokens[2],
+        t4 = tokens[4],
+        l = t0 !== undefined && isLengthPercentage(t0) ? t0.number : 0,
+        c = t1 !== undefined && isLengthPercentage(t1) ? t1.number : 0,
+        h = t2 !== undefined && (isNumberToken(t2) || isDimensionToken(t2)) ? t2.number : 0,
+        a = t4 !== undefined && isLengthPercentage(t4) ? getAbsoluteValue(t4, 1) : 1;
 
     return [l, c, h, a];
 };
 
-export const extractLabComponents = (args: CSSValue[]): [number, number, number, number] => {
+export const extractLabComponents = (args: CSSValue[]): RGBA4 => {
     const tokens = args.filter(nonFunctionArgSeparator),
+        t0 = tokens[0],
+        t1 = tokens[1],
+        t2 = tokens[2],
+        t4 = tokens[4],
         l =
-            tokens[0].type === TokenType.PERCENTAGE_TOKEN
-                ? tokens[0].number / 100
-                : isNumberToken(tokens[0])
-                  ? tokens[0].number
-                  : 0,
+            t0 !== undefined
+                ? t0.type === TokenType.PERCENTAGE_TOKEN
+                    ? t0.number / 100
+                    : isNumberToken(t0)
+                      ? t0.number
+                      : 0
+                : 0,
         a =
-            tokens[1].type === TokenType.PERCENTAGE_TOKEN
-                ? tokens[1].number / 100
-                : isNumberToken(tokens[1])
-                  ? tokens[1].number
-                  : 0,
-        b = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
-        alpha = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
+            t1 !== undefined
+                ? t1.type === TokenType.PERCENTAGE_TOKEN
+                    ? t1.number / 100
+                    : isNumberToken(t1)
+                      ? t1.number
+                      : 0
+                : 0,
+        b = t2 !== undefined && (isNumberToken(t2) || isDimensionToken(t2)) ? t2.number : 0,
+        alpha = t4 !== undefined && isLengthPercentage(t4) ? getAbsoluteValue(t4, 1) : 1;
 
     return [l, a, b, alpha];
 };
 
-export const extractOkLchComponents = (args: CSSValue[]): [number, number, number, number] => {
+export const extractOkLchComponents = (args: CSSValue[]): RGBA4 => {
     const tokens = args.filter(nonFunctionArgSeparator),
+        t0 = tokens[0],
+        t1 = tokens[1],
+        t2 = tokens[2],
+        t4 = tokens[4],
         l =
-            tokens[0].type === TokenType.PERCENTAGE_TOKEN
-                ? tokens[0].number / 100
-                : isNumberToken(tokens[0])
-                  ? tokens[0].number
-                  : 0,
+            t0 !== undefined
+                ? t0.type === TokenType.PERCENTAGE_TOKEN
+                    ? t0.number / 100
+                    : isNumberToken(t0)
+                      ? t0.number
+                      : 0
+                : 0,
         c =
-            tokens[1].type === TokenType.PERCENTAGE_TOKEN
-                ? tokens[1].number / 100
-                : isNumberToken(tokens[1])
-                  ? tokens[1].number
-                  : 0,
-        h = isNumberToken(tokens[2]) || isDimensionToken(tokens[2]) ? tokens[2].number : 0,
-        a = typeof tokens[4] !== 'undefined' && isLengthPercentage(tokens[4]) ? getAbsoluteValue(tokens[4], 1) : 1;
+            t1 !== undefined
+                ? t1.type === TokenType.PERCENTAGE_TOKEN
+                    ? t1.number / 100
+                    : isNumberToken(t1)
+                      ? t1.number
+                      : 0
+                : 0,
+        h = t2 !== undefined && (isNumberToken(t2) || isDimensionToken(t2)) ? t2.number : 0,
+        a = t4 !== undefined && isLengthPercentage(t4) ? getAbsoluteValue(t4, 1) : 1;
 
     return [l, c, h, a];
 };
@@ -286,7 +314,7 @@ const oklab2xyz = (lab: [number, number, number]): [number, number, number] => {
             ],
             lab
         ),
-        LMS = LMSg.map((val: number) => val ** 3);
+        LMS: RGB3 = [LMSg[0] ** 3, LMSg[1] ** 3, LMSg[2] ** 3];
 
     return multiplyMatrices(
         [
@@ -308,7 +336,7 @@ const lab2xyz = (lab: [number, number, number]): [number, number, number] => {
         fz = fy - lab[2] / 200,
         k = 24389 / 27,
         e = 24 / 116,
-        xyz = [
+        xyz: RGB3 = [
             ((fx > e ? fx ** 3 : (116 * fx - 16) / k) * 0.3457) / 0.3585,
             lab[0] > 8 ? fy ** 3 : lab[0] / k,
             ((fz > e ? fz ** 3 : (116 * fz - 16) / k) * (1.0 - 0.3457 - 0.3585)) / 0.3585
@@ -326,15 +354,11 @@ const lab2xyz = (lab: [number, number, number]): [number, number, number] => {
 export const rgbToXyz = (_context: Context, args: CSSValue[]): [number, number, number, number] => {
     const tokens = args.filter(nonFunctionArgSeparator);
 
-    if (tokens.length === 3) {
-        const [r, g, b] = tokens.map(getTokenColorValue),
-            rgb_linear = rgb2rgbLinear([r / 255, g / 255, b / 255]),
-            [x, y, z] = rgbLinear2xyz([rgb_linear[0], rgb_linear[1], rgb_linear[2]]);
-        return [x, y, z, 1];
-    }
-
-    if (tokens.length === 4) {
-        const [r, g, b, a] = tokens.map(getTokenColorValue),
+    if (tokens.length === 3 || tokens.length === 4) {
+        const r = getTokenColorValue(at(tokens, 0), 0),
+            g = getTokenColorValue(at(tokens, 1), 1),
+            b = getTokenColorValue(at(tokens, 2), 2),
+            a = tokens.length === 4 ? getTokenColorValue(at(tokens, 3), 3) : 1,
             rgb_linear = rgb2rgbLinear([r / 255, g / 255, b / 255]),
             [x, y, z] = rgbLinear2xyz([rgb_linear[0], rgb_linear[1], rgb_linear[2]]);
         return [x, y, z, a];
@@ -410,7 +434,7 @@ export const oklabToXyz = (_context: Context, args: CSSValue[]): [number, number
  *
  * @param args
  */
-export const xyz50ToXYZ = (args: number[]): [number, number, number] => {
+export const xyz50ToXYZ = (args: RGBA4 | RGB3): RGB3 => {
     return d50toD65([args[0], args[1], args[2]]);
 };
 
@@ -438,7 +462,7 @@ export const xyz50FromXYZ = (args: [number, number, number, number]): [number, n
  *
  * @param args
  */
-export const convertXyz = (args: number[]): number => {
+export const convertXyz = (args: RGBA4): number => {
     return packXYZ([args[0], args[1], args[2], args[3]]);
 };
 
@@ -447,7 +471,7 @@ export const convertXyz = (args: number[]): number => {
  *
  * @param args
  */
-export const convertXyz50 = (args: number[]): number => {
+export const convertXyz50 = (args: RGBA4): number => {
     const xyz = xyz50ToXYZ([args[0], args[1], args[2]]);
     return packXYZ([xyz[0], xyz[1], xyz[2], args[3]]);
 };

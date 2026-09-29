@@ -59,8 +59,11 @@ export class Cache {
      * failed (logged). Subsequent cache.match() calls return immediately.
      *
      * @param concurrency - Max concurrent image loads (1–100, default 10).
+     * @param onProgress - Invoked once before loading and after each settled
+     *   batch with (settledCount, totalCount), enabling coarse progress UI.
+     *   Not invoked when there is nothing to load.
      */
-    async preloadAll(concurrency = 10): Promise<void> {
+    async preloadAll(concurrency = 10, onProgress?: (loaded: number, total: number) => void): Promise<void> {
         this._deferMode = false;
         const urls = Array.from(this._collectedUrls);
         this._collectedUrls.clear();
@@ -74,10 +77,14 @@ export class Cache {
 
         // Load in batches to respect the concurrency cap while maximising
         // parallelism within each batch.
+        let settled = 0;
+        onProgress?.(0, urls.length);
         for (let i = 0; i < urls.length; i += limit) {
             const batch = urls.slice(i, i + limit);
             const operations = batch.map((url) => this._addImageWithPending(url));
             await Promise.allSettled(operations);
+            settled += batch.length;
+            onProgress?.(settled, urls.length);
         }
     }
 

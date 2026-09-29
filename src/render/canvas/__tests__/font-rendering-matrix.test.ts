@@ -121,7 +121,7 @@ describe('Font Rendering Matrix', () => {
             await renderer.renderTextNode(textContainer, createMockStyles());
 
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 63);
+            strictEqual(fillCalls[0]?.y, 63);
         });
 
         it('should render Times New Roman with correct baseline', async () => {
@@ -154,7 +154,7 @@ describe('Font Rendering Matrix', () => {
             );
 
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 62);
+            strictEqual(fillCalls[0]?.y, 62);
         });
     });
 
@@ -190,9 +190,9 @@ describe('Font Rendering Matrix', () => {
             );
 
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 61, 'should use actualBoundingBoxAscent, not fontSize');
+            strictEqual(fillCalls[0]?.y, 61, 'should use actualBoundingBoxAscent, not fontSize');
 
-            const textBottom = fillCalls[0].y + 10;
+            const textBottom = fillCalls[0]?.y + 10;
             const containerBottom = bounds.top + bounds.height;
             ok(textBottom < containerBottom, 'descenders should fit within container');
         });
@@ -250,7 +250,7 @@ describe('Font Rendering Matrix', () => {
             strictEqual(measureCalls.length, 1, 'should call ctx.measureText');
             strictEqual(measureCalls[0], 'Mg');
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 65);
+            strictEqual(fillCalls[0]?.y, 65);
         });
 
         it('should handle fontBoundingBoxAscent fallback correctly', async () => {
@@ -298,7 +298,7 @@ describe('Font Rendering Matrix', () => {
             );
 
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 64);
+            strictEqual(fillCalls[0]?.y, 64);
         });
 
         it('should fallback to fontSize when no Canvas metrics available', async () => {
@@ -343,7 +343,7 @@ describe('Font Rendering Matrix', () => {
             );
 
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 66);
+            strictEqual(fillCalls[0]?.y, 66);
         });
     });
 
@@ -378,7 +378,7 @@ describe('Font Rendering Matrix', () => {
             );
 
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 64);
+            strictEqual(fillCalls[0]?.y, 64);
         });
     });
 
@@ -409,8 +409,8 @@ describe('Font Rendering Matrix', () => {
             await renderer.renderTextNode(textContainer, createMockStyles());
 
             strictEqual(fillCalls.length, 2);
-            strictEqual(fillCalls[0].y, 63);
-            strictEqual(fillCalls[1].y, 63);
+            strictEqual(fillCalls[0]?.y, 63);
+            strictEqual(fillCalls[1]?.y, 63);
         });
     });
 
@@ -440,7 +440,7 @@ describe('Font Rendering Matrix', () => {
             await renderer.renderTextNode(textContainer, createMockStyles());
 
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 50);
+            strictEqual(fillCalls[0]?.y, 50);
         });
 
         it('should handle very small fonts', async () => {
@@ -473,7 +473,7 @@ describe('Font Rendering Matrix', () => {
             );
 
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 58);
+            strictEqual(fillCalls[0]?.y, 58);
         });
 
         it('should handle very large fonts', async () => {
@@ -506,7 +506,7 @@ describe('Font Rendering Matrix', () => {
             );
 
             strictEqual(fillCalls.length, 1);
-            strictEqual(fillCalls[0].y, 95);
+            strictEqual(fillCalls[0]?.y, 95);
         });
     });
 });

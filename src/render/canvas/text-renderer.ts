@@ -12,6 +12,7 @@
  */
 
 import { TextContainer } from '../../dom/text-container';
+import { at } from '../../core/util';
 import { CSSParsedDeclaration } from '../../css';
 import { Bounds } from '../../css/layout/bounds';
 import { TextBounds, segmentGraphemes } from '../../css/layout/text';
@@ -230,7 +231,7 @@ export class TextRenderer {
         let top = text.bounds.top;
 
         for (let i = 0; i < letters.length;) {
-            const letter = letters[i];
+            const letter = letters[i] as string;
             const isSideways =
                 isSidewaysWritingMode(writingMode) || (!hasCJKCharacters(letter) && letter.trim().length > 0);
 
@@ -250,7 +251,7 @@ export class TextRenderer {
             // ── Batch consecutive sideways glyphs into one save/restore ──
             const runStart = i;
             while (i < letters.length) {
-                const ch = letters[i];
+                const ch = letters[i] as string;
                 if (!isSidewaysWritingMode(writingMode) && !hasCJKCharacters(ch) && ch.trim().length === 0) break;
                 if (isSidewaysWritingMode(writingMode) || (!hasCJKCharacters(ch) && ch.trim().length > 0)) {
                     i++;
@@ -265,8 +266,9 @@ export class TextRenderer {
             this.ctx.rotate(rotationAngle);
             let runOffset = 0;
             for (let j = runStart; j < i; j++) {
-                renderFn(letters[j], 0, runOffset);
-                runOffset += this.cachedMeasureText(letters[j], fontString) + letterSpacing;
+                const glyph = letters[j] as string;
+                renderFn(glyph, 0, runOffset);
+                runOffset += this.cachedMeasureText(glyph, fontString) + letterSpacing;
             }
             this.ctx.restore();
             top += runOffset;
@@ -470,7 +472,7 @@ export class TextRenderer {
         const lineHeight = styles.fontSize.number * 1.5;
         const lines: TextBounds[][] = [];
         let currentLine: TextBounds[] = [];
-        let currentLineTop = text.textBounds[0].bounds.top;
+        let currentLineTop = at(text.textBounds, 0).bounds.top;
 
         text.textBounds.forEach((tb) => {
             if (Math.abs(tb.bounds.top - currentLineTop) >= lineHeight * 0.5) {
@@ -488,14 +490,14 @@ export class TextRenderer {
 
         // Render full lines (0..N-2)
         for (let i = 0; i < maxLines - 1; i++) {
-            lines[i].forEach((tb) => this.renderTextBoundWithPaintOrder(tb, styles, paintOrder, baseline));
+            at(lines, i).forEach((tb) => this.renderTextBoundWithPaintOrder(tb, styles, paintOrder, baseline));
         }
 
         // Nth line: truncated with ellipsis
         const lastLine = lines[maxLines - 1];
         if (lastLine?.length && containerBounds) {
             const textStr = lastLine.map((tb) => tb.text).join('');
-            const first = lastLine[0];
+            const first = at(lastLine, 0);
             const avail = containerBounds.width - (first.bounds.left - containerBounds.left);
             const truncated = this.truncateTextWithEllipsis(textStr, avail, styles.letterSpacing);
             const bounds = new TextBounds(truncated, first.bounds);
@@ -523,7 +525,7 @@ export class TextRenderer {
         containerBounds: Bounds
     ): boolean {
         const lineHeight = styles.fontSize.number * 1.5;
-        const firstTop = text.textBounds[0].bounds.top;
+        const firstTop = at(text.textBounds, 0).bounds.top;
         const isSingleLine = text.textBounds.every((tb) => Math.abs(tb.bounds.top - firstTop) < lineHeight * 0.5);
         if (!isSingleLine) return false;
 
@@ -539,7 +541,7 @@ export class TextRenderer {
         if (fullWidth <= containerBounds.width + TEXT_OVERFLOW_EPSILON) return false;
 
         const truncated = this.truncateTextWithEllipsis(fullText, containerBounds.width, styles.letterSpacing);
-        const bounds = new TextBounds(truncated, text.textBounds[0].bounds);
+        const bounds = new TextBounds(truncated, at(text.textBounds, 0).bounds);
         for (const layer of paintOrder) {
             if (layer === PAINT_ORDER_LAYER.FILL) this.renderTextFillWithShadows(bounds, styles, baseline);
             else if (layer === PAINT_ORDER_LAYER.STROKE) this.renderTextStrokeWithStyle(bounds, styles, baseline);
@@ -564,7 +566,7 @@ export class TextRenderer {
         // the font may change between nodes.
         this.glyphWidthCache = null;
         const [fontString] = this.createFontStyle(styles);
-        this.ctx.font = fontString;
+        this.ctx.font = fontString ?? '';
         this.ctx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'alphabetic';
@@ -574,7 +576,7 @@ export class TextRenderer {
         // This ensures correct positioning whether using webfonts (which may not
         // be loaded in the original document but are active in the Canvas) or
         // system fonts.
-        const baseline = this.measureBaselineCached(fontString, styles.fontSize.number);
+        const baseline = this.measureBaselineCached(fontString ?? '', styles.fontSize.number);
 
         // -webkit-line-clamp
         const clamp =

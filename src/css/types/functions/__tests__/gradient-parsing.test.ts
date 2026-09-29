@@ -86,8 +86,8 @@ describe('functions', () => {
         it('color stops with positions', () => {
             const image = parseRadial('radial-gradient(circle, #000 10px, #fff 20%)');
             strictEqual(image.stops.length, 2);
-            strictEqual((image.stops[0].stop as { number: number }).number, 10);
-            strictEqual((image.stops[1].stop as { number: number }).number, 20);
+            strictEqual((image.stops[0]?.stop as { number: number }).number, 10);
+            strictEqual((image.stops[1]?.stop as { number: number }).number, 20);
         });
     });
 
@@ -164,8 +164,8 @@ describe('functions', () => {
         it('color stops', () => {
             const image = parsePrefix('-webkit-radial-gradient(center, circle, #000 10px, #fff)');
             strictEqual(image.stops.length, 2);
-            strictEqual((image.stops[0].stop as { number: number }).number, 10);
-            strictEqual(image.stops[1].stop, null);
+            strictEqual((image.stops[0]?.stop as { number: number }).number, 10);
+            strictEqual(image.stops[1]?.stop, null);
         });
     });
 
@@ -178,10 +178,10 @@ describe('functions', () => {
             };
             strictEqual(image.type, CSSImageType.LINEAR_GRADIENT);
             strictEqual(image.angle, 0);
-            strictEqual(image.stops[0].stop, ZERO_LENGTH);
-            strictEqual(image.stops[0].color, colorOf('rgb(255,0,0)'));
-            strictEqual(image.stops[1].stop, HUNDRED_PERCENT);
-            strictEqual(image.stops[1].color, colorOf('rgb(0,0,255)'));
+            strictEqual(image.stops[0]?.stop, ZERO_LENGTH);
+            strictEqual(image.stops[0]?.color, colorOf('rgb(255,0,0)'));
+            strictEqual(image.stops[1]?.stop, HUNDRED_PERCENT);
+            strictEqual(image.stops[1]?.color, colorOf('rgb(0,0,255)'));
         });
 
         it('radial defaults to circle farthest-corner', () => {
@@ -204,8 +204,8 @@ describe('functions', () => {
                 webkitGradient,
                 '-webkit-gradient(linear, color-stop(0.25, rgb(255,0,0)), to(rgb(0,0,255)))'
             ) as { stops: { stop: { type: TokenType; number: number } }[] };
-            strictEqual(image.stops[0].stop.type, TokenType.PERCENTAGE_TOKEN);
-            strictEqual(image.stops[0].stop.number, 25);
+            strictEqual(image.stops[0]?.stop.type, TokenType.PERCENTAGE_TOKEN);
+            strictEqual(image.stops[0]?.stop.number, 25);
         });
 
         it('ignores unrecognized arguments', () => {

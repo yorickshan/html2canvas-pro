@@ -1,4 +1,5 @@
 import { Matrix } from '../css/property-descriptors/transform';
+import { at } from '../core/util';
 import { MixBlendMode, MIX_BLEND_MODE } from '../css/property-descriptors/mix-blend-mode';
 import { Path } from './path';
 
@@ -137,7 +138,7 @@ export class FilterEffect implements IElementEffect {
         }
 
         // Parse the first drop-shadow body to extract shadow params
-        const shadow = FilterEffect.parseDropShadowBody(matches[0].body);
+        const shadow = FilterEffect.parseDropShadowBody(at(matches, 0).body);
 
         // Build safe filter string by removing ALL drop-shadow() occurrences
         let result = '';
@@ -172,7 +173,7 @@ export class FilterEffect implements IElementEffect {
             let pos = openParen + 1;
 
             while (pos < str.length && depth > 0) {
-                const ch = str[pos];
+                const ch = str[pos] ?? '';
                 if (ch === '(') depth++;
                 else if (ch === ')') depth--;
                 pos++;
@@ -212,9 +213,9 @@ export class FilterEffect implements IElementEffect {
         }
 
         return {
-            offsetX: lengths[0],
-            offsetY: lengths[1],
-            blur: lengths[2] ?? 0,
+            offsetX: at(lengths, 0),
+            offsetY: at(lengths, 1),
+            blur: lengths.length > 2 ? at(lengths, 2) : 0,
             color: color ?? 'rgba(0,0,0,1)'
         };
     }
@@ -232,7 +233,7 @@ export class FilterEffect implements IElementEffect {
         let depth = 0;
 
         for (let i = 0; i < str.length; i++) {
-            const ch = str[i];
+            const ch = str[i] ?? '';
 
             if (ch === '(') {
                 depth++;

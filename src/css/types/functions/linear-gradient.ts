@@ -12,10 +12,10 @@ export const linearGradient = (context: Context, tokens: CSSValue[]): CSSLinearG
     parseFunctionArgs(tokens).forEach((arg, i) => {
         if (i === 0) {
             const firstToken = arg[0];
-            if (firstToken.type === TokenType.IDENT_TOKEN && firstToken.value === 'to') {
+            if (firstToken && firstToken.type === TokenType.IDENT_TOKEN && firstToken.value === 'to') {
                 angle = parseNamedSide(arg);
                 return;
-            } else if (isAngle(firstToken)) {
+            } else if (firstToken && isAngle(firstToken)) {
                 angle = angleType.parse(context, firstToken);
                 return;
             }

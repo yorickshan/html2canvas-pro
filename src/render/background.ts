@@ -1,4 +1,5 @@
 import { Bounds } from '../css/layout/bounds';
+import { at } from '../core/util';
 import { BACKGROUND_ORIGIN } from '../css/property-descriptors/background-origin';
 import { ElementContainer } from '../dom/element-container';
 import { BACKGROUND_SIZE, BackgroundSizeInfo } from '../css/property-descriptors/background-size';
@@ -165,7 +166,7 @@ export const calculateBackgroundSize = (
         let height = 0;
         if (isLengthPercentage(first)) {
             width = getAbsoluteValue(first, bounds.width);
-        } else if (isLengthPercentage(second)) {
+        } else if (second && isLengthPercentage(second)) {
             height = getAbsoluteValue(second, bounds.height);
         }
 
@@ -216,7 +217,7 @@ export const calculateBackgroundSize = (
 export const getBackgroundValueForIndex = <T>(values: T[], index: number): T => {
     const value = values[index];
     if (typeof value === 'undefined') {
-        return values[0];
+        return at(values, 0);
     }
 
     return value;

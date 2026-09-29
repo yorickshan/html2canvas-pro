@@ -1,3 +1,4 @@
+import { at } from '../../core/util';
 /**
  * Safe arithmetic expression evaluator — replaces `new Function()`.
  *
@@ -32,7 +33,7 @@ const safeEvalArithmetic = (expr: string): number => {
             ops.pop(); // discard '('
         } else {
             // operator: + - * /
-            while (ops.length && precedence[ops[ops.length - 1]] >= precedence[tok]) {
+            while (ops.length && (precedence[at(ops, ops.length - 1)] ?? 0) >= (precedence[tok] ?? 0)) {
                 output.push(ops.pop()!);
             }
             ops.push(tok);
@@ -73,7 +74,7 @@ const safeEvalArithmetic = (expr: string): number => {
         }
     }
 
-    return stack.length === 1 ? stack[0] : NaN;
+    return stack.length === 1 ? (stack[0] ?? NaN) : NaN;
 };
 
 export default safeEvalArithmetic;

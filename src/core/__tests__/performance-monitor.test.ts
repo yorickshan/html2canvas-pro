@@ -62,7 +62,7 @@ describe('PerformanceMonitor', () => {
         const summary = monitor.getSummary();
         expect(summary.totalDuration).toBeGreaterThanOrEqual(0);
         expect(summary.breakdown.length).toBe(1);
-        expect(summary.breakdown[0].name).toBe('x');
+        expect(summary.breakdown[0]?.name).toBe('x');
     });
 
     it('getActiveMetrics returns active metric names', () => {

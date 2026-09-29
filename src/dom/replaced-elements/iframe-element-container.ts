@@ -1,5 +1,6 @@
 import { ElementContainer } from '../element-container';
-import { Color, parseColor, COLORS } from '../../css/types/color';
+import { parseColor, type Color } from '../../css/types/color';
+import { TRANSPARENT_COLOR } from '../../css/types/color';
 import { isTransparent } from '../../css/types/color-utilities';
 import { Context } from '../../core/context';
 
@@ -36,13 +37,13 @@ export class IFrameElementContainer extends ElementContainer {
                           context,
                           getComputedStyle(iframe.contentWindow.document.documentElement).backgroundColor as string
                       )
-                    : COLORS.TRANSPARENT;
+                    : TRANSPARENT_COLOR;
                 const bodyBackgroundColor = iframe.contentWindow.document.body
                     ? parseColor(
                           context,
                           getComputedStyle(iframe.contentWindow.document.body).backgroundColor as string
                       )
-                    : COLORS.TRANSPARENT;
+                    : TRANSPARENT_COLOR;
 
                 this.backgroundColor = isTransparent(documentBackgroundColor)
                     ? isTransparent(bodyBackgroundColor)

@@ -142,13 +142,17 @@ import html2canvas from 'html2canvas-pro';
 html2canvas(element, {
     onProgress: (phase, progress) => {
         console.log(`${phase}: ${progress}%`);
-        // clone 10 → clone 30 → parse 50 → layout 60 → render 90 → render 100
+        // clone 10 → clone 30 → parse 50 →
+        // preload 50…60 (one event per settled image batch) →
+        // layout 60 → render 90 → render 100
     }
 });
 ```
 
-`phase` is one of `'clone'`, `'parse'`, `'layout'` or `'render'`; `progress` is a
-coarse 0–100 estimate. Callback exceptions are caught and logged — a broken
+`phase` is one of `'clone'`, `'parse'`, `'preload'`, `'layout'` or `'render'`;
+`progress` is a coarse 0–100 estimate. Image preloading reports one event per
+settled batch across the 50–60 range, so captures with many images show
+incremental progress. Callback exceptions are caught and logged — a broken
 handler never fails the capture.
 
 ### CSP Nonce

@@ -374,7 +374,8 @@ export class Tokenizer {
             return -1;
         }
 
-        return this._value[delta];
+        const codePoint = this._value[delta];
+        return codePoint !== undefined ? codePoint : -1;
     }
 
     private consumeUnicodeRangeToken(): UnicodeRangeToken {
@@ -553,7 +554,7 @@ export class Tokenizer {
         } while (true);
     }
 
-    private consumeNumber() {
+    private consumeNumber(): [number, number] {
         const repr = [];
         let type = FLAG_INTEGER;
         let c1 = this.peekCodePoint(0);

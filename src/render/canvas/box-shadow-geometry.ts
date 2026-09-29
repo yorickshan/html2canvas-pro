@@ -1,4 +1,5 @@
 import { BezierCurve, isBezierCurve } from '../bezier-curve';
+import { at } from '../../core/util';
 import { Path } from '../path';
 import { Vector } from '../vector';
 
@@ -23,25 +24,25 @@ export const spreadShadowPath = (paths: Path[], spread: number): Path[] => {
             ry: Math.abs(point.end.y - point.start.y)
         };
     });
-    const width = corners[1].x - corners[0].x + 2 * spread;
-    const height = corners[3].y - corners[0].y + 2 * spread;
+    const width = at(corners, 1).x - at(corners, 0).x + 2 * spread;
+    const height = at(corners, 3).y - at(corners, 0).y + 2 * spread;
     if (width <= 0 || height <= 0) return [];
     const radii = corners.map((c) => ({ x: shadowRadius(c.rx, spread), y: shadowRadius(c.ry, spread) }));
     const ratio = (size: number, sum: number): number => (sum > 0 ? size / sum : 1);
     const factor = Math.min(
         1,
-        ratio(width, radii[0].x + radii[1].x),
-        ratio(width, radii[3].x + radii[2].x),
-        ratio(height, radii[0].y + radii[3].y),
-        ratio(height, radii[1].y + radii[2].y)
+        ratio(width, at(radii, 0).x + at(radii, 1).x),
+        ratio(width, at(radii, 3).x + at(radii, 2).x),
+        ratio(height, at(radii, 0).y + at(radii, 3).y),
+        ratio(height, at(radii, 1).y + at(radii, 2).y)
     );
     return paths.map((point, index) => {
-        const corner = corners[index];
+        const corner = at(corners, index);
         const x = corner.x + (index === 1 || index === 2 ? spread : -spread);
         const y = corner.y + (index >= 2 ? spread : -spread);
         if (!isBezierCurve(point)) return new Vector(x, y);
-        const rx = radii[index].x * factor;
-        const ry = radii[index].y * factor;
+        const rx = at(radii, index).x * factor;
+        const ry = at(radii, index).y * factor;
         if (!rx || !ry) return new Vector(x, y);
         const sx = rx / corner.rx;
         const sy = ry / corner.ry;

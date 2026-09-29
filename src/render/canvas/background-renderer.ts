@@ -10,6 +10,7 @@
  */
 
 import { Context } from '../../core/context';
+import { at } from '../../core/util';
 import { ElementContainer } from '../../dom/element-container';
 import { Path } from '../path';
 import {
@@ -186,8 +187,8 @@ export class BackgroundRenderer {
         // processColorStops normalises stops to [0, 1] of the gradient line,
         // so scale the span back to absolute pixels for the pattern canvas.
         const processedStops = processColorStops(backgroundImage.stops, lineLength || 1);
-        const lastStop = processedStops[processedStops.length - 1];
-        const firstStop = processedStops[0];
+        const lastStop = at(processedStops, processedStops.length - 1);
+        const firstStop = at(processedStops, 0);
         const stopSpan = lastStop.stop - firstStop.stop;
         const patternLength = stopSpan * (lineLength || 1);
 
@@ -298,8 +299,8 @@ export class BackgroundRenderer {
     ): void {
         const [path, left, top, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
         const position = backgroundImage.position.length === 0 ? [FIFTY_PERCENT] : backgroundImage.position;
-        const x = getAbsoluteValue(position[0], width);
-        const y = getAbsoluteValue(position[position.length - 1], height);
+        const x = getAbsoluteValue(at(position, 0), width);
+        const y = getAbsoluteValue(at(position, position.length - 1), height);
 
         let [rx, ry] = calculateRadius(backgroundImage, x, y, width, height);
         // Handle edge case where radial gradient size is 0

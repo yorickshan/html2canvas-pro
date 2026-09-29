@@ -1,5 +1,5 @@
 import { Bounds, parseBounds, parseDocumentSize } from '../css/layout/bounds';
-import { COLORS } from '../css/types/color';
+import { TRANSPARENT_COLOR } from '../css/types/color';
 import { CloneConfigurations, DocumentCloner } from '../dom/document-cloner';
 import { isBodyElement, isHTMLElement } from '../dom/node-type-guards';
 import { parseTree } from '../dom/node-parser';
@@ -29,6 +29,7 @@ import { parseBackgroundColor } from './background-parser';
 export const enum ProgressPhase {
     CLONE = 'clone',
     PARSE = 'parse',
+    PRELOAD = 'preload',
     LAYOUT = 'layout',
     RENDER = 'render'
 }
@@ -187,9 +188,12 @@ export const renderElement = async (
 
             emitProgress(opts.onProgress, context, ProgressPhase.PARSE, 50);
 
-            // Batch-preload all collected images in parallel before rendering.
+            // Batch-preload all collected images in parallel before rendering,
+            // reporting progress across the 50→60 range.
             perfMonitor.start('preload');
-            await context.cache.preloadAll();
+            await context.cache.preloadAll(10, (loaded, total) => {
+                emitProgress(opts.onProgress, context, ProgressPhase.PRELOAD, 50 + Math.round((loaded / total) * 10));
+            });
             perfMonitor.end('preload');
 
             // Element bounds and text layout were measured during parse; with
@@ -197,7 +201,7 @@ export const renderElement = async (
             emitProgress(opts.onProgress, context, ProgressPhase.LAYOUT, 60);
 
             if (backgroundColor === root.styles.backgroundColor) {
-                root.styles.backgroundColor = COLORS.TRANSPARENT;
+                root.styles.backgroundColor = TRANSPARENT_COLOR;
             }
 
             context.logger.debug(

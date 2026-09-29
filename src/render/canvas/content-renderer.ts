@@ -164,7 +164,7 @@ export function renderFormElements(
     if (isTextInputElement(container) && container.value.length) {
         const [font] = textRenderer.createFontStyle(styles);
         // Use Canvas API to measure baseline from the actual rendered font
-        ctx.font = font;
+        ctx.font = font ?? '';
         const fontSizeValue = getAbsoluteValue(styles.fontSize, 0);
         const { baseline, height: fontHeight } = measureFontMetrics(ctx, fontSizeValue);
         const isPlaceholder = container instanceof InputElementContainer && container.isPlaceholder;
@@ -316,7 +316,7 @@ export async function renderListMarker(
         }
     } else if (paint.listValue && container.styles.listStyleType !== LIST_STYLE_TYPE.NONE) {
         const [font] = textRenderer.createFontStyle(styles);
-        ctx.font = font;
+        ctx.font = font ?? '';
         ctx.fillStyle = asString(styles.color);
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'right';

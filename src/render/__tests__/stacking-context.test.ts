@@ -547,7 +547,7 @@ describe('ElementPaint effect construction', () => {
     it('opacity below 1 adds an OpacityEffect', () => {
         const paint = paintOf({ opacity: '0.5' });
         expect(paint.effects).toHaveLength(1);
-        expect(paint.effects[0].type).toBe(2 /* EffectType.OPACITY */);
+        expect(paint.effects[0]?.type).toBe(2 /* EffectType.OPACITY */);
     });
 
     it('rotate adds a TransformEffect with the rotation matrix', () => {
@@ -569,8 +569,8 @@ describe('ElementPaint effect construction', () => {
         const paint = paintOf({ overflow: 'hidden', borderTopWidth: '2px', borderLeftWidth: '3px' });
         const clips = paint.effects as unknown as Array<{ target: number }>;
         expect(clips).toHaveLength(2);
-        expect(clips[0].target).toBe(EffectTarget.BACKGROUND_BORDERS);
-        expect(clips[1].target).toBe(EffectTarget.CONTENT);
+        expect(clips[0]?.target).toBe(EffectTarget.BACKGROUND_BORDERS);
+        expect(clips[1]?.target).toBe(EffectTarget.CONTENT);
     });
 
     it('overflow hidden without borders still adds border/padding box clips (upstream equalPath quirk)', () => {
@@ -579,8 +579,8 @@ describe('ElementPaint effect construction', () => {
         // equalPath compares Path objects by identity, so the combined-clip
         // branch is never taken even when the boxes coincide (upstream parity).
         expect(clips).toHaveLength(2);
-        expect(clips[0].target).toBe(EffectTarget.BACKGROUND_BORDERS);
-        expect(clips[1].target).toBe(EffectTarget.CONTENT);
+        expect(clips[0]?.target).toBe(EffectTarget.BACKGROUND_BORDERS);
+        expect(clips[1]?.target).toBe(EffectTarget.CONTENT);
     });
 
     it.each(['inset(10px)', 'circle(50% at 50% 50%)', 'ellipse(closest-side closest-side)', 'polygon(0 0, 100% 0)'])(
@@ -588,7 +588,7 @@ describe('ElementPaint effect construction', () => {
         (clipPathValue) => {
             const paint = paintOf({ clipPath: clipPathValue });
             expect(paint.effects).toHaveLength(1);
-            expect(paint.effects[0].type).toBe(3 /* EffectType.CLIP_PATH */);
+            expect(paint.effects[0]?.type).toBe(3 /* EffectType.CLIP_PATH */);
         }
     );
 
@@ -603,7 +603,7 @@ describe('ElementPaint effect construction', () => {
     it('filter adds a FilterEffect', () => {
         const paint = paintOf({ filter: 'blur(4px)' });
         expect(paint.effects).toHaveLength(1);
-        expect(paint.effects[0].type).toBe(5 /* EffectType.FILTER */);
+        expect(paint.effects[0]?.type).toBe(5 /* EffectType.FILTER */);
     });
 
     it('zoom other than 1 adds a scaling TransformEffect', () => {
@@ -628,7 +628,7 @@ describe('getEffects', () => {
             (el) => (el === leafEl ? styles.leaf : el === midEl ? styles.mid : styles.root)
         );
         expect(container.elements).toHaveLength(1);
-        const midContainer = container.elements[0];
+        const midContainer = container.elements[0] as ElementContainer;
         expect(midContainer.elements).toHaveLength(1);
         const leafContainer = midContainer.elements[0];
         assignLayout(container);
@@ -694,7 +694,7 @@ describe('getEffects', () => {
         expect(all).toHaveLength(3);
         const asRoot = leafPaint.getEffects(EffectTarget.CONTENT, leafPaint);
         expect(asRoot).toHaveLength(1);
-        expect(asRoot[0].type).toBe(0 /* EffectType.TRANSFORM */);
+        expect(asRoot[0]?.type).toBe(0 /* EffectType.TRANSFORM */);
     });
 
     it('filters the collected effects by target', () => {
@@ -763,8 +763,8 @@ describe('parseStackingContexts – tree structure', () => {
         );
         const dupStack = parseStackingContexts(dupContainer);
         expect(dupStack.positiveZIndex).toHaveLength(2);
-        expect(dupStack.positiveZIndex[0].element.container).toBe(dupContainer.elements[0]);
-        expect(dupStack.positiveZIndex[1].element.container).toBe(dupContainer.elements[1]);
+        expect(dupStack.positiveZIndex[0]?.element.container).toBe(dupContainer.elements[0]);
+        expect(dupStack.positiveZIndex[1]?.element.container).toBe(dupContainer.elements[1]);
     });
 
     it('classifies non-positioned floats, inline level and non-inline level nodes', () => {
@@ -790,7 +790,7 @@ describe('parseStackingContexts – tree structure', () => {
         expect(root.nonPositionedFloats).toHaveLength(1);
         expect(root.nonInlineLevel).toHaveLength(1);
         expect(root.inlineLevel).toHaveLength(1);
-        expect(root.inlineLevel[0].container).toBe(container.elements[2]);
+        expect(root.inlineLevel[0]?.container).toBe(container.elements[2]);
     });
 
     it('treats nested real stacking contexts relative to their real parent', () => {
@@ -814,9 +814,9 @@ describe('parseStackingContexts – tree structure', () => {
         const root = parseStackingContexts(container);
 
         expect(root.positiveZIndex).toHaveLength(1);
-        const wrapperStack = root.positiveZIndex[0];
+        const wrapperStack = root.positiveZIndex[0] as StackingContext;
         expect(wrapperStack.negativeZIndex).toHaveLength(1);
-        expect(wrapperStack.negativeZIndex[0].element.container).toBe(container.elements[0].elements[0]);
+        expect(wrapperStack.negativeZIndex[0]?.element.container).toBe(container.elements[0]?.elements[0]);
     });
 
     it('numbers list items for ol with start/reversed and li value attributes', () => {

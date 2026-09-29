@@ -1,4 +1,5 @@
 import { IPropertyListDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
+import { at } from '../../core/util';
 import { CSSValue, isStringToken } from '../syntax/parser';
 import { TokenType } from '../syntax/tokenizer';
 import { Context } from '../../core/context';
@@ -22,7 +23,7 @@ export const quotes: IPropertyListDescriptor<Quotes> = {
 
         const first = tokens[0];
 
-        if (first.type === TokenType.IDENT_TOKEN && first.value === 'none') {
+        if (first && first.type === TokenType.IDENT_TOKEN && first.value === 'none') {
             return null;
         }
 
@@ -34,8 +35,8 @@ export const quotes: IPropertyListDescriptor<Quotes> = {
         }
 
         for (let i = 0; i < filtered.length; i += 2) {
-            const open = filtered[i].value;
-            const close = filtered[i + 1].value;
+            const open = at(filtered, i).value;
+            const close = at(filtered, i + 1).value;
             quotes.push({ open, close });
         }
 

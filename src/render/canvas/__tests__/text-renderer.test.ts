@@ -105,12 +105,12 @@ describe('renderTextWithLetterSpacing', () => {
         // Verify letter spacing is added between characters
         // A: x=100, B: x=100+10+5=115, C: x=115+12+5=132
         strictEqual(fillCalls.length, 3);
-        strictEqual(fillCalls[0].text, 'A');
-        strictEqual(fillCalls[0].x, 100);
-        strictEqual(fillCalls[1].text, 'B');
-        strictEqual(fillCalls[1].x, 115); // 100 + measureText('A').width(10) + letterSpacing(5)
-        strictEqual(fillCalls[2].text, 'C');
-        strictEqual(fillCalls[2].x, 132); // 115 + measureText('B').width(12) + letterSpacing(5)
+        strictEqual(fillCalls[0]?.text, 'A');
+        strictEqual(fillCalls[0]?.x, 100);
+        strictEqual(fillCalls[1]?.text, 'B');
+        strictEqual(fillCalls[1]?.x, 115); // 100 + measureText('A').width(10) + letterSpacing(5)
+        strictEqual(fillCalls[2]?.text, 'C');
+        strictEqual(fillCalls[2]?.x, 132); // 115 + measureText('B').width(12) + letterSpacing(5)
 
         // Verify y position uses baseline
         fillCalls.forEach((call) => {
@@ -243,8 +243,8 @@ describe('renderTextWithLetterSpacing', () => {
         renderer.renderTextWithLetterSpacing(text, -3, 15);
 
         // A: x=100, B: x=100 + 10 + (-3) = 107
-        strictEqual(fillCalls[0].x, 100);
-        strictEqual(fillCalls[1].x, 107);
+        strictEqual(fillCalls[0]?.x, 100);
+        strictEqual(fillCalls[1]?.x, 107);
     });
 
     it('should draw mixed CJK and Latin text on the same baseline as the whole-string path', () => {
@@ -285,7 +285,7 @@ describe('renderTextWithLetterSpacing', () => {
 
         deepStrictEqual(
             calls,
-            ['A', '快', 'B'].map((letter) => ({ text: letter, y: wholeString.y, baseline: wholeString.baseline }))
+            ['A', '快', 'B'].map((letter) => ({ text: letter, y: wholeString!.y, baseline: wholeString!.baseline }))
         );
     });
 
@@ -489,7 +489,7 @@ describe('renderTextNode', () => {
         strictEqual(fillCalls.length, 1);
         // Y should be: bounds.top(50) + actualBoundingBoxAscent(14) = 64
         // NOT: bounds.top(50) + fontSize.number(16) = 66
-        strictEqual(fillCalls[0].y, 64, 'should use actualBoundingBoxAscent (64), not fontSize.number (66)');
+        strictEqual(fillCalls[0]?.y, 64, 'should use actualBoundingBoxAscent (64), not fontSize.number (66)');
     });
 
     it('should fallback to fontSize.number when actualBoundingBoxAscent is not available', async () => {
@@ -560,6 +560,6 @@ describe('renderTextNode', () => {
         // Verify fallback to fontSize.number (16)
         strictEqual(fillCalls.length, 1);
         // Y should be: bounds.top(50) + fontSize.number(16) = 66
-        strictEqual(fillCalls[0].y, 66, 'should fallback to fontSize.number (66)');
+        strictEqual(fillCalls[0]?.y, 66, 'should fallback to fontSize.number (66)');
     });
 });

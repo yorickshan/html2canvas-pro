@@ -217,7 +217,7 @@ export class Validator {
         // Remove square brackets if present (e.g., [::1])
         const addr = normalizedHost.replace(/^\[|\]$/g, '');
         // Remove zone ID if present (e.g., fe80::1%eth0)
-        const addrWithoutZone = addr.split('%')[0];
+        const addrWithoutZone = addr.split('%')[0] ?? addr;
         // Loopback ::1 (also matches 0:0:0:0:0:0:0:1)
         if (/^(0:){7}1$/.test(addrWithoutZone) || addrWithoutZone === '::1') {
             return true;

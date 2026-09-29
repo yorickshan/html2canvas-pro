@@ -83,7 +83,7 @@ describe('tokenizer', () => {
         it('slices very long strings', () => {
             const tokens = tokenize(`"${'a'.repeat(50001)}"`);
             deepEqual(tokens.length, 1);
-            deepEqual(tokens[0].type, TokenType.STRING_TOKEN);
+            deepEqual(tokens[0]?.type, TokenType.STRING_TOKEN);
             deepEqual((tokens[0] as { value: string }).value.length, 50001);
         });
     });

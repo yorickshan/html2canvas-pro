@@ -1,4 +1,5 @@
 import { CSSValue } from '../../syntax/parser';
+import { at } from '../../../core/util';
 import {
     CSSRadialExtent,
     CSSRadialGradientImage,
@@ -12,7 +13,7 @@ import { getAbsoluteValue, HUNDRED_PERCENT, isLengthPercentage, ZERO_LENGTH } fr
 import { Context } from '../../../core/context';
 
 export const parseColorStop = (context: Context, args: CSSValue[]): UnprocessedGradientColorStop => {
-    const color = colorType.parse(context, args[0]);
+    const color = colorType.parse(context, at(args, 0));
     const stop = args[1];
     return stop && isLengthPercentage(stop) ? { color, stop } : { color, stop: null };
 };
@@ -22,8 +23,8 @@ export const processColorStops = (stops: UnprocessedGradientColorStop[], lineLen
     // the implicit first/last stops must not mutate them (it would also make
     // identical gradient cache keys diverge after the first render).
     const resolvedStops: UnprocessedGradientColorStop[] = stops.map((stop) => ({ color: stop.color, stop: stop.stop }));
-    const first = resolvedStops[0];
-    const last = resolvedStops[resolvedStops.length - 1];
+    const first = at(resolvedStops, 0);
+    const last = at(resolvedStops, resolvedStops.length - 1);
     if (first.stop === null) {
         first.stop = ZERO_LENGTH;
     }
@@ -35,7 +36,7 @@ export const processColorStops = (stops: UnprocessedGradientColorStop[], lineLen
     const processStops: (number | null)[] = [];
     let previous = 0;
     for (let i = 0; i < resolvedStops.length; i++) {
-        const stop = resolvedStops[i].stop;
+        const stop = at(resolvedStops, i).stop;
         if (stop !== null) {
             const absoluteValue = getAbsoluteValue(stop, lineLength);
             if (absoluteValue > previous) {
@@ -51,7 +52,7 @@ export const processColorStops = (stops: UnprocessedGradientColorStop[], lineLen
 
     let gapBegin = null;
     for (let i = 0; i < processStops.length; i++) {
-        const stop = processStops[i];
+        const stop = at(processStops, i);
         if (stop === null) {
             if (gapBegin === null) {
                 gapBegin = i;
@@ -202,8 +203,9 @@ export const calculateRadius = (
     }
 
     if (Array.isArray(gradient.size)) {
-        rx = getAbsoluteValue(gradient.size[0], width);
-        ry = gradient.size.length === 2 ? getAbsoluteValue(gradient.size[1], height) : rx;
+        const size = gradient.size;
+        rx = getAbsoluteValue(at(size, 0), width);
+        ry = size.length === 2 ? getAbsoluteValue(at(size, 1), height) : rx;
     }
 
     return [rx, ry];

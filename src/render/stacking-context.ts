@@ -1,4 +1,5 @@
 import { ElementContainer } from '../dom/element-container';
+import { at } from '../core/util';
 import { contains } from '../core/bitwise';
 import { BoundCurves, calculateBorderBoxPath, calculatePaddingBoxPath } from './bound-curves';
 import {
@@ -273,9 +274,9 @@ export const buildClipPathEffect = (clipPath: ClipPathValue, bounds: Bounds): Cl
             return new ClipPathEffect((ctx) => {
                 ctx.beginPath();
                 if (absPoints.length > 0) {
-                    ctx.moveTo(absPoints[0][0], absPoints[0][1]);
+                    ctx.moveTo(at(at(absPoints, 0), 0), at(at(absPoints, 0), 1));
                     for (let i = 1; i < absPoints.length; i++) {
-                        ctx.lineTo(absPoints[i][0], absPoints[i][1]);
+                        ctx.lineTo(at(at(absPoints, i), 0), at(at(absPoints, i), 1));
                     }
                     ctx.closePath();
                 }
@@ -415,7 +416,7 @@ const processListItems = (owner: ElementContainer, elements: ElementPaint[]) => 
     let numbering = owner instanceof OLElementContainer ? owner.start : 1;
     const reversed = owner instanceof OLElementContainer ? owner.reversed : false;
     for (let i = 0; i < elements.length; i++) {
-        const item = elements[i];
+        const item = at(elements, i);
         if (
             item.container instanceof LIElementContainer &&
             typeof item.container.value === 'number' &&

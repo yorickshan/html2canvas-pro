@@ -115,12 +115,17 @@ export function supportsNativeFilters(owner: Document = document): boolean {
             input.fillRect(8, 8, 8, 8);
             context.filter = 'blur(2px)';
             context.drawImage(source, 0, 0);
-            const blurred = context.getImageData(6, 12, 1, 1).data[3] > 0;
+            const blurred = (context.getImageData(6, 12, 1, 1).data[3] ?? 0) > 0;
             context.clearRect(0, 0, 32, 32);
             context.filter = 'drop-shadow(12px 0px 0px rgba(255, 0, 0, 0.5))';
             context.drawImage(source, 0, 0);
             const shadow = context.getImageData(24, 12, 1, 1).data;
-            supported = blurred && shadow[0] > 240 && shadow[1] < 10 && shadow[3] >= 126 && shadow[3] <= 129;
+            supported =
+                blurred &&
+                (shadow[0] ?? 0) > 240 &&
+                (shadow[1] ?? 0) < 10 &&
+                (shadow[3] ?? 0) >= 126 &&
+                (shadow[3] ?? 0) <= 129;
         }
     } catch {
         // Readback can itself be unavailable. Be conservative and retain SVG.

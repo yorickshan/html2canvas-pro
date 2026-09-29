@@ -49,13 +49,13 @@ export default defineConfig({
                     statements: 92,
                     lines: 92
                 },
-                // DOM snapshot containers; document-cloner relies on iframe
-                // quirks that only reftests can fully exercise.
+                // DOM snapshot containers and replaced-element containers.
+                // document-cloner iframe quirks remain reftest territory.
                 'src/dom/**': {
-                    branches: 52,
-                    functions: 68,
-                    statements: 62,
-                    lines: 61
+                    branches: 60,
+                    functions: 82,
+                    statements: 72,
+                    lines: 71
                 },
                 // Render-domain pure logic (paths, curves, effects, bounds).
                 'src/render/*.ts': {

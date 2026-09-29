@@ -3,6 +3,7 @@ import { CSSValue } from '../syntax/parser';
 import { isLengthPercentage, LengthPercentage } from '../types/length-percentage';
 import { FLAG_INTEGER, TokenType } from '../syntax/tokenizer';
 import { Context } from '../../core/context';
+import { at } from '../../core/util';
 export type TransformOrigin = [LengthPercentage, LengthPercentage];
 
 const DEFAULT_VALUE: LengthPercentage = {
@@ -24,6 +25,6 @@ export const transformOrigin: IPropertyListDescriptor<TransformOrigin> = {
             return DEFAULT;
         }
 
-        return [origins[0], origins[1]];
+        return [at(origins, 0), at(origins, 1)];
     }
 };

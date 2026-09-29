@@ -85,7 +85,7 @@ describe('optional filter surface lifecycle', () => {
             return context;
         });
         await expect(renderFilterSurface(source, { blur: 4 }, 1, 1)).rejects.toBeInstanceOf(FilterSurfaceError);
-        expect(canvases[0].width).toBe(0);
-        expect(canvases[0].height).toBe(0);
+        expect(canvases[0]?.width).toBe(0);
+        expect(canvases[0]?.height).toBe(0);
     });
 });

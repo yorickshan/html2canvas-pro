@@ -1,4 +1,5 @@
 import { IPropertyValueDescriptor, PropertyDescriptorParsingType } from '../property-descriptor';
+import { at } from '../../core/util';
 import { CSSValue, isIdentToken, isIdentWithValue, nonWhiteSpace, parseFunctionArgs } from '../syntax/parser';
 import { StringValueToken, TokenType } from '../syntax/tokenizer';
 import {
@@ -217,10 +218,10 @@ const parsePolygon = (values: CSSValue[]): PolygonClipPath => {
     const args = parseFunctionArgs(values);
     const points: [LengthPercentage, LengthPercentage][] = [];
     for (const arg of args) {
-        if (arg.length === 1 && isIdentToken(arg[0])) continue; // skip fill-rule
+        if (arg.length === 1 && arg[0] && isIdentToken(arg[0])) continue; // skip fill-rule
         const lengths = arg.filter(isLengthPercentage);
         if (lengths.length >= 2) {
-            points.push([lengths[0], lengths[1]]);
+            points.push([at(lengths, 0), at(lengths, 1)]);
         }
     }
     return { type: CLIP_PATH_TYPE.POLYGON, points };

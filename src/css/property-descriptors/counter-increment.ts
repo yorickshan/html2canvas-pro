@@ -18,7 +18,7 @@ export const parseCounterValue = (tokens: CSSValue[], defaultNumber: number): [s
     for (let i = 0; i < filtered.length; i++) {
         const counter = filtered[i];
         const next = filtered[i + 1];
-        if (counter.type === TokenType.IDENT_TOKEN) {
+        if (counter && counter.type === TokenType.IDENT_TOKEN) {
             const num = next && isNumberToken(next) ? next.number : defaultNumber;
             entries.push([counter.value, num]);
         }
@@ -38,7 +38,7 @@ export const counterIncrement: IPropertyListDescriptor<CounterIncrement> = {
         }
 
         const first = tokens[0];
-        if (first.type === TokenType.IDENT_TOKEN && first.value === 'none') {
+        if (first && first.type === TokenType.IDENT_TOKEN && first.value === 'none') {
             return null;
         }
 

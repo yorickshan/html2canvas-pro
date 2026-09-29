@@ -140,6 +140,6 @@ describe('tokenizer on whitespace-only input', () => {
         tokenizer.write('   ');
         const tokens = tokenizer.read();
         expect(tokens).toHaveLength(1);
-        expect(tokens[0].type).toBe(TokenType.WHITESPACE_TOKEN);
+        expect(tokens[0]?.type).toBe(TokenType.WHITESPACE_TOKEN);
     });
 });

@@ -1,4 +1,5 @@
 import { CSSValue, isIdentToken, isNumberToken, nonFunctionArgSeparator, parseFunctionArgs } from '../../syntax/parser';
+import { at } from '../../../core/util';
 import {
     CSSImageType,
     CSSLinearGradientImage,
@@ -26,6 +27,9 @@ export const webkitGradient = (
     const position: LengthPercentage[] = [];
     parseFunctionArgs(tokens).forEach((arg, i) => {
         const firstToken = arg[0];
+        if (!firstToken) {
+            return;
+        }
         if (i === 0) {
             if (isIdentToken(firstToken) && firstToken.value === 'linear') {
                 type = CSSImageType.LINEAR_GRADIENT;
@@ -38,16 +42,16 @@ export const webkitGradient = (
 
         if (firstToken.type === TokenType.FUNCTION) {
             if (firstToken.name === 'from') {
-                const color = colorType.parse(context, firstToken.values[0]);
+                const color = colorType.parse(context, at(firstToken.values, 0));
                 stops.push({ stop: ZERO_LENGTH, color });
             } else if (firstToken.name === 'to') {
-                const color = colorType.parse(context, firstToken.values[0]);
+                const color = colorType.parse(context, at(firstToken.values, 0));
                 stops.push({ stop: HUNDRED_PERCENT, color });
             } else if (firstToken.name === 'color-stop') {
                 const values = firstToken.values.filter(nonFunctionArgSeparator);
                 if (values.length === 2) {
-                    const color = colorType.parse(context, values[1]);
-                    const stop = values[0];
+                    const color = colorType.parse(context, at(values, 1));
+                    const stop = at(values, 0);
                     if (isNumberToken(stop)) {
                         stops.push({
                             stop: { type: TokenType.PERCENTAGE_TOKEN, number: stop.number * 100, flags: stop.flags },

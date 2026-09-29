@@ -59,10 +59,12 @@ export type Options = CloneOptions &
         onError?: (error: Error) => void;
         /**
          * Called at key milestones during the render pipeline.
-         * `phase` is one of: 'clone' | 'parse' | 'layout' | 'render'.
+         * `phase` is one of: 'clone' | 'parse' | 'preload' | 'layout' | 'render'.
          * `progress` is a coarse 0–100 estimate. Milestones:
          *   clone 10 (cloning starts), clone 30 (cloned document ready),
-         *   parse 50 (style/DOM parse done), layout 60 (bounds + images ready),
+         *   parse 50 (style/DOM parse done),
+         *   preload 50–60 (image fetching; one event per settled batch),
+         *   layout 60 (bounds + images ready),
          *   render 90 (canvas painted), render 100 (cleanup done).
          * Callback exceptions are caught and logged, never fatal.
          */

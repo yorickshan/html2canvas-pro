@@ -1,4 +1,5 @@
 import { PropertyDescriptorParsingType, IPropertyListDescriptor } from '../property-descriptor';
+import { at } from '../../core/util';
 import { CSSValue, CSSFunction } from '../syntax/parser';
 import { TokenType } from '../syntax/tokenizer';
 import { Context } from '../../core/context';
@@ -11,8 +12,11 @@ export const filter: IPropertyListDescriptor<FilterValue> = {
     prefix: false,
     type: PropertyDescriptorParsingType.LIST,
     parse: (_context: Context, tokens: CSSValue[]): FilterValue => {
-        if (tokens.length === 1 && tokens[0].type === TokenType.IDENT_TOKEN && tokens[0].value === 'none') {
-            return null;
+        if (tokens.length === 1) {
+            const first = at(tokens, 0);
+            if (first.type === TokenType.IDENT_TOKEN && first.value === 'none') {
+                return null;
+            }
         }
 
         const parts: string[] = [];

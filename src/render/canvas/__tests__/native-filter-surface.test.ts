@@ -91,9 +91,9 @@ describe('native filter surface', () => {
             filter: 'blur(8px) drop-shadow(-24px 16px 12px rgba(0,0,0,0.5))',
             alpha: 1
         });
-        expect(draws[1].filter).toBe('none');
-        expect(draws[1].alpha).toBe(0.25);
-        expect((draws[1].image as HTMLCanvasElement).width).toBe(0);
+        expect(draws[1]?.filter).toBe('none');
+        expect(draws[1]?.alpha).toBe(0.25);
+        expect((draws[1]?.image as HTMLCanvasElement).width).toBe(0);
         expect(result.width).toBe(100);
         expect(source.width).toBe(100);
         expect(source.toDataURL).not.toHaveBeenCalled();

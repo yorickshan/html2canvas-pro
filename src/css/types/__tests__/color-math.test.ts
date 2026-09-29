@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { Matrix3x3, RGB3 } from '../color-math';
 import { clamp, multiplyMatrices } from '../color-math';
 import { isTransparent, asString, pack } from '../color-utilities';
 
@@ -21,23 +22,24 @@ describe('clamp', () => {
 });
 
 describe('multiplyMatrices', () => {
-    it('multiplies two 3x3 matrices stored as 9-element arrays', () => {
-        const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-        const result = multiplyMatrices(identity, identity);
-        expect(result).toEqual([1, 0, 0]);
+    it('multiplies a 3x3 matrix by an RGB vector', () => {
+        const identity: Matrix3x3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+        const vector: RGB3 = [1, 1, 1];
+        const result = multiplyMatrices(identity, vector);
+        expect(result).toEqual([1, 1, 1]);
     });
 
     it('multiplies non-identity matrices', () => {
-        const a = [2, 0, 0, 0, 2, 0, 0, 0, 2];
-        const b = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        const a: Matrix3x3 = [2, 0, 0, 0, 2, 0, 0, 0, 2];
+        const b: RGB3 = [1, 2, 3];
         const result = multiplyMatrices(a, b);
         expect(result).toBeDefined();
         expect(result.length).toBe(3);
     });
 
     it('returns a tuple of three numbers', () => {
-        const a = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-        const b = [5, 5, 5, 5, 5, 5, 5, 5, 5];
+        const a: Matrix3x3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+        const b: RGB3 = [5, 5, 5];
         const result = multiplyMatrices(a, b);
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBe(3);

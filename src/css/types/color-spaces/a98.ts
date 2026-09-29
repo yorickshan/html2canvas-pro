@@ -3,6 +3,7 @@
  */
 
 import { multiplyMatrices, packSrgbLinear } from '../color-utilities';
+import { RGBA4 } from '../color-math';
 import { xyz2rgbLinear } from './srgb';
 
 /**
@@ -47,7 +48,7 @@ export const a982a98Linear = (rgb: [number, number, number]): [number, number, n
         return sign * abs ** (563 / 256);
     });
 
-    return [mapped[0], mapped[1], mapped[2]];
+    return [mapped[0] ?? 0, mapped[1] ?? 0, mapped[2] ?? 0];
 };
 
 /**
@@ -62,7 +63,7 @@ export const a98Linear2a98 = (rgb: [number, number, number]): [number, number, n
         return sign * abs ** (256 / 563);
     });
 
-    return [mapped[0], mapped[1], mapped[2]];
+    return [mapped[0] ?? 0, mapped[1] ?? 0, mapped[2] ?? 0];
 };
 
 /**
@@ -80,7 +81,7 @@ export const a98FromXYZ = (args: [number, number, number, number]): [number, num
  *
  * @param args
  */
-export const convertA98rgb = (args: number[]): number => {
+export const convertA98rgb = (args: RGBA4): number => {
     const srgb_linear = xyz2rgbLinear(a98Linear2xyz(a982a98Linear([args[0], args[1], args[2]])));
     return packSrgbLinear([srgb_linear[0], srgb_linear[1], srgb_linear[2], args[3]]);
 };
