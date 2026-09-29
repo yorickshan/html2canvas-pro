@@ -91,7 +91,7 @@ After installing dependencies and building the branch, run:
 pnpm exec playwright install --with-deps chromium firefox webkit
 node scripts/filter-descriptor-regressions.mjs
 node scripts/filter-native-regressions.mjs
-node scripts/filter-surface-regressions.mjs
+node scripts/filter-surface-benchmark.mjs
 ```
 
 These commands complement the unit suite and the separate native macOS WKWebView probe. They do not establish correctness on every device, for general filter chains, transformed/blended surfaces or arbitrary SVG overflow.

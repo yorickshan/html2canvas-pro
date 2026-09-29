@@ -4,7 +4,7 @@ import { isTransparent } from '../../css/types/color-utilities';
 import { Context } from '../../core/context';
 
 // Parser function type to break circular dependency
-type ParseTreeFunction = (context: Context, node: Node) => ElementContainer;
+type ParseTreeFunction = (context: Context, node: HTMLElement) => ElementContainer;
 
 export class IFrameElementContainer extends ElementContainer {
     src: string;

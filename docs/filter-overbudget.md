@@ -2,9 +2,13 @@
 
 The earlier 2600 × 2600 release/draft timing gap is not a clean measurement of memory-budget overhead. The published 2.4.3 descriptor turns `blur(4px)` into `blur(4pxpx)` and drops functional shadow-color arguments. The corrected descriptor changes the rendering work even when the surface path falls back.
 
+> **Historical report.** The five-variant harness and the pinned 2.4.3 baseline it compared
+> against were removed on 2026-09-28. The comparison, tables and conclusions below are retained
+> as a historical record.
+
 ## Controlled comparison
 
-`node scripts/filter-overbudget.mjs` compares five variants on identical DOM, within one browser run:
+`node scripts/filter-overbudget.mjs` (removed 2026-09-28) compared five variants on identical DOM, within one browser run:
 
 | Variant | Descriptor | Rendering path | Purpose |
 | --- | --- | --- | --- |
@@ -89,24 +93,12 @@ The renderer cannot legitimately recover the old time by dropping blur again. In
 
 This is an attribution for these fixtures, not proof that arbitrary large trees have zero eligibility overhead. Budget rejection still falls back to legacy composition: filtered overlapping draws can have incorrect group opacity, and repeated full-size filtering can remain expensive. Center alpha is reported, not asserted to equal 128 on this fallback. Tiled filtering or other bounded-memory compositing would be a separate rendering feature requiring seam, shadow-outset, opacity and memory tests. No peak process-memory or system Safari/WKWebView performance claim is made.
 
-## Reproduce
+## Reproduce (removed)
 
-```sh
-pnpm install --frozen-lockfile
-pnpm build
-pnpm exec playwright install --with-deps chromium firefox webkit
-node scripts/filter-overbudget.mjs
-```
-
-Optional focused run:
-
-```sh
-BENCH_ENGINES=chromium OVERBUDGET_CASES=combined \
-  OVERBUDGET_ITERATIONS=7 OVERBUDGET_WARMUPS=2 \
-  node scripts/filter-overbudget.mjs
-```
-
-Raw observations and a summary are written to `tmp/filter-surface-regressions/performance/overbudget.json` and `overbudget.md`. The existing Filter performance workflow runs this diagnostic before the broader benchmark and retains the files in its `filter-performance` artifact. No new macOS job or publication dependency is added.
+The harness (`scripts/filter-overbudget.mjs`, `tests/manual/filter-overbudget.js` and the pinned
+`html2canvas-pro-baseline` dependency) was removed on 2026-09-28. Each run wrote
+`tmp/filter-surface-regressions/performance/overbudget.json` and `overbudget.md`; the
+`Filter performance` workflow no longer runs this diagnostic.
 
 The earlier, unisolated measurements remain historical context in [the native fast-path report](./filter-native-fastpath.md). The distinction between backend fallback and legacy fallback is described in [filter support](./filter-support.md).
 

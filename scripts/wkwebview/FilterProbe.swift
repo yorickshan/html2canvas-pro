@@ -66,12 +66,10 @@ final class Probe: NSObject, WKNavigationDelegate {
     }
     func capture(id: String, scale: Double, native: Data) {
         view.callAsyncJavaScript("""
-            const {default: baseline} = await import('/build/html2canvas-pro-baseline.esm.js');
             const element = document.getElementById(id);
             const canvas = await html2canvas(element, {scale, backgroundColor:null, logging:false});
-            const before = await baseline(element, {scale, backgroundColor:null, logging:false});
             const context = document.createElement('canvas').getContext('2d');
-            return {png:canvas.toDataURL(), before:before.toDataURL(), width:canvas.width, height:canvas.height,
+            return {png:canvas.toDataURL(), width:canvas.width, height:canvas.height,
                 userAgent:navigator.userAgent, canvasFilterAvailable:'filter' in context,
                 leftoverIframes:document.querySelectorAll('.html2canvas-container').length};
             """, arguments: ["id": id, "scale": scale], in: nil, in: .page) { result in
@@ -80,14 +78,12 @@ final class Probe: NSObject, WKNavigationDelegate {
             case .success(let value):
                 guard var row = value as? [String: Any], let encoded = row.removeValue(forKey: "png") as? String,
                     let png = Data(base64Encoded: String(encoded.split(separator: ",", maxSplits: 1)[1])) else { self.fail(NSError(domain: "Invalid canvas result", code: 1)) }
-                guard let beforeUrl = row.removeValue(forKey: "before") as? String, let before = Data(base64Encoded: String(beforeUrl.split(separator: ",", maxSplits: 1)[1])) else { self.fail(NSError(domain: "Invalid baseline result", code: 1)) }
                 row["id"] = id; row["scale"] = scale
                 row["host"] = "macOS WKWebView"; row["os"] = ProcessInfo.processInfo.operatingSystemVersionString
                 let prefix = "\(Int(scale))-\(id)"
                 do {
                     try native.write(to: self.output.appendingPathComponent(prefix + "-native.png"))
                     try png.write(to: self.output.appendingPathComponent(prefix + "-capture.png"))
-                    try before.write(to: self.output.appendingPathComponent(prefix + "-before.png"))
                 } catch { self.fail(error) }
                 self.results.append(row)
                 self.index += 1

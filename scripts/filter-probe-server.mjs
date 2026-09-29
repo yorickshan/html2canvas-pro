@@ -28,11 +28,7 @@ export async function startFilterServer() {
                 '/tests/test.js',
                 '/dist/html2canvas-pro.js',
                 '/build/filter-surface-benchmark.js',
-                '/build/html2canvas-pro-baseline.esm.js',
-                '/tests/manual/filter-compositing.js',
-                '/tests/manual/filter-lab.html',
-                '/tests/manual/filter-lab.css',
-                '/tests/manual/filter-lab.js'
+                '/tests/manual/filter-compositing.js'
             ]);
             if (!allowed.has(url.pathname)) {
                 res.writeHead(404).end();

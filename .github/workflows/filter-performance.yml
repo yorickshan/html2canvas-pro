@@ -3,13 +3,9 @@ on:
   pull_request:
     paths:
       - 'src/**'
-      - 'tests/manual/filter-performance*'
-      - 'tests/manual/filter-overbudget.js'
-      - 'scripts/filter-overbudget.mjs'
-      - 'scripts/filter-performance.mjs'
       - 'scripts/filter-native-regressions.mjs'
       - 'scripts/filter-probe-server.mjs'
-      - 'scripts/copy-filter-baseline.mjs'
+      - 'scripts/bundle-filter-surface.mjs'
       - '.github/workflows/filter-performance.yml'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -21,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   benchmark:
-    name: Native/SVG validity and informational timings
+    name: Native/SVG validity
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -35,10 +31,6 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: node scripts/filter-native-regressions.mjs
-      - run: node scripts/filter-overbudget.mjs
-      - run: node scripts/filter-performance.mjs
-        env:
-          BENCH_ENGINES: chromium,firefox,webkit
       - uses: actions/upload-artifact@v6
         if: always()
         with:

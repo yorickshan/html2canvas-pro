@@ -103,14 +103,14 @@ export const calculateGradientDirection = (
 const distance = (a: number, b: number): number => Math.sqrt(a * a + b * b);
 
 const findCorner = (width: number, height: number, x: number, y: number, closest: boolean): [number, number] => {
-    const corners = [
+    const corners: [number, number][] = [
         [0, 0],
         [0, height],
         [width, 0],
         [width, height]
     ];
 
-    return corners.reduce(
+    return corners.reduce<{ optimumCorner: [number, number] | null; optimumDistance: number }>(
         (stat, corner) => {
             const [cx, cy] = corner;
             const d = distance(x - cx, y - cy);

@@ -16,13 +16,10 @@
         "skipLibCheck": true,
         "declarationDir": "dist/types",
         "resolveJsonModule": true,
-        "moduleResolution": "node",
+        "rootDir": "src",
+        "moduleResolution": "bundler",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true
     },
-    "include": ["src"],
-    "ts-node": {
-        "esm": true,
-        "experimentalSpecifierResolution": "node"
-    }
+    "include": ["src"]
 }

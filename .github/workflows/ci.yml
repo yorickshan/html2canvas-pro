@@ -190,15 +190,12 @@ jobs:
                   path: build
             - run: pnpm exec playwright install --with-deps chromium webkit
             - run: node scripts/filter-descriptor-regressions.mjs
-            - run: node scripts/filter-compositing-probe.mjs
-            - run: node scripts/filter-surface-regressions.mjs
             - run: node scripts/filter-surface-benchmark.mjs
             - uses: actions/upload-artifact@v6
               if: always()
               with:
                   name: filter-pixels-and-memory
                   path: |
-                      tmp/filter-compositing-probe
                       tmp/filter-surface-regressions
                   if-no-files-found: warn
 

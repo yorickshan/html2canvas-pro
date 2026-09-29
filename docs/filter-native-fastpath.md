@@ -92,10 +92,11 @@ pnpm install --frozen-lockfile
 pnpm build
 pnpm exec playwright install --with-deps chromium firefox webkit
 node scripts/filter-native-regressions.mjs
-BENCH_ENGINES=chromium,firefox,webkit node scripts/filter-performance.mjs
 ```
 
-The manual page is `/tests/manual/filter-performance.html`; it uses the same harness, supports cancellation and JSON import/export, and labels historical reports separately. The older measurements remain in [filter-performance.md](./filter-performance.md).
+The `filter-performance.mjs` before/after harness, its manual page and the pinned
+`html2canvas-pro-baseline` dependency were removed on 2026-09-28. Measurements recorded
+before then remain in [filter-performance.md](./filter-performance.md).
 
 Raw `results.json`, `summary.md` and `native-regressions.json` are in the `filter-performance` artifact of run 35088872866 (artifact `10444095148`, ZIP SHA-256 `2082921c3064415bc616833541df30dd5eeebd9fc4fbc47af48dfcef57345ad9`). The production report includes `implementation: production-native-with-svg-fallback` and the source/bundle hashes below.
 
@@ -107,5 +108,8 @@ Raw `results.json`, `summary.md` and `native-regressions.json` are in the `filte
   "build/html2canvas-pro-baseline.esm.js": "d335004b5269e8ae10c139a105df141a66646960c7b1b5f5def18a8eec80c1d8"
 }
 ```
+
+The `tests/manual/filter-performance.js` and `build/html2canvas-pro-baseline.esm.js` entries
+are provenance for that run; both files were removed on 2026-09-28.
 
 Updating repository demo sources does not redeploy the existing hosted chatgpt.site URL. Upstream PR-description updates remain unavailable through this integration; this report is committed to the head branch.

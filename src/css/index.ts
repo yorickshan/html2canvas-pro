@@ -485,7 +485,9 @@ const parse = (context: Context, descriptor: CSSPropertyDescriptor<any>, style?:
     if (!skipCache) {
         if (valueCache.size >= PARSE_CACHE_MAX_PER_DESCRIPTOR) {
             const oldestKey = valueCache.keys().next().value;
-            valueCache.delete(oldestKey);
+            if (oldestKey !== undefined) {
+                valueCache.delete(oldestKey);
+            }
         }
         valueCache.set(rawValue, result);
     }

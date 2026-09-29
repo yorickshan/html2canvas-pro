@@ -49,7 +49,8 @@ export const packSrgb = (args: number[]): number => {
     );
 };
 
-export const packSrgbLinear = ([r, g, b, a]: [number, number, number, number]): number => {
+export const packSrgbLinear = (args: number[]): number => {
+    const [r, g, b, a] = args;
     const rgb = srgbLinear2rgb([r, g, b]);
     return pack(
         clamp(Math.round(rgb[0] * 255), 0, 255),

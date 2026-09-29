@@ -2,6 +2,11 @@
 
 These are reproducible observations, not a universal performance approval.
 
+> **Historical report.** The pinned-2.4.3 before/after harness (`scripts/filter-performance.mjs`,
+> the `filter-lab.html` / `filter-performance.html` manual pages and the `html2canvas-pro-baseline`
+> dependency) was removed on 2026-09-28. The measurements and provenance below are retained as
+> history; only the surface microbenchmark and the native/SVG regressions still run.
+
 **Current implementation:** production native filtering with a verified SVG fallback landed in `1720a27`. See [the native fast-path report](./filter-native-fastpath.md) for current measurements, verification and remaining limits. The tables below preserve the historical pre-fast-path run at `ec0183e`, when the Canvas alternative was benchmark-only. The current harness measures the actual production dispatcher and explicit SVG helper instead; its JSON reports include an `implementation` label.
 
 ## Reproduce
@@ -11,15 +16,17 @@ pnpm install --frozen-lockfile
 pnpm build
 pnpm exec playwright install --with-deps chromium firefox webkit
 node scripts/filter-native-regressions.mjs
-BENCH_ENGINES=chromium,firefox,webkit node scripts/filter-performance.mjs
+node scripts/filter-surface-benchmark.mjs
 ```
 
-Optional: `BENCH_ENGINES=chromium BENCH_ITERATIONS=21 BENCH_WARMUPS=3 node scripts/filter-performance.mjs`.
-Without `BENCH_ENGINES`, the CLI defaults to Chromium and WebKit; the workflow explicitly covers all three engines. These are not system Safari, real WKWebView, iOS or Android performance measurements.
+These are not system Safari, real WKWebView, iOS or Android performance measurements.
 
-For the browser UI, run the normal test server and open `/tests/manual/filter-performance.html`, linked from the filter lab's Performance section. No benchmark starts automatically. Keep the tab visible and avoid other CPU-intensive work. The page supports cancellation and JSON export/import.
-
-CLI output is `tmp/filter-surface-regressions/performance/results.json` and `summary.md`. The Ubuntu-only `Filter performance` workflow retains both in its `filter-performance` artifact, together with `native-regressions.json`. It is not a dependency of NPM publication. Timings are informational; invalid execution, rendering paths or pixel sanity checks fail the job, not a speed threshold.
+CLI output is `tmp/filter-surface-regressions/performance/native-regressions.json` and
+`tmp/filter-surface-regressions/benchmark.json`. The Ubuntu-only `Filter performance`
+workflow retains the former in its `filter-performance` artifact; the latter runs in the
+`filter-pixels` job of `ci.yml`. Neither is a dependency of NPM publication. Timings are
+informational; invalid execution, rendering paths or pixel sanity checks fail the job, not a
+speed threshold.
 
 ## Protocol
 
@@ -27,7 +34,7 @@ The build bundles the actual `src/render/canvas/filter-surface.ts` into the igno
 
 **Surface microbenchmark:** 512, 1000 and 2000 raster pixels per side, scale 1. Compare flat fill and deterministic high-entropy RGB noise, with blur(4px), or blur plus one shadow (12px, 8px, 8px, alpha 0.6), then layer opacity 0.5. Source creation is excluded. The opacity-only copy is a cost floor, not an equivalent visual result. Native filtering happens at alpha 1 before a second opacity pass, preserving operation order. Before `1720a27` the native implementation was test-only; the current harness invokes the production dispatcher.
 
-**Full capture:** identical DOM, dimensions and scale for the pinned unmodified 2.4.3 and the draft. Cases cover no-effects controls, combined effects, 50 sparse layers, 12 nested filters and a 2600-pixel over-budget capture. Cloning and rendering are timed. The 2000-pixel filtered DOM fixture has inset content so its padded intermediate surface fits the existing budget; output is exactly 2000 by 2000.
+**Full capture (historical, harness removed):** identical DOM, dimensions and scale for the pinned unmodified 2.4.3 and the draft. Cases cover no-effects controls, combined effects, 50 sparse layers, 12 nested filters and a 2600-pixel over-budget capture. Cloning and rendering are timed. The 2000-pixel filtered DOM fixture has inset content so its padded intermediate surface fits the existing budget; output is exactly 2000 by 2000.
 
 **Sampling:** first observation recorded separately, two excluded warmups, nine measured samples by default. Backend/version order rotates each round. The microbenchmark changes one source pixel between rounds to avoid identical SVG image-cache hits. Full captures represent repeated capture of a stable DOM. The first observation is not a claim of process-cold startup timing.
 

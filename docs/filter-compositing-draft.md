@@ -25,17 +25,13 @@ The base is `60cb8bdd925fd7c56cd423d6e2127da177a97279` (version 2.4.3).
 The fixture uses local HTML and inline SVG only. It requires no application,
 account, external image, web font, or proprietary asset.
 
-## Interactive HTML demo
+## Interactive HTML demo (removed)
 
-Open `/tests/manual/filter-lab.html` on the same local server. The page provides:
+The `/tests/manual/filter-lab.html` before/after demo was removed on 2026-09-28 together with
+the pinned `html2canvas-pro-baseline` dependency it compared against. Its findings are retained
+below as a historical record.
 
-- Four sources: a CTA with text, overlapping HTML children, inline SVG and a local raster image.
-- Sliders for blur, layer opacity, shadow blur and positive/negative shadow offsets.
-- Eight presets covering every on/off combination of blur, shadow and 50% opacity.
-- Live DOM, published 2.4.3 (before) and draft PR #239 (after), plus transparent PNG downloads.
-- A full preset matrix at 1x or 2x, runtime capability detection and a JSON report download.
-
-The page tests actual Canvas blur behavior instead of inferring it from a user
+The demo tested actual Canvas blur behavior instead of inferring it from a user
 agent string. Safari and WebKit-based webviews are a compatibility focus, but the
 compositing bugs are not exclusive to webviews: Chromium reproduces them too.
 A genuine macOS WKWebView host has also been tested, as documented below;
@@ -44,14 +40,13 @@ The [Canvas filter documentation](https://developer.mozilla.org/en-US/docs/Web/A
 and [WebKit implementation tracker](https://bugs.webkit.org/show_bug.cgi?id=198416)
 provide context; runtime support still needs to be checked on the target device.
 
-The before column imports the unmodified published `html2canvas-pro@2.4.3` ESM
+The before column imported the unmodified published `html2canvas-pro@2.4.3` ESM
 bundle through an exact dev-dependency alias, with its integrity pinned in the
-lockfile. `pnpm build` copies it to ignored `build/` for the demo; it is not included
-in the library's published `dist/` package. The after column uses this branch's
-normal renderer. Both receive the same DOM, dimensions, scale and stylesheet
-readiness hook. No effects are removed from either capture. Examples without
-effects provide a control and should match. The separate SVG prototype remains
-available in the minimal reproduction and pixel probe.
+lockfile; `pnpm build` copied it to ignored `build/`, never into the published
+`dist/` package. The after column used this branch's normal renderer. Both received
+the same DOM, dimensions, scale and stylesheet readiness hook. No effects were
+removed from either capture. Examples without effects provided a control and should
+match. The separate SVG prototype remains available in the minimal reproduction.
 
 The default overlapping-children example shows the combined defect immediately.
 The matrix keeps all eight presets for each source, so reviewers can inspect
@@ -85,7 +80,8 @@ and Playwright WebKit 26.4: 4 sources × 8 presets × 2 scales × 2 engines.
 All 128 after captures passed native DOM screenshot comparisons (mean RGB error
 below 0.39/255 in Chromium and 1.19/255 in WebKit); no-effects baseline controls also passed. The combined overlap
 center changed from alpha 239 to 128 at 1x in both engines, as expected for 50%
-opacity. The regression probe explicitly checks this baseline defect and its fix.
+opacity. The regression probe that asserted this baseline defect and its fix was
+removed on 2026-09-28; the screenshots below remain the evidence.
 
 These are real macOS Safari 26.5.2 screenshots of the local demo, captured through the
 native browser UI at 1x capture scale. In this runtime Canvas 2D blur is unavailable.
@@ -99,16 +95,13 @@ Safari visually reproduced the missing blur and darkened overlap before the fix.
 The after column retained blur and the expected 0.50 center alpha. These desktop
 Safari checks do not establish correctness in an embedded WKWebView host.
 
-## Pixel probe
+## Pixel probe (removed)
 
-Run `node scripts/filter-compositing-probe.mjs` for an automated Chromium
-comparison at 1x and 2x. Set `CHROME_BIN` if using an installed Chrome instead of
-Puppeteer's downloaded browser. Screenshots and metrics go to the ignored
-`tmp/filter-compositing-probe/` directory. The probe checks the renderer against
-native DOM screenshots, plus nested opacity, source/ancestor clipping and the
-still-unfixed SVG overflow case.
-It also delays uncached demo stylesheets, checks automatic capture and all eight
-combinations at 1x/2x, and verifies failed stylesheet loading followed by retry.
+`scripts/filter-compositing-probe.mjs` compared the renderer against native DOM
+screenshots in Chromium at 1x and 2x, covering nested opacity, source/ancestor
+clipping, the still-unfixed SVG overflow case, delayed demo stylesheets and failed
+stylesheet loading followed by retry. It was removed on 2026-09-28; the Chromium and
+WebKit reftests above remain the automated pixel coverage.
 
 ## Cases
 
@@ -229,13 +222,13 @@ the rounded border-box cutout without reversing Bezier curves. Tests cover trans
 rounded boxes, multiple box shadows, signed offsets and negative spread at 1x/2x.
 Inset shadows retain the previous path, with capture-scaled metrics in a source surface.
 
-`node scripts/filter-surface-regressions.mjs` checks Chromium/WebKit pixels at
-1x/2x, z-order, nested signed outsets, overflowing text and box shadows, offset
-crops, transformed/rotated/zoomed/blended/clipped ancestors and descendants,
-unsupported filter chains, real taint, CSP, decoder failure, abort and cleanup.
-Unsupported subtrees are compared with the published release. Explicit SVG/CSP
-fallback checks use the current legacy path, preserving the separate parser fixes;
-working native behavior under blocked data-image CSP is checked separately.
+`node scripts/filter-surface-regressions.mjs` compared Chromium/WebKit pixels at
+1x/2x across z-order, nested signed outsets, overflowing text and box shadows,
+offset crops, transformed/rotated/zoomed/blended/clipped ancestors and descendants,
+unsupported filter chains, real taint, CSP, decoder failure, abort and cleanup,
+including unsupported subtrees against the published release. It was removed on
+2026-09-28 with the pinned baseline; `filter-descriptor-regressions.mjs` and the
+reftests above remain.
 
 `node scripts/filter-surface-benchmark.mjs` records allocations and timings.
 Historical Chromium/WebKit measurements on macOS 26.5.2:
