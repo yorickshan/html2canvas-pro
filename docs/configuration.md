@@ -132,7 +132,24 @@ html2canvas(element, {
 controller.abort();
 ```
 
-> **Note:** the `Options` type also declares `onProgress`, but no progress events are emitted yet. Rely on `onError` and `signal` for now.
+### Progress Callback
+
+Subscribe to pipeline milestones with `onProgress`:
+
+```javascript
+import html2canvas from 'html2canvas-pro';
+
+html2canvas(element, {
+    onProgress: (phase, progress) => {
+        console.log(`${phase}: ${progress}%`);
+        // clone 10 → clone 30 → parse 50 → layout 60 → render 90 → render 100
+    }
+});
+```
+
+`phase` is one of `'clone'`, `'parse'`, `'layout'` or `'render'`; `progress` is a
+coarse 0–100 estimate. Callback exceptions are caught and logged — a broken
+handler never fails the capture.
 
 ### CSP Nonce
 

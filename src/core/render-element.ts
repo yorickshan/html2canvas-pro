@@ -22,6 +22,34 @@ import {
 } from './config-assembler';
 import { parseBackgroundColor } from './background-parser';
 
+/**
+ * Progress milestones emitted via `Options.onProgress`.
+ * Phase names are stable API; percentages are coarse estimates.
+ */
+export const enum ProgressPhase {
+    CLONE = 'clone',
+    PARSE = 'parse',
+    LAYOUT = 'layout',
+    RENDER = 'render'
+}
+
+const emitProgress = (
+    onProgress: ((phase: string, progress: number) => void) | undefined,
+    context: Context,
+    phase: string,
+    progress: number
+): void => {
+    if (!onProgress) {
+        return;
+    }
+    try {
+        onProgress(phase, progress);
+    } catch (error) {
+        // A broken consumer callback must never break the render itself.
+        context.logger.error(`onProgress callback failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+};
+
 export const renderElement = async (
     element: HTMLElement,
     opts: Partial<Options>,
@@ -93,6 +121,8 @@ export const renderElement = async (
         } scrolled to ${-windowBounds.left},${-windowBounds.top}`
     );
 
+    emitProgress(opts.onProgress, context, ProgressPhase.CLONE, 10);
+
     perfMonitor.start('clone');
     const documentCloner = new DocumentCloner(context, element, cloneOptions);
     const clonedElement = documentCloner.clonedReferenceElement;
@@ -102,6 +132,8 @@ export const renderElement = async (
 
     const container = await documentCloner.toIFrame(ownerDocument, windowBounds);
     perfMonitor.end('clone');
+
+    emitProgress(opts.onProgress, context, ProgressPhase.CLONE, 30);
 
     if (signal?.aborted) {
         if (opts.removeContainer ?? true) {
@@ -153,10 +185,16 @@ export const renderElement = async (
             root = parseTree(context, clonedElement);
             perfMonitor.end('parse');
 
+            emitProgress(opts.onProgress, context, ProgressPhase.PARSE, 50);
+
             // Batch-preload all collected images in parallel before rendering.
             perfMonitor.start('preload');
             await context.cache.preloadAll();
             perfMonitor.end('preload');
+
+            // Element bounds and text layout were measured during parse; with
+            // image resources resolved the layout information is final.
+            emitProgress(opts.onProgress, context, ProgressPhase.LAYOUT, 60);
 
             if (backgroundColor === root.styles.backgroundColor) {
                 root.styles.backgroundColor = COLORS.TRANSPARENT;
@@ -172,6 +210,8 @@ export const renderElement = async (
             canvas = await renderer.render(root);
             perfMonitor.end('render');
         }
+
+        emitProgress(opts.onProgress, context, ProgressPhase.RENDER, 90);
     } finally {
         perfMonitor.start('cleanup');
         try {
@@ -184,5 +224,6 @@ export const renderElement = async (
     perfMonitor.end('total');
     context.logger.debug(`Finished rendering`);
     if (performanceMonitoring) perfMonitor.logSummary();
+    emitProgress(opts.onProgress, context, ProgressPhase.RENDER, 100);
     return canvas;
 };

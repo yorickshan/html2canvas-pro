@@ -15,15 +15,17 @@ import {
     isVideoElement,
     canHavePseudoElements
 } from './node-type-guards';
-import { isIdentToken, nonFunctionArgSeparator } from '../css/syntax/parser';
-import { TokenType } from '../css/syntax/tokenizer';
-import { CounterState, createCounterText } from '../css/types/functions/counter';
-import { LIST_STYLE_TYPE, listStyleType } from '../css/property-descriptors/list-style-type';
-import { CSSParsedCounterDeclaration, CSSParsedPseudoDeclaration } from '../css/index';
-import { getQuote } from '../css/property-descriptors/quotes';
+import { CounterState } from '../css/types/functions/counter';
+import { CSSParsedCounterDeclaration } from '../css/index';
 import { Context } from '../core/context';
 import { DebuggerType, isDebugging } from '../core/debugger';
 import { IGNORE_ATTRIBUTE, SlotCloner } from './slot-cloner';
+import { copyCSSStyles } from './copy-css-styles';
+import { PseudoContentResolver, PseudoElementType, createPseudoHideStyles } from './pseudo-content';
+
+// Re-exported for backwards compatibility: existing consumers import these
+// from the cloner module.
+export { copyCSSStyles } from './copy-css-styles';
 
 export interface CloneOptions {
     ignoreElements?: (element: Element) => boolean;
@@ -82,8 +84,8 @@ export class DocumentCloner {
     clonedReferenceElement?: HTMLElement;
     private readonly documentElement: HTMLElement;
     private readonly counters: CounterState;
+    private readonly pseudoContents: PseudoContentResolver;
     private readonly slotCloner: SlotCloner;
-    private quoteDepth: number;
 
     constructor(
         private readonly context: Context,
@@ -93,7 +95,7 @@ export class DocumentCloner {
         this.scrolledElements = [];
         this.referenceElement = element;
         this.counters = new CounterState();
-        this.quoteDepth = 0;
+        this.pseudoContents = new PseudoContentResolver(context, this.counters);
         this.slotCloner = new SlotCloner(
             (node, copyStyles) => this.cloneNode(node, copyStyles),
             { ignoreElements: options.ignoreElements, copyStyles: options.copyStyles ?? true },
@@ -454,13 +456,23 @@ export class DocumentCloner {
 
             if (checkPseudoElements) {
                 const styleBefore = window.getComputedStyle(node, ':before');
-                const before = this.resolvePseudoContent(node, clone, styleBefore, PseudoElementType.BEFORE);
+                const before = this.pseudoContents.resolvePseudoContent(
+                    node,
+                    clone,
+                    styleBefore,
+                    PseudoElementType.BEFORE
+                );
                 if (before) {
                     clone.insertBefore(before, clone.firstChild);
                 }
 
                 const styleAfter = window.getComputedStyle(node, ':after');
-                const after = this.resolvePseudoContent(node, clone, styleAfter, PseudoElementType.AFTER);
+                const after = this.pseudoContents.resolvePseudoContent(
+                    node,
+                    clone,
+                    styleAfter,
+                    PseudoElementType.AFTER
+                );
                 if (after) {
                     clone.appendChild(after);
                 }
@@ -500,107 +512,6 @@ export class DocumentCloner {
         return node.cloneNode(false);
     }
 
-    resolvePseudoContent(
-        node: Element,
-        clone: Element,
-        style: CSSStyleDeclaration,
-        pseudoElt: PseudoElementType
-    ): HTMLElement | void {
-        if (!style) {
-            return;
-        }
-
-        const value = style.content;
-        const document = clone.ownerDocument;
-        if (!document || !value || value === 'none' || value === '-moz-alt-content' || style.display === 'none') {
-            return;
-        }
-
-        this.counters.parse(new CSSParsedCounterDeclaration(this.context, style));
-        const declaration = new CSSParsedPseudoDeclaration(this.context, style);
-
-        const anonymousReplacedElement = document.createElement('html2canvaspseudoelement');
-        copyCSSStyles(style, anonymousReplacedElement);
-
-        declaration.content.forEach((token) => {
-            if (token.type === TokenType.STRING_TOKEN) {
-                anonymousReplacedElement.appendChild(document.createTextNode(token.value));
-            } else if (token.type === TokenType.URL_TOKEN) {
-                const img = document.createElement('img');
-                img.src = token.value;
-                img.style.opacity = '1';
-                anonymousReplacedElement.appendChild(img);
-            } else if (token.type === TokenType.FUNCTION) {
-                if (token.name === 'attr') {
-                    const attr = token.values.filter(isIdentToken);
-                    if (attr.length) {
-                        anonymousReplacedElement.appendChild(
-                            document.createTextNode(node.getAttribute(attr[0].value) || '')
-                        );
-                    }
-                } else if (token.name === 'counter') {
-                    const [counter, counterStyle] = token.values.filter(nonFunctionArgSeparator);
-                    if (counter && isIdentToken(counter)) {
-                        const counterState = this.counters.getCounterValue(counter.value);
-                        const counterType =
-                            counterStyle && isIdentToken(counterStyle)
-                                ? listStyleType.parse(this.context, counterStyle.value)
-                                : LIST_STYLE_TYPE.DECIMAL;
-
-                        anonymousReplacedElement.appendChild(
-                            document.createTextNode(createCounterText(counterState, counterType, false))
-                        );
-                    }
-                } else if (token.name === 'counters') {
-                    const [counter, delim, counterStyle] = token.values.filter(nonFunctionArgSeparator);
-                    if (counter && isIdentToken(counter)) {
-                        const counterStates = this.counters.getCounterValues(counter.value);
-                        const counterType =
-                            counterStyle && isIdentToken(counterStyle)
-                                ? listStyleType.parse(this.context, counterStyle.value)
-                                : LIST_STYLE_TYPE.DECIMAL;
-                        const separator = delim && delim.type === TokenType.STRING_TOKEN ? delim.value : '';
-                        const text = counterStates
-                            .map((value) => createCounterText(value, counterType, false))
-                            .join(separator);
-
-                        anonymousReplacedElement.appendChild(document.createTextNode(text));
-                    }
-                }
-            } else if (token.type === TokenType.IDENT_TOKEN) {
-                switch (token.value) {
-                    case 'open-quote':
-                        anonymousReplacedElement.appendChild(
-                            document.createTextNode(getQuote(declaration.quotes, this.quoteDepth++, true))
-                        );
-                        break;
-                    case 'close-quote':
-                        anonymousReplacedElement.appendChild(
-                            document.createTextNode(getQuote(declaration.quotes, --this.quoteDepth, false))
-                        );
-                        break;
-                    default:
-                        // safari doesn't parse string tokens correctly because of lack of quotes
-                        anonymousReplacedElement.appendChild(document.createTextNode(token.value));
-                }
-            }
-        });
-
-        anonymousReplacedElement.className = `${PSEUDO_HIDE_ELEMENT_CLASS_BEFORE} ${PSEUDO_HIDE_ELEMENT_CLASS_AFTER}`;
-        const newClassName =
-            pseudoElt === PseudoElementType.BEFORE
-                ? ` ${PSEUDO_HIDE_ELEMENT_CLASS_BEFORE}`
-                : ` ${PSEUDO_HIDE_ELEMENT_CLASS_AFTER}`;
-
-        if (isSVGElementNode(clone)) {
-            clone.className.baseValue += newClassName;
-        } else {
-            clone.className += newClassName;
-        }
-
-        return anonymousReplacedElement;
-    }
-
     static destroy(container: HTMLIFrameElement): boolean {
         if (container.parentNode) {
             container.parentNode.removeChild(container);
@@ -608,11 +519,6 @@ export class DocumentCloner {
         }
         return false;
     }
-}
-
-enum PseudoElementType {
-    BEFORE,
-    AFTER
 }
 
 const createIFrameContainer = (
@@ -687,31 +593,6 @@ const iframeLoader = (iframe: HTMLIFrameElement): Promise<HTMLIFrameElement> => 
     });
 };
 
-const ignoredStyleProperties = [
-    'all', // #2476
-    'd', // #2483
-    'content' // Safari shows pseudoelements if content is set
-];
-
-export const copyCSSStyles = <T extends HTMLElement | SVGElement>(style: CSSStyleDeclaration, target: T): T => {
-    const parts: string[] = [];
-    for (let i = style.length - 1; i >= 0; i--) {
-        const property = style.item(i);
-        // fix: Chrome_138 ignore custom properties
-        if (ignoredStyleProperties.indexOf(property) === -1 && !property.startsWith('--')) {
-            const value = style.getPropertyValue(property);
-            if (value) {
-                const priority = style.getPropertyPriority(property);
-                parts.push(priority ? `${property}:${value} !${priority}` : `${property}:${value}`);
-            }
-        }
-    }
-    if (parts.length > 0) {
-        target.style.cssText = parts.join(';') + ';';
-    }
-    return target;
-};
-
 /**
  * Serialise a document type declaration to an HTML string.
  * @internal – exported for testing only, not part of the public API.
@@ -752,37 +633,6 @@ const restoreOwnerScroll = (ownerDocument: Document | null, x: number, y: number
 const restoreNodeScroll = ([element, x, y]: [Element, number, number]) => {
     element.scrollLeft = x;
     element.scrollTop = y;
-};
-
-const PSEUDO_BEFORE = ':before';
-const PSEUDO_AFTER = ':after';
-const PSEUDO_HIDE_ELEMENT_CLASS_BEFORE = '___html2canvas___pseudoelement_before';
-const PSEUDO_HIDE_ELEMENT_CLASS_AFTER = '___html2canvas___pseudoelement_after';
-
-const PSEUDO_HIDE_ELEMENT_STYLE = `{
-    content: "" !important;
-    display: none !important;
-}`;
-
-const createPseudoHideStyles = (body: HTMLElement, cspNonce?: string) => {
-    createStyles(
-        body,
-        `.${PSEUDO_HIDE_ELEMENT_CLASS_BEFORE}${PSEUDO_BEFORE}${PSEUDO_HIDE_ELEMENT_STYLE}
-         .${PSEUDO_HIDE_ELEMENT_CLASS_AFTER}${PSEUDO_AFTER}${PSEUDO_HIDE_ELEMENT_STYLE}`,
-        cspNonce
-    );
-};
-
-const createStyles = (body: HTMLElement, styles: string, cspNonce?: string) => {
-    const document = body.ownerDocument;
-    if (document) {
-        const style = document.createElement('style');
-        style.textContent = styles;
-        if (cspNonce) {
-            style.nonce = cspNonce;
-        }
-        body.appendChild(style);
-    }
 };
 
 const addBase = (targetELement: HTMLElement, baseUri: string) => {
