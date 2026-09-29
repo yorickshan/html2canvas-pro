@@ -15,6 +15,7 @@ Below is a list of all the supported CSS properties and values.
        - radial-gradient()
    - background-origin
    - background-position
+   - background-repeat
    - background-size
  - border
    - border-color
@@ -36,7 +37,10 @@ Below is a list of all the supported CSS properties and values.
    - `polygon()`
    - `path()`
  - content
+ - counter-increment
+ - counter-reset
  - color
+ - direction
  - display
  - filter ([surface-compositing scope and fallback behavior](./filter-support.md))
    - blur()
@@ -63,6 +67,7 @@ Below is a list of all the supported CSS properties and values.
  - left
  - letter-spacing
  - line-break
+ - line-height
  - list-style
     - list-style-image
     - list-style-position
@@ -81,7 +86,9 @@ Below is a list of all the supported CSS properties and values.
  - padding
  - paint-order
  - position
+ - quotes
  - right
+ - rotate (**Limited support**)
  - text-align
  - text-decoration
    - text-decoration-color
@@ -94,6 +101,7 @@ Below is a list of all the supported CSS properties and values.
  - text-transform
  - top
  - transform (**Limited support**)
+ - transform-origin
  - visibility
  - white-space
  - width
@@ -105,6 +113,15 @@ Below is a list of all the supported CSS properties and values.
  - writing-mode
  - z-index
  - zoom
+
+## What's new in v2.4.x
+
+- **box-shadow fidelity** — correct blur/border-radius scaling, inset shadow masking, and shadows preserved through transformed ancestors ([2.4.4](https://github.com/yorickshan/html2canvas-pro/blob/main/CHANGELOG.md), [2.4.5](https://github.com/yorickshan/html2canvas-pro/blob/main/CHANGELOG.md))
+- **filter surface compositing** — eligible layers composite `blur()`/`drop-shadow()` on a dedicated surface before layer `opacity` is applied; native canvas fast path with verified SVG fallback ([scope & limits](./filter-support.md))
+- **CJK text** — CJK glyphs keep the alphabetic baseline when `letter-spacing` is set
+- **textarea text wrapping** — `white-space` aware wrapping inside textareas
+- **Cross-origin images** — the resource cache can load cross-origin images with CORS enabled
+- **Shadow DOM** — shadow roots and attributes of custom elements are preserved in clones; fieldset legends are positioned like the browser does
 
 ## CSS properties supported as of v2.1.1+
 

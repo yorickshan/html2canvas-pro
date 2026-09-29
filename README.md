@@ -15,26 +15,40 @@ Next generation JavaScript screenshot tool.
   <a href="https://deepwiki.com/yorickshan/html2canvas-pro"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 <p align="center">
-  <a href="https://yorickshan.github.io/html2canvas-pro/getting-started.html">Getting Started</a>
+  <a href="https://yorickshan.github.io/html2canvas-pro/getting-started.html">Getting Started</a> ·
+  <a href="https://yorickshan.github.io/html2canvas-pro/configuration.html">Configuration</a> ·
+  <a href="https://yorickshan.github.io/html2canvas-pro/features.html">Features</a> ·
+  <a href="https://yorickshan.github.io/html2canvas-pro/faq.html">FAQ</a>
 </p>
 <br>
 
 ## Why html2canvas-pro?
 
 html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/html2canvas) that includes various fixes and new features. It offers several advantages over the original html2canvas:
+
+**Modern CSS support**
 - Color functions `color()` (incl. relative colors), `lab()`, `lch()`, `oklab()`, `oklch()`
 - `background-clip: text` support
-- `mix-blend-mode` support
+- `mix-blend-mode` and `background-blend-mode` support
 - `object-fit` support for `<img/>`
 - CSS `clip-path` support (inset, circle, ellipse, polygon, path)
 - CSS `writing-mode` support (horizontal-tb, vertical-rl, vertical-lr)
-- Native `drop-shadow()` filter rendering via the canvas shadow API
-- **Image smoothing control** — CSS `image-rendering` property and `imageSmoothing`/`imageSmoothingQuality` options
-- **Security validation** — Built-in input validation (XSS/SSRF protection)
-- **Performance monitoring** — Built-in performance measurement API
-- **Progress & error callbacks** — `onProgress` / `onError` options and `AbortSignal` cancellation
-- **Performance optimizations** — deferred CSS parsing and LRU caches for gradients & CSS parsing
-- Various bug fixes from the [changelog](./CHANGELOG.md)
+- `filter` compositing for eligible layers — `blur()` / `drop-shadow()` rendered on a dedicated surface with correct layer `opacity` (see [filter support notes](docs/filter-support.md))
+- Faithful `box-shadow` rendering, including inset shadows, blur scaling, and shadows through transformed ancestors
+- `image-rendering` CSS property plus `imageSmoothing` / `imageSmoothingQuality` options for pixel-perfect output
+- Border image, counters & quotes, `direction`, `line-height`, `transform-origin`, and more — see the full [feature list](docs/features.md)
+
+**Developer experience**
+- **Security validation** — Built-in input validation (`Validator` API, XSS/SSRF protection)
+- **Performance monitoring** — Built-in `PerformanceMonitor` with per-phase timings
+- **Error & cancellation hooks** — `onError` callback for failed resources and `AbortSignal` cancellation
+- **TypeScript** — First-class type definitions included
+- **Shadow DOM & Web Components** — slot assignment, shadow-root cloning, and automatic iframe placement
+
+**Performance**
+- Deferred (batched, parallel) image preloading
+- LRU caches for CSS parsing and gradient patterns
+- Native canvas filter fast path with verified SVG fallback
 
 If you found this helpful, don't forget to
 leave a star 🌟.
@@ -48,11 +62,12 @@ yarn add html2canvas-pro
 ```
 
 ## Usage
+
 ```javascript
 import html2canvas from 'html2canvas-pro';
 ```
 
-To render an `element` with html2canvas-pro with some (optional) [options](/docs/configuration.md), simply call `html2canvas(element, options);`
+To render an `element` with html2canvas-pro with some (optional) [options](docs/configuration.md), simply call `html2canvas(element, options);`
 
 ### Basic Example
 
@@ -62,9 +77,20 @@ html2canvas(document.body).then(function(canvas) {
 });
 ```
 
+### Script tag / CDN
+
+A browser bundle is also available (exposes the global `window.html2canvas`):
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro/dist/html2canvas-pro.min.js"></script>
+<script>
+  html2canvas(document.body).then((canvas) => document.body.appendChild(canvas));
+</script>
+```
+
 ### Controlling Output Dimensions
 
-⚠️ **Important**: By default, the output canvas dimensions are affected by `devicePixelRatio`. 
+⚠️ **Important**: By default, the output canvas dimensions are affected by `devicePixelRatio`.
 
 ```javascript
 // If you need exact pixel dimensions (e.g., for a specific file size):
@@ -78,7 +104,78 @@ html2canvas(element, {
 });
 ```
 
-See the [Configuration Guide](/docs/configuration.md#canvas-dimensions) for more details.
+See the [Configuration Guide](docs/configuration.md#canvas-dimensions) for more details.
+
+### Error Handling & Cancellation
+
+```javascript
+const controller = new AbortController();
+
+html2canvas(element, {
+    useCORS: true,
+    onError: (error) => {
+        // Called when a resource (image, font, …) fails to load.
+        // The render continues — this is a notification hook, not an abort.
+        console.warn('Resource failed:', error);
+    },
+    signal: controller.signal // Rejects with an AbortError when aborted
+}).then(canvas => {
+    document.body.appendChild(canvas);
+});
+
+// Cancel an in-progress capture:
+controller.abort();
+```
+
+### Pixel-Perfect Capture
+
+```javascript
+html2canvas(element, {
+    imageSmoothing: false,       // Disable anti-aliasing globally
+    scale: 2                     // Upscale without blur
+});
+// Or per-element via CSS: style="image-rendering: pixelated"
+```
+
+## API
+
+The package exports `html2canvas` (default), plus the following named exports:
+
+| Export | Description |
+| --- | --- |
+| `html2canvas` | Render an element to a `<canvas>` |
+| `Html2CanvasConfig` | Per-call runtime config (CSP nonce, shared cache) |
+| `Validator` / `createDefaultValidator` | Input validation (URLs, proxy allow-list, element checks) |
+| `PerformanceMonitor` | Phase-level timing metrics |
+| `Options` | The full options type |
+
+Full type definitions ship with the package — your editor's IntelliSense covers every option. An HTML API reference can be generated locally with `corepack pnpm docs:api` (TypeDoc).
+
+## Documentation
+
+The full documentation site lives at [yorickshan.github.io/html2canvas-pro](https://yorickshan.github.io/html2canvas-pro/):
+
+- [Getting Started](docs/getting-started.md) — installation, usage, live demo
+- [Configuration](docs/configuration.md) — every option with defaults and examples
+- [Features](docs/features.md) — supported CSS properties and values
+- [Proxy](docs/proxy.md) — cross-origin image handling
+- [FAQ](docs/faq.md) — canvas size, tainted canvas, browser limits
+- [Architecture](docs/ARCHITECTURE.md) — how the rendering pipeline works
+
+## Development
+
+The project uses [pnpm](https://pnpm.io) (the version is pinned via the `packageManager` field — Corepack handles it automatically). Unit tests require **Node.js 24** (jsdom 30).
+
+```sh
+corepack pnpm install
+corepack pnpm build          # tsc + Rolldown bundles (CJS/ESM/UMD)
+corepack pnpm unittest       # Vitest unit tests
+corepack pnpm test           # lint + unit tests + browser (Karma) tests
+corepack pnpm docs:dev       # VitePress dev server
+corepack pnpm docs:api       # Generate the TypeDoc API reference
+```
+
+See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for the full guide, including how to add a new CSS property.
 
 ## Contribution
 

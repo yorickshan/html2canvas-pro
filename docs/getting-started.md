@@ -24,6 +24,19 @@ html2canvas(document.body).then(function(canvas) {
 });
 ```
 
+### Script tag / CDN
+
+If you don't use a bundler, load the UMD bundle directly — it exposes the global `window.html2canvas`:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro/dist/html2canvas-pro.min.js"></script>
+<script>
+  html2canvas(document.body).then((canvas) => document.body.appendChild(canvas));
+</script>
+```
+
+Other bundles in the npm package: `html2canvas-pro.esm.js` (ESM), `html2canvas-pro.cjs` (CommonJS), `html2canvas-pro.js` (UMD), `html2canvas-pro.min.js` (UMD, minified).
+
 ## Interactive Demo
 
 <div id="demo-section">

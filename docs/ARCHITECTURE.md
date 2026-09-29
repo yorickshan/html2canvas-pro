@@ -22,7 +22,12 @@ DOM Clone → CSS Parse → Layout → Stacking Context → Canvas Render
    reliable `getComputedStyle` results.
 
 **Slot / Shadow DOM** handling is delegated to `SlotCloner` (`slot-cloner.ts`), which
-manages `<slot>` assignment, fallback content, and shadow-root cloning.
+manages `<slot>` assignment, fallback content, and shadow-root cloning (including custom
+elements' shadow roots and attributes). When the target element lives inside a shadow root,
+the temporary iframe is created inside that shadow root so scoped styles apply.
+
+`dom-normalizer.ts` optionally normalizes the cloned DOM before capture (disables
+animations, resets transforms). Enabled by default; disable with `normalizeDom: false`.
 
 ### Phase 2: CSS Parsing (`src/css/`)
 
@@ -97,12 +102,21 @@ painting order:
 7. Positive z-index children
 
 Each `ElementPaint` in the tree holds an array of `IElementEffect` objects:
-- **TransformEffect** — matrix transforms with origin offset
+- **TransformEffect** — matrix transforms with origin offset (incl. the individual `rotate` property)
 - **ClipEffect** — overflow/border-radius clipping via paths
 - **OpacityEffect** — global alpha multiplication
 - **ClipPathEffect** — CSS `clip-path` shapes
 - **BlendEffect** — `mix-blend-mode` composite operations
 - **FilterEffect** — CSS `filter` functions
+
+#### Filter & opacity surface compositing
+
+Eligible stacking contexts (see the [support matrix](./filter-support.md)) are rasterized
+into an intermediate surface by `filter-surface.ts` (`surface-bounds.ts` computes the
+bounded outset), the filter chain subset (`blur()` + `drop-shadow()`) is applied to the
+surface, and the layer's CSS `opacity` is composited once afterwards. A runtime pixel
+probe picks the native canvas fast path and falls back to an SVG backend on the same
+surface. Unsupported chains or subtrees stay on the classic per-draw path.
 
 ### Phase 5: Canvas Rendering (`src/render/canvas/`)
 
@@ -127,6 +141,21 @@ keyed by `URL + size + imageRendering`.
 
 Renders solid, dashed, dotted, and double borders per side.
 Border-image uses `border-image-renderer.ts` which implements 9-slice scaling.
+
+#### Box shadows (`box-shadow-*.ts`)
+
+Box shadows are painted by `box-shadow-painter.ts` with geometry from
+`box-shadow-geometry.ts` (blur/border-radius scaling, inset masking) and
+`box-shadow-transform.ts` (composing shadows through effective canvas transforms).
+Shadows participate in filter-surface rasterization when the layer is eligible.
+
+#### Text (`text-renderer.ts`)
+
+`text-renderer.ts` paints text runs: grapheme segmentation, letter-spacing, direction,
+writing-mode baselines (CJK stays on the alphabetic baseline), and `webkit-text-stroke`
+via `paint-order`. `font-utils.ts` measures baselines; text decoration lines
+(underline/overline/line-through with style, thickness, and offset) live in
+`text/text-decoration-renderer.ts`.
 
 #### Content (`content-renderer.ts`)
 
@@ -168,13 +197,16 @@ the first key (oldest entry).
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `tokenizer.ts` | 822 | CSS tokenizer state machine |
-| `document-cloner.ts` | ~780 | DOM cloning (slot logic extracted) |
-| `canvas-renderer.ts` | ~450 | Main canvas renderer (content extracted) |
-| `color-tests.ts` | 91 tests | Color parsing tests |
-| `stacking-context.ts` | ~150 | Stacking context tree |
-| `effects.ts` | ~100 | Effect type system |
-| `border-renderer.ts` | ~200 | Border rendering |
-| `background-renderer.ts` | ~380 | Background rendering + pattern cache |
-| `slot-cloner.ts` | ~190 | Shadow DOM / Slot cloning |
-| `content-renderer.ts` | ~260 | Replaced/form/list-item rendering |
+| `canvas-renderer.ts` | ~800 | Main canvas renderer orchestration |
+| `document-cloner.ts` | ~790 | DOM cloning (slot logic extracted) |
+| `text-renderer.ts` | ~590 | Text run painting (CJK, writing modes, stroke) |
+| `css/index.ts` | ~500 | `CSSParsedDeclaration` registry |
+| `background-renderer.ts` | ~440 | Background rendering + pattern cache |
+| `stacking-context.ts` | ~415 | Stacking context tree + effects |
+| `content-renderer.ts` | ~370 | Replaced/form/list-item rendering |
+| `filter-surface.ts` | ~280 | Filter/opacity surface compositing |
+| `effects.ts` | ~275 | Effect type system |
+| `border-renderer.ts` | ~225 | Border rendering |
+| `box-shadow-painter.ts` | ~220 | Box shadow painting |
+| `slot-cloner.ts` | ~205 | Shadow DOM / Slot cloning |
+| `dom-normalizer.ts` | ~130 | Pre-capture DOM normalization |

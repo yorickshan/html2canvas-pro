@@ -67,6 +67,7 @@ Options that control how images are processed and loaded.
 | imageSmoothing | `true` | Whether to apply smoothing to images. Set to `false` for pixel-perfect rendering of pixel art, sprites, and low-res images. Also respects CSS `image-rendering` property | `false` |
 | imageSmoothingQuality | browser default | Quality level for image smoothing when `imageSmoothing` is enabled: `'low'`, `'medium'`, or `'high'`. Higher quality may be slower for large images | `'high'` |
 | imageTimeout | `15000` | Timeout for loading an image (in milliseconds). Set to `0` to disable timeout | `30000` |
+| maxCacheSize | `100` | Maximum number of image resources kept in the internal LRU cache (max `10000`) | `500` |
 | proxy | `null` | Url to the [proxy](./proxy) which is to be used for loading cross-origin images. If left empty, cross-origin images won't be loaded | `"https://proxy.example.com/"` |
 | useCORS | `false` | Whether to attempt to load images from a server using CORS | `true` |
 
@@ -103,10 +104,35 @@ If you wish to exclude certain `Element`s from getting rendered, you can add a `
 | Option Name | Default | Description | Example |
 | ----------- | :-----: | ----------- | ------- |
 | cspNonce | `null` | Content-Security-Policy nonce for inline styles | `"abc123"` |
+| normalizeDom | `true` | Normalize the cloned DOM before capture (disable animations, reset transforms). Set to `false` to preserve the original DOM state | `false` |
 | skipValidation | `false` | Skip the built-in input validation (not recommended) | `true` |
-| enablePerformanceMonitoring | `false` | Enable performance metrics collection. Access via `PerformanceMonitor` | `true` |
+| enablePerformanceMonitoring | `false` | Enable performance metrics collection and log a timing summary. Defaults to the `logging` option value when not specified | `true` |
 | signal | `null` | `AbortSignal` to cancel an in-progress render | `new AbortController().signal` |
 | validator | `default` | Custom `Validator` instance for input validation | `createStrictValidator(['proxy.example.com'])` |
+
+### Error Handling & Cancellation
+
+Use `onError` to observe failed resources and `signal` to cancel an in-progress render:
+
+```javascript
+const controller = new AbortController();
+
+html2canvas(element, {
+    onError: (error) => {
+        // A resource (image, font, …) failed to load.
+        // The render continues — this is a notification hook, not an abort.
+        console.warn('Resource failed:', error);
+    },
+    signal: controller.signal
+}).then(canvas => {
+    document.body.appendChild(canvas);
+});
+
+// Cancel the in-progress capture; the promise rejects with an `AbortError`:
+controller.abort();
+```
+
+> **Note:** the `Options` type also declares `onProgress`, but no progress events are emitted yet. Rely on `onError` and `signal` for now.
 
 ### CSP Nonce
 

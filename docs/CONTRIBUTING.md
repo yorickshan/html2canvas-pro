@@ -2,11 +2,15 @@
 
 ## Quick Start
 
+The project uses [pnpm](https://pnpm.io); the exact version is pinned in the
+`packageManager` field, so [Corepack](https://nodejs.org/api/corepack.html) picks it up
+automatically. **Unit tests require Node.js 24** (jsdom 30 does not run on older versions).
+
 ```bash
-pnpm install
-pnpm build       # TypeScript compile + Rolldown bundle
-pnpm test        # Run all unit tests (vitest)
-pnpm typecheck   # TypeScript type check only
+corepack pnpm install
+corepack pnpm build       # TypeScript compile + Rolldown bundle
+corepack pnpm unittest    # Vitest unit tests
+corepack pnpm lint        # ESLint (src/, zero warnings allowed)
 ```
 
 ## Adding a New CSS Property
@@ -101,9 +105,13 @@ Update `docs/features.md` to list the newly supported property.
 ### Running Tests
 
 ```bash
-pnpm test             # Run all tests
-pnpm test -- --watch  # Watch mode
-pnpm test path/to/file # Run specific test file
+corepack pnpm unittest             # Vitest unit tests (single run)
+corepack pnpm watch:unittest       # Vitest in watch mode
+corepack pnpm unittest:coverage    # Vitest with V8 coverage
+corepack pnpm test                 # lint + unit tests + browser (Karma) tests
+corepack pnpm karma                # Browser tests only (needs Chrome; prereqs are checked automatically)
+corepack pnpm reftests-diff        # Screenshot reftest diffing (Vitest config)
+corepack pnpm bench:css-parse      # CSS parse micro-benchmark
 ```
 
 ### Test Structure
@@ -126,24 +134,26 @@ Tests are colocated with source in `__tests__/` directories:
 ## Build System
 
 ```
+tsc (tsconfig.build.json) → typed dist
 Rolldown → CJS bundle (dist/html2canvas-pro.cjs)
         → ESM bundle (dist/html2canvas-pro.esm.js)
         → UMD bundle (dist/html2canvas-pro.js)
         → UMD minified bundle (dist/html2canvas-pro.min.js)
         → Test runner bundle (build/testrunner.js)
++ scripts/bundle-filter-surface.mjs (filter surface regression bundle)
 ```
 
-- `pnpm build` — full build (tsc + rolldown)
-- `pnpm typecheck` — TypeScript check only
-- Git hooks (Husky) run prettier + eslint on staged files
+- `corepack pnpm build` — full build (tsc + rolldown + reftest list)
+- Git hooks (Husky + lint-staged) run prettier + eslint on staged files
 
 ## Release Process
 
 ```bash
-pnpm release <version>  # e.g., pnpm release 2.1.1
+corepack pnpm release <version>  # e.g., corepack pnpm release patch
 ```
 
-This bumps the version, runs the build, and publishes to npm.
+The version argument is one of `major | minor | patch | premajor | preminor | prepatch | prerelease`.
+The script bumps the version, runs the build, and publishes to npm.
 
 ## Architecture Reference
 
