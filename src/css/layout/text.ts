@@ -92,16 +92,29 @@ const createRange = (node: Text, offset: number, length: number): Range => {
     return range;
 };
 
+// Intl.Segmenter is TC39 Stage 4 but not yet in TS lib types
+type IntlSegmenter = {
+    Segmenter: new (l?: unknown, o?: object) => { segment(v: string): Iterable<{ segment: string }> };
+};
+
+// Segmenter construction is expensive and segmentation is locale-independent
+// for our use, so one instance per granularity is created and reused for
+// every text node of every render.
+const segmenterCache = new Map<'grapheme' | 'word', { segment(v: string): Iterable<{ segment: string }> }>();
+
+const getSegmenter = (granularity: 'grapheme' | 'word') => {
+    let segmenter = segmenterCache.get(granularity);
+    if (!segmenter) {
+        const Segmenter = (Intl as unknown as IntlSegmenter).Segmenter;
+        segmenter = new Segmenter(void 0, { granularity });
+        segmenterCache.set(granularity, segmenter);
+    }
+    return segmenter;
+};
+
 export const segmentGraphemes = (value: string): string[] => {
     if (FEATURES.SUPPORT_NATIVE_TEXT_SEGMENTATION) {
-        // Intl.Segmenter is TC39 Stage 4 but not yet in TS lib types
-
-        const Segmenter = Intl as unknown as {
-            Segmenter: new (l?: unknown, o?: object) => { segment(v: string): Iterable<{ segment: string }> };
-        };
-        const seg = new Segmenter.Segmenter(void 0, { granularity: 'grapheme' });
-
-        return Array.from(seg.segment(value)).map((s) => s.segment);
+        return Array.from(getSegmenter('grapheme').segment(value)).map((s) => s.segment);
     }
 
     return splitGraphemes(value);
@@ -109,12 +122,7 @@ export const segmentGraphemes = (value: string): string[] => {
 
 const segmentWords = (value: string, styles: CSSParsedDeclaration): string[] => {
     if (FEATURES.SUPPORT_NATIVE_TEXT_SEGMENTATION) {
-        const Segmenter = Intl as unknown as {
-            Segmenter: new (l?: unknown, o?: object) => { segment(v: string): Iterable<{ segment: string }> };
-        };
-        const seg = new Segmenter.Segmenter(void 0, { granularity: 'word' });
-
-        return Array.from(seg.segment(value)).map((s) => s.segment);
+        return Array.from(getSegmenter('word').segment(value)).map((s) => s.segment);
     }
 
     return breakWords(value, styles);

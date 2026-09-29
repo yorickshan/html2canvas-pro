@@ -15,8 +15,33 @@ export interface SimpleFilter {
 
 // This first renderer integration handles computed blur followed by one shadow.
 // Unsupported chains retain the existing renderer until general filter support lands.
+
+// Distinct filter strings are few, but parseSimpleFilter is called for every
+// node of a canComposite() subtree walk, so identical values are memoised with
+// a small LRU bound. Returned objects are treated as read-only by all callers.
+const SIMPLE_FILTER_CACHE_MAX = 256;
+const simpleFilterCache = new Map<string, SimpleFilter | null>();
+
 export function parseSimpleFilter(value: string | null): SimpleFilter | null {
     if (!value || value === 'none') return { blur: 0 };
+
+    const cached = simpleFilterCache.get(value);
+    if (cached !== undefined) {
+        simpleFilterCache.delete(value);
+        simpleFilterCache.set(value, cached);
+        return cached;
+    }
+
+    const parsed = computeSimpleFilter(value);
+    if (simpleFilterCache.size >= SIMPLE_FILTER_CACHE_MAX) {
+        const oldest = simpleFilterCache.keys().next().value;
+        if (oldest !== undefined) simpleFilterCache.delete(oldest);
+    }
+    simpleFilterCache.set(value, parsed);
+    return parsed;
+}
+
+function computeSimpleFilter(value: string): SimpleFilter | null {
     const effect = new FilterEffect(value);
     const shadows = value.match(/drop-shadow\(/g) || [];
     if (shadows.length > 1 || (shadows.length === 1 && !effect.shadow)) return null;

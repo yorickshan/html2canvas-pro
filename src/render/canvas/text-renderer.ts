@@ -139,6 +139,13 @@ export class TextRenderer {
     private readonly options: { scale: number };
     private readonly decorationRenderer: TextDecorationRenderer;
     /**
+     * Baseline ascent per font string. Consecutive text nodes overwhelmingly
+     * share a font, and each measureBaseline call issues a canvas measureText,
+     * so repeated fonts are memoised (bounded; cleared if the working set
+     * exceeds the cap).
+     */
+    private readonly baselineCache: Map<string, number> = new Map();
+    /**
      * Per-render glyph width cache. Keyed by glyph + font string,
      * avoids redundant `measureText` calls when letter-spacing is non-zero.
      * Cleared at the start of each renderTextNode call.
@@ -540,6 +547,18 @@ export class TextRenderer {
         return true;
     }
 
+    private measureBaselineCached(fontString: string, fallback: number): number {
+        let baseline = this.baselineCache.get(fontString);
+        if (baseline === undefined) {
+            baseline = measureBaseline(this.ctx, fallback);
+            if (this.baselineCache.size >= 64) {
+                this.baselineCache.clear();
+            }
+            this.baselineCache.set(fontString, baseline);
+        }
+        return baseline;
+    }
+
     async renderTextNode(text: TextContainer, styles: CSSParsedDeclaration, containerBounds?: Bounds): Promise<void> {
         // Reset glyph width cache at the start of each text node render —
         // the font may change between nodes.
@@ -555,7 +574,7 @@ export class TextRenderer {
         // This ensures correct positioning whether using webfonts (which may not
         // be loaded in the original document but are active in the Canvas) or
         // system fonts.
-        const baseline = measureBaseline(this.ctx, styles.fontSize.number);
+        const baseline = this.measureBaselineCached(fontString, styles.fontSize.number);
 
         // -webkit-line-clamp
         const clamp =

@@ -4,6 +4,9 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'jsdom',
+        // vmThreads reuses one jsdom environment per worker instead of building
+        // one per test file (the environment dominates suite wall time).
+        pool: 'vmThreads',
         include: ['src/**/__tests__/**/*.ts'],
         coverage: {
             provider: 'v8',

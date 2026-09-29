@@ -53,6 +53,8 @@ export class ElementPaint {
     readonly effects: IElementEffect[] = [];
     readonly curves: BoundCurves;
     listValue?: string;
+    /** Memoised getEffects results for the plain (surfaceRoot-less) render path. */
+    private plainEffectsCache: Map<EffectTarget, IElementEffect[]> | null = null;
 
     constructor(
         readonly container: ElementContainer,
@@ -122,6 +124,29 @@ export class ElementPaint {
     }
 
     getEffects(target: EffectTarget, surfaceRoot?: ElementPaint): IElementEffect[] {
+        // The ElementPaint tree is fully built before rendering begins, so the
+        // ancestor walk below is deterministic per node. Memoise it for the
+        // plain render path (surfaceRoot undefined), which resolves the same
+        // two target masks for every element of every render. The composited
+        // filter-surface path passes a surfaceRoot whose filtering depends on
+        // the caller, so it always recomputes.
+        if (!surfaceRoot) {
+            let cache = this.plainEffectsCache;
+            if (!cache) {
+                cache = new Map();
+                this.plainEffectsCache = cache;
+            }
+            let cached = cache.get(target);
+            if (!cached) {
+                cached = this.computeEffects(target);
+                cache.set(target, cached);
+            }
+            return cached;
+        }
+        return this.computeEffects(target, surfaceRoot);
+    }
+
+    private computeEffects(target: EffectTarget, surfaceRoot?: ElementPaint): IElementEffect[] {
         let inFlow = [POSITION.ABSOLUTE, POSITION.FIXED].indexOf(this.container.styles.position) === -1;
         let parent = this === surfaceRoot ? null : this.parent;
         const sourceEffects = (paint: ElementPaint) =>

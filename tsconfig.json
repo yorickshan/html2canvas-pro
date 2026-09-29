@@ -11,7 +11,7 @@
         "target": "es2020",
         "module": "esnext",
         "lib": ["es2020", "dom"],
-        "outDir": "dist/lib",
+        "outDir": "build/lib",
         "declaration": true,
         "skipLibCheck": true,
         "declarationDir": "dist/types",
