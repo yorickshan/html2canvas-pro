@@ -64,7 +64,7 @@ html2canvas(element, {
 ## Why aren't my images rendered?
 html2canvas-pro cannot bypass content policy restrictions set by your browser. Drawing images from outside the
 [origin](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy) of the current page will [taint the
-canvas](https://developer.mozilla.org/en-US/docs/Web/HTML/CORS_enabled_image#What_is_a_tainted_canvas) they are drawn on. Once the canvas is tainted, it can no longer be read. Therefore, html2canvas-pro checks
+canvas](https://developer.mozilla.org/en-US/docs/Web/HTML/How_to/CORS_enabled_image#security_and_tainted_canvases) they are drawn on. Once the canvas is tainted, it can no longer be read. Therefore, html2canvas-pro checks
 whether an image would taint the canvas before drawing it. If you have set the `allowTaint`
 [option](./configuration) to `false`, it will skip the image.
 
@@ -100,5 +100,5 @@ is missing or incomplete and you believe it should be included, create a test ca
 
 ## How do I get html2canvas-pro to work in a browser extension?
 You should not use html2canvas-pro inside a browser extension. Most browsers provide native APIs for capturing screenshots from
-tabs within extensions. See [Chrome](https://developer.chrome.com/extensions/tabs#method-captureVisibleTab) and
-[Firefox](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D#drawWindow()) for details.
+tabs within extensions. See [Chrome](https://developer.chrome.com/docs/extensions/reference/api/tabs#method-captureVisibleTab) and
+[Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/captureVisibleTab) for details.
