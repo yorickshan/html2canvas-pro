@@ -25,3 +25,4 @@ dev/docs/api/
 .claude/
 coverage/
 .zcode
+docs/api/
