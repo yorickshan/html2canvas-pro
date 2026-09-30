@@ -1,3 +1,15 @@
+## [2.5.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.5...v2.5.0) (2026-09-30)
+
+### Features
+
+* **css:** add conic/repeating-radial gradients, mask-image, backdrop-filter and more ([5e2a2ef](https://github.com/yorickshan/html2canvas-pro/commit/5e2a2efe22f1a8ab5d41ec03df1ab8c648460697))
+* **css:** add text-emphasis, box-reflect, image-set and border-image outset/width ([51bee56](https://github.com/yorickshan/html2canvas-pro/commit/51bee56bd1465030ea7cdd349ad9e7e8af14873b))
+* implement background-clip: text support with TextClipRenderer ([2f8cdfa](https://github.com/yorickshan/html2canvas-pro/commit/2f8cdfa35f244e6a43929869c2d6c9e9e6b9a4cb))
+
+### Bug Fixes
+
+* render background-clip: text with multiple text fragments ([09e487b](https://github.com/yorickshan/html2canvas-pro/commit/09e487be2dcb109553952131daa739b68816aaa6)), closes [#243](https://github.com/yorickshan/html2canvas-pro/issues/243)
+
 ## [2.4.5](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.4...v2.4.5) (2026-09-23)
 
 ### Bug Fixes
