@@ -617,5 +617,100 @@ export class TextRenderer {
                 }
             });
         });
+
+        if (styles.textEmphasisStyle) {
+            this.renderTextEmphasis(text, styles, baseline);
+        }
+    }
+
+    /**
+     * Draw text-emphasis marks over (or under) each grapheme cluster.
+     *
+     * Vertical writing modes are skipped in the current scope: marks would
+     * need to sit beside vertical glyph runs rather than above them.
+     */
+    private renderTextEmphasis(text: TextContainer, styles: CSSParsedDeclaration, baseline: number): void {
+        if (isVerticalWritingMode(styles.writingMode)) {
+            return;
+        }
+        const style = styles.textEmphasisStyle;
+        if (!style) {
+            return;
+        }
+        const fontSize = styles.fontSize.number;
+        const markDiameter = fontSize * 0.5;
+        const color = asString(styles.textEmphasisColor ?? styles.color);
+        const position = styles.textEmphasisPosition;
+
+        const drawShapeMark = (centerX: number, centerY: number): void => {
+            if (typeof style === 'string') {
+                // Custom string: draw the character itself at the mark size.
+                const savedFont = this.ctx.font;
+                this.ctx.font = savedFont.replace(/^\S+/, `${markDiameter}px`);
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(style, centerX, centerY + markDiameter / 3);
+                this.ctx.font = savedFont;
+                this.ctx.textAlign = 'left';
+                return;
+            }
+            const { fill, shape } = style;
+            const radius = markDiameter * (shape === 'dot' ? 0.3 : shape === 'sesame' ? 0.26 : 0.34);
+            this.ctx.beginPath();
+            if (shape === 'sesame') {
+                // Sesame seeds are teardrop shaped; a rotated ellipse is the
+                // accepted canvas approximation.
+                this.ctx.ellipse(centerX, centerY, radius * 1.3, radius * 0.8, Math.PI / 4, 0, Math.PI * 2);
+            } else if (shape === 'triangle') {
+                this.ctx.moveTo(centerX, centerY - radius);
+                this.ctx.lineTo(centerX + radius * 1.1, centerY + radius * 0.8);
+                this.ctx.lineTo(centerX - radius * 1.1, centerY + radius * 0.8);
+                this.ctx.closePath();
+            } else {
+                this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            }
+            if (fill) {
+                if (shape === 'double-circle') {
+                    // Two concentric rings, drawn as strokes of different widths.
+                    this.ctx.lineWidth = radius * 0.7;
+                    this.ctx.stroke();
+                    this.ctx.beginPath();
+                    this.ctx.arc(centerX, centerY, radius * 0.4, 0, Math.PI * 2);
+                    this.ctx.lineWidth = radius * 0.35;
+                    this.ctx.stroke();
+                } else {
+                    this.ctx.fill();
+                }
+            } else {
+                this.ctx.lineWidth = Math.max(1, radius * 0.35);
+                this.ctx.stroke();
+                if (shape === 'double-circle') {
+                    this.ctx.beginPath();
+                    this.ctx.arc(centerX, centerY, radius * 0.5, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+            }
+        };
+
+        const fontString = this.ctx.font;
+        for (const tb of text.textBounds) {
+            // Walk grapheme clusters with their advance widths — the same walk
+            // the letter-spacing renderer uses — and centre a mark per glyph.
+            const baselineY = tb.bounds.top + baseline;
+            const centerY = position.over ? baselineY - fontSize - markDiameter * 0.4 : baselineY + markDiameter * 0.9;
+            let left = tb.bounds.left;
+            for (const letter of segmentGraphemes(tb.text)) {
+                const width = this.cachedMeasureText(letter, fontString);
+                this.ctx.save();
+                try {
+                    this.ctx.fillStyle = color;
+                    this.ctx.strokeStyle = color;
+                    this.ctx.lineWidth = 1;
+                    drawShapeMark(left + width / 2 + styles.letterSpacing / 2, centerY);
+                } finally {
+                    this.ctx.restore();
+                }
+                left += width + styles.letterSpacing;
+            }
+        }
     }
 }

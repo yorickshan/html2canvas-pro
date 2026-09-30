@@ -30,11 +30,12 @@ import { TextRenderer } from './text-renderer';
 import { Context } from '../../core/context';
 import { BackgroundRenderer } from './background-renderer';
 import { BorderRenderer } from './border-renderer';
-import { BorderImageRenderer } from './border-image-renderer';
+import { BorderImageRenderer, resolveBorderImageOutset, resolveBorderImageWidths } from './border-image-renderer';
 import { EffectsRenderer } from './effects-renderer';
 import { createCanvasPath, formatCanvasPath } from './canvas-path';
 import { OUTLINE_STYLE } from '../../css/property-descriptors/outline';
 import { paintMaskLayers } from './mask-renderer';
+import { BoxReflect } from '../../css/property-descriptors/webkit-box-reflect';
 import { calculateObjectFitRendering } from '../object-fit';
 import { renderReplacedElements, renderFormElements, renderListMarker } from './content-renderer';
 import { paintBoxShadow } from './box-shadow-painter';
@@ -162,13 +163,14 @@ export class CanvasRenderer {
         if (styles.isVisible()) {
             const filter = parseSimpleFilter(styles.filter);
             const hasMask = styles.maskImage.length > 0;
+            const reflect = styles.webkitBoxReflect;
             if (
                 stack.element !== this.surfaceRoot &&
                 !this.legacySubtree &&
-                (hasMask || (filter && (styles.filter || styles.opacity < 1))) &&
+                (hasMask || reflect || (filter && (styles.filter || styles.opacity < 1))) &&
                 this.canComposite(stack.element)
             ) {
-                if (!(await this.renderCompositedStack(stack, filter, hasMask))) {
+                if (!(await this.renderCompositedStack(stack, filter, hasMask, reflect))) {
                     // A rejected optional surface must preserve the previous subtree path.
                     this.legacySubtree = true;
                     try {
@@ -210,7 +212,8 @@ export class CanvasRenderer {
     private async renderCompositedStack(
         stack: StackingContext,
         filter: SimpleFilter | null,
-        hasMask: boolean
+        hasMask: boolean,
+        reflect: BoxReflect | null
     ): Promise<boolean> {
         const signal = this.options.signal;
         if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
@@ -275,6 +278,9 @@ export class CanvasRenderer {
                 composited.width / options.scale,
                 composited.height / options.scale
             );
+            if (reflect) {
+                await this.drawReflection(composited, stack.element.container.bounds, bounds, reflect);
+            }
             return true;
         } catch (error) {
             if (!(error instanceof FilterSurfaceError)) throw error;
@@ -327,6 +333,110 @@ export class CanvasRenderer {
             ctx.drawImage(maskCanvas, 0, 0);
         } finally {
             ctx.restore();
+        }
+    }
+
+    /**
+     * Mirror the element surface in the given direction and offset, optionally
+     * masked (the -webkit-box-reflect mask applies in element space, so it is
+     * composited in the mirrored space where the reflection was drawn).
+     */
+    private async drawReflection(
+        composited: HTMLCanvasElement,
+        elementBounds: Bounds,
+        surfaceBoundsObj: Bounds,
+        reflect: BoxReflect
+    ): Promise<void> {
+        const scale = this.options.scale;
+        const w = Math.ceil(elementBounds.width * scale);
+        const h = Math.ceil(elementBounds.height * scale);
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        const reserved = reserveSurface(this.surfaceBudget, w, h);
+        if (!reserved) {
+            return;
+        }
+        let refCanvas: HTMLCanvasElement | undefined;
+        let maskCanvas: HTMLCanvasElement | undefined;
+        try {
+            refCanvas = document.createElement('canvas');
+            refCanvas.width = w;
+            refCanvas.height = h;
+            const ctx = refCanvas.getContext('2d');
+            if (!ctx) {
+                return;
+            }
+            const offX = Math.round((elementBounds.left - surfaceBoundsObj.left) * scale);
+            const offY = Math.round((elementBounds.top - surfaceBoundsObj.top) * scale);
+            const horizontal = reflect.direction === 'left' || reflect.direction === 'right';
+            ctx.save();
+            try {
+                if (horizontal) {
+                    ctx.translate(w, 0);
+                    ctx.scale(-1, 1);
+                } else {
+                    ctx.translate(0, h);
+                    ctx.scale(1, -1);
+                }
+                ctx.drawImage(composited, -offX, -offY);
+            } finally {
+                ctx.restore();
+            }
+
+            if (reflect.mask) {
+                maskCanvas = document.createElement('canvas');
+                maskCanvas.width = w;
+                maskCanvas.height = h;
+                const mctx = maskCanvas.getContext('2d');
+                if (mctx) {
+                    await paintMaskLayers(
+                        mctx,
+                        [reflect.mask],
+                        {
+                            maskPosition: [],
+                            maskRepeat: [],
+                            maskSize: []
+                        },
+                        { left: 0, top: 0, width: elementBounds.width, height: elementBounds.height },
+                        async (url) => await this.context.cache.match(url)
+                    );
+                    ctx.save();
+                    try {
+                        if (horizontal) {
+                            ctx.translate(w, 0);
+                            ctx.scale(-1, 1);
+                        } else {
+                            ctx.translate(0, h);
+                            ctx.scale(1, -1);
+                        }
+                        ctx.globalCompositeOperation = 'destination-in';
+                        ctx.drawImage(maskCanvas, 0, 0);
+                    } finally {
+                        ctx.restore();
+                    }
+                }
+            }
+
+            const offset = reflect.offset;
+            let x = elementBounds.left;
+            let y = elementBounds.top;
+            if (reflect.direction === 'below') y = elementBounds.top + elementBounds.height + offset;
+            else if (reflect.direction === 'above') y = elementBounds.top - elementBounds.height - offset;
+            else if (reflect.direction === 'right') x = elementBounds.left + elementBounds.width + offset;
+            else x = elementBounds.left - elementBounds.width - offset;
+
+            this.ctx.save();
+            try {
+                this.ctx.filter = 'none';
+                this.ctx.drawImage(refCanvas, x, y, elementBounds.width, elementBounds.height);
+            } finally {
+                this.ctx.restore();
+            }
+        } finally {
+            if (refCanvas) releaseSurface(refCanvas);
+            if (maskCanvas) releaseSurface(maskCanvas);
+            this.surfaceBudget.pixels -= reserved;
         }
     }
 
@@ -616,15 +726,30 @@ export class CanvasRenderer {
                     const image = await this.context.cache.match(url);
                     if (image) {
                         const bounds = paint.container.bounds;
+                        const borderWidths: [number, number, number, number] = [
+                            Math.max(0, styles.borderTopWidth),
+                            Math.max(0, styles.borderRightWidth),
+                            Math.max(0, styles.borderBottomWidth),
+                            Math.max(0, styles.borderLeftWidth)
+                        ];
+                        const outset = resolveBorderImageOutset(styles.borderImageOutset, borderWidths);
+                        const area = bounds.add(
+                            -outset.left,
+                            -outset.top,
+                            outset.left + outset.right,
+                            outset.top + outset.bottom
+                        );
+                        const widths = resolveBorderImageWidths(styles.borderImageWidth, borderWidths, area);
                         this.borderImageRenderer.renderBorderImage(
                             bounds,
                             image as HTMLImageElement,
                             styles.borderImageSlice,
                             styles.borderImageRepeat,
-                            Math.max(0, styles.borderTopWidth),
-                            Math.max(0, styles.borderRightWidth),
-                            Math.max(0, styles.borderBottomWidth),
-                            Math.max(0, styles.borderLeftWidth)
+                            widths[0],
+                            widths[1],
+                            widths[2],
+                            widths[3],
+                            outset
                         );
                     }
                 } catch (e) {

@@ -110,6 +110,9 @@ import { isolation } from './property-descriptors/isolation';
 import { outlineColor, outlineOffset, outlineStyle, outlineWidth } from './property-descriptors/outline';
 import { backdropFilter } from './property-descriptors/backdrop-filter';
 import { maskImage, maskPosition, maskRepeat, maskSize } from './property-descriptors/mask';
+import { textEmphasisColor, textEmphasisPosition, textEmphasisStyle } from './property-descriptors/text-emphasis';
+import { borderImageOutset, borderImageWidth } from './property-descriptors/border-image-width';
+import { webkitBoxReflect } from './property-descriptors/webkit-box-reflect';
 import { PARSE_CACHE_MAX_PER_DESCRIPTOR } from '../core/constants';
 
 export const STANDARD_PROPERTIES: [string, CSSPropertyDescriptor<unknown>, string][] = [
@@ -206,7 +209,13 @@ export const STANDARD_PROPERTIES: [string, CSSPropertyDescriptor<unknown>, strin
     ['maskImage', maskImage, 'maskImage'],
     ['maskPosition', maskPosition, 'maskPosition'],
     ['maskRepeat', maskRepeat, 'maskRepeat'],
-    ['maskSize', maskSize, 'maskSize']
+    ['maskSize', maskSize, 'maskSize'],
+    ['textEmphasisStyle', textEmphasisStyle, 'textEmphasisStyle'],
+    ['textEmphasisColor', textEmphasisColor, 'textEmphasisColor'],
+    ['textEmphasisPosition', textEmphasisPosition, 'textEmphasisPosition'],
+    ['borderImageWidth', borderImageWidth, 'borderImageWidth'],
+    ['borderImageOutset', borderImageOutset, 'borderImageOutset'],
+    ['webkitBoxReflect', webkitBoxReflect, 'webkitBoxReflect']
 ];
 
 const parseCache = new Map<CSSPropertyDescriptor<any>, Map<string, unknown>>();

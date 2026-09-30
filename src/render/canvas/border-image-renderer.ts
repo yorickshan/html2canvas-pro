@@ -11,6 +11,62 @@ import { BorderImageSlice } from '../../css/property-descriptors/border-image-sl
 import { BORDER_IMAGE_REPEAT, BorderImageRepeat } from '../../css/property-descriptors/border-image-repeat';
 import { Bounds } from '../../css/layout/bounds';
 
+export interface BorderImageSides {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+}
+
+/**
+ * Resolve border-image-width to per-side pixel widths. `auto` uses the
+ * corresponding border width, numbers multiply it, lengths are absolute and
+ * percentages refer to the border image area (width for left/right, height
+ * for top/bottom).
+ */
+export const resolveBorderImageWidths = (
+    width: {
+        top: { kind: string; value?: number };
+        right: { kind: string; value?: number };
+        bottom: { kind: string; value?: number };
+        left: { kind: string; value?: number };
+    } | null,
+    borderWidths: [number, number, number, number],
+    area: Bounds
+): [number, number, number, number] => {
+    const sides = width ? [width.top, width.right, width.bottom, width.left] : null;
+    return [0, 1, 2, 3].map((i) => {
+        const side = sides ? sides[i] : null;
+        const borderWidth = borderWidths[i] ?? 0;
+        if (!side) return borderWidth;
+        if (side.kind === 'auto') return borderWidth;
+        if (side.kind === 'number') return borderWidth * (side.value ?? 1);
+        if (side.kind === 'length') return side.value ?? 0;
+        // percentage: left/right of the area width, top/bottom of its height
+        return ((side.value ?? 0) / 100) * (i === 0 || i === 2 ? area.height : area.width);
+    }) as [number, number, number, number];
+};
+
+/** Resolve border-image-outset to per-side pixel offsets (numbers multiply the border width). */
+export const resolveBorderImageOutset = (
+    outset: {
+        top: { kind: string; value?: number };
+        right: { kind: string; value?: number };
+        bottom: { kind: string; value?: number };
+        left: { kind: string; value?: number };
+    } | null,
+    borderWidths: [number, number, number, number]
+): BorderImageSides => {
+    const sides = outset ? [outset.top, outset.right, outset.bottom, outset.left] : null;
+    const px = (i: number): number => {
+        const side = sides ? sides[i] : null;
+        if (!side) return 0;
+        if (side.kind === 'number') return (borderWidths[i] ?? 0) * (side.value ?? 0);
+        return side.value ?? 0;
+    };
+    return { top: px(0), right: px(1), bottom: px(2), left: px(3) };
+};
+
 export class BorderImageRenderer {
     private readonly ctx: CanvasRenderingContext2D;
 
@@ -26,8 +82,12 @@ export class BorderImageRenderer {
         borderTopWidth: number,
         borderRightWidth: number,
         borderBottomWidth: number,
-        borderLeftWidth: number
+        borderLeftWidth: number,
+        outset: BorderImageSides = { top: 0, right: 0, bottom: 0, left: 0 }
     ): void {
+        // The border image area starts at the border box and grows outwards
+        // by the outset amounts.
+        bounds = bounds.add(-outset.left, -outset.top, outset.left + outset.right, outset.top + outset.bottom);
         const imgW = image.naturalWidth || image.width;
         const imgH = image.naturalHeight || image.height;
         if (imgW <= 0 || imgH <= 0) {

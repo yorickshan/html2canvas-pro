@@ -11,6 +11,7 @@ import { prefixRadialGradient } from './functions/-prefix-radial-gradient';
 import { repeatingLinearGradient } from './functions/repeating-linear-gradient';
 import { repeatingRadialGradient } from './functions/repeating-radial-gradient';
 import { conicGradient } from './functions/conic-gradient';
+import { imageSet } from './functions/image-set';
 import { Context } from '../../core/context';
 
 export const enum CSSImageType {
@@ -155,5 +156,7 @@ const SUPPORTED_IMAGE_FUNCTIONS: Record<string, (context: Context, args: CSSValu
     '-moz-repeating-radial-gradient': repeatingRadialGradient,
     'conic-gradient': conicGradient,
     '-webkit-conic-gradient': conicGradient,
-    '-moz-conic-gradient': conicGradient
+    '-moz-conic-gradient': conicGradient,
+    'image-set': imageSet,
+    '-webkit-image-set': imageSet
 };

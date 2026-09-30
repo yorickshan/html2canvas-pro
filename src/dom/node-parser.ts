@@ -138,6 +138,7 @@ const createsRealStackingContext = (node: Element, container: ElementContainer, 
         Boolean(container.styles.filter) ||
         Boolean(container.styles.backdropFilter) ||
         container.styles.maskImage.length > 0 ||
+        Boolean(container.styles.webkitBoxReflect) ||
         container.styles.isolation === ISOLATION.ISOLATE ||
         container.styles.isTransformed() ||
         (isBodyElement(node) && root.styles.isTransparent())

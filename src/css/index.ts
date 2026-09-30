@@ -98,6 +98,13 @@ import { type ISOLATION } from './property-descriptors/isolation';
 import { type OUTLINE_STYLE, type OutlineColor } from './property-descriptors/outline';
 import { type FilterValue } from './property-descriptors/filter';
 import { type MaskImage, type MaskPosition, type MaskRepeat, type MaskSize } from './property-descriptors/mask';
+import {
+    type TextEmphasisColor,
+    type TextEmphasisPosition as TextEmphasisPositionValue,
+    type TextEmphasisStyle
+} from './property-descriptors/text-emphasis';
+import { type BorderImageOutset, type BorderImageWidthSide } from './property-descriptors/border-image-width';
+import { type BoxReflectValue } from './property-descriptors/webkit-box-reflect';
 
 export class CSSParsedDeclaration {
     animationDuration!: ReturnType<typeof duration.parse>;
@@ -199,6 +206,17 @@ export class CSSParsedDeclaration {
     maskPosition!: MaskPosition;
     maskRepeat!: MaskRepeat;
     maskSize!: MaskSize;
+    textEmphasisStyle!: TextEmphasisStyle;
+    textEmphasisColor!: TextEmphasisColor;
+    textEmphasisPosition!: TextEmphasisPositionValue;
+    borderImageWidth!: {
+        top: BorderImageWidthSide;
+        right: BorderImageWidthSide;
+        bottom: BorderImageWidthSide;
+        left: BorderImageWidthSide;
+    };
+    borderImageOutset!: BorderImageOutset;
+    webkitBoxReflect!: BoxReflectValue;
 
     // ── Grouped read-only accessors ──────────────────────────────
     private _border?: BorderStyles;
