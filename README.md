@@ -31,8 +31,12 @@ html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/
 - `background-clip: text` support
 - `mix-blend-mode` and `background-blend-mode` support
 - `object-fit` support for `<img/>`
-- CSS `clip-path` support (inset, circle, ellipse, polygon, path)
+- CSS `clip-path` support (inset, rect, xywh, circle, ellipse, polygon, path)
 - CSS `writing-mode` support (horizontal-tb, vertical-rl, vertical-lr)
+- `mask-image` alpha masks with position/size/repeat (see [mask support](docs/features.md#mask-support))
+- `backdrop-filter: blur()` for frosted-glass captures (see [backdrop-filter support](docs/features.md#backdrop-filter-support))
+- `conic-gradient()` and `repeating-radial-gradient()` — complete gradient family
+- `accent-color`, `outline`, `-webkit-text-fill-color`, `isolation`
 - `filter` compositing for eligible layers — `blur()` / `drop-shadow()` rendered on a dedicated surface with correct layer `opacity` (see [filter support notes](docs/filter-support.md))
 - Faithful `box-shadow` rendering, including inset shadows, blur scaling, and shadows through transformed ancestors
 - `image-rendering` CSS property plus `imageSmoothing` / `imageSmoothingQuality` options for pixel-perfect output
@@ -41,7 +45,7 @@ html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/
 **Developer experience**
 - **Security validation** — Built-in input validation (`Validator` API, XSS/SSRF protection)
 - **Performance monitoring** — Built-in `PerformanceMonitor` with per-phase timings
-- **Error & cancellation hooks** — `onError` callback for failed resources and `AbortSignal` cancellation
+- **Error, progress & cancellation hooks** — `onError` for failed resources, `onProgress` for pipeline milestones (incl. per-batch image preload progress), `AbortSignal` cancellation
 - **TypeScript** — First-class type definitions included
 - **Shadow DOM & Web Components** — slot assignment, shadow-root cloning, and automatic iframe placement
 

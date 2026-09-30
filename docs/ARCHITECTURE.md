@@ -109,6 +109,13 @@ Each `ElementPaint` in the tree holds an array of `IElementEffect` objects:
 - **BlendEffect** — `mix-blend-mode` composite operations
 - **FilterEffect** — CSS `filter` functions
 
+Masked elements (`mask-image`) are also rendered as real stacking contexts and
+rasterised through the same surface path: `mask-renderer.ts` paints the mask
+layers into an alpha surface which is applied to the element surface with
+`destination-in` before compositing. `backdrop-filter` captures the region
+already painted beneath the element's border box from the main canvas, runs it
+through the filter surface pipeline, and composites it back.
+
 #### Filter & opacity surface compositing
 
 Eligible stacking contexts (see the [support matrix](./filter-support.md)) are rasterized
