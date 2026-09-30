@@ -3,8 +3,45 @@
 
 const listenAddress = 'localhost';
 const port = 9876;
+const fs = require('fs');
+const path = require('path');
 
 const log = require('karma/lib/logger').create('launcher:MobileSafari');
+
+// Mirrors how karma-firefox-launcher resolves the Firefox binary
+// (FIREFOX_BIN override, then platform-specific default locations) so a
+// missing install can be detected before the launcher crashes the server
+// with an opaque TypeError.
+const firefoxAvailable = () => {
+    if (process.env.FIREFOX_BIN) {
+        return true;
+    }
+    switch (process.platform) {
+        case 'darwin': {
+            const candidates = ['/Applications/Firefox.app/Contents/MacOS/firefox'];
+            if ('HOME' in process.env) {
+                candidates.unshift(path.join(process.env.HOME, '/Applications/Firefox.app/Contents/MacOS/firefox'));
+            }
+            return candidates.some(fs.existsSync);
+        }
+        case 'linux':
+        case 'freebsd': {
+            // The launcher resolves a bare "firefox" command via PATH.
+            const pathDirs = (process.env.PATH || '').split(path.delimiter);
+            return pathDirs.some((dir) => {
+                const candidate = path.join(dir, 'firefox');
+                return fs.existsSync(candidate) && fs.statSync(candidate).isFile();
+            });
+        }
+        case 'win32': {
+            const prefixes = [process.env.PROGRAMFILES, process.env['PROGRAMFILES(X86)']].filter(Boolean);
+            return prefixes.some((prefix) => fs.existsSync(path.join(prefix, 'Mozilla Firefox', 'firefox.exe')));
+        }
+        default:
+            // Unknown platform: leave the decision to the launcher.
+            return true;
+    }
+};
 
 module.exports = function(config) {
     // https://github.com/actions/virtual-environments/blob/master/images/macos/macos-10.15-Readme.md
@@ -123,14 +160,32 @@ module.exports = function(config) {
 
     const ciLauncher = launchers[process.env.TARGET_BROWSER];
 
-    const customLaunchers = ciLauncher ? {target_browser: ciLauncher} : {
-        stable_chrome: {
-            base: 'ChromeHeadless'
-        },
-        stable_firefox: {
-            base: 'Firefox'
+    let customLaunchers;
+    if (ciLauncher) {
+        customLaunchers = { target_browser: ciLauncher };
+    } else {
+        customLaunchers = {
+            stable_chrome: {
+                base: 'ChromeHeadless'
+            }
+        };
+        // A missing Firefox install makes the firefox launcher throw an
+        // uncaught TypeError that kills the whole suite; skip it with a
+        // warning instead. Explicit TARGET_BROWSER requests are honoured as-is.
+        if (firefoxAvailable()) {
+            customLaunchers.stable_firefox = {
+                base: 'Firefox'
+            };
+        } else {
+            // console.warn on purpose: the karma logger (log4js) is not
+            // reliably configured yet while the config file is evaluated.
+            console.warn(
+                '[karma.conf] Firefox not found — skipping the stable_firefox launcher. ' +
+                    'Install Firefox or set FIREFOX_BIN to run the suite in both browsers, ' +
+                    'or pick one explicitly with TARGET_BROWSER (e.g. Chrome_Stable).'
+            );
         }
-    };
+    }
 
     const MobileSafari = function(baseBrowserDecorator, args) {
         if(process.platform !== "darwin"){
