@@ -44,5 +44,29 @@
     <h2 style="font: 700 24px sans-serif; background-image: linear-gradient(90deg, #2ecc71, #3498db); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Small Gradient Text</h2>
 </div>
 
+<!-- Multi-fragment regression (issue #243): text split into several fragments
+     (letter-spacing segmentation, word/punctuation boundaries) must not erase
+     previously clipped fragments. -->
+
+<div class="demo">
+    <div class="label">Negative letter-spacing (per-grapheme fragments)</div>
+    <h1 style="font: 700 48px sans-serif; letter-spacing: -2px; background-image: linear-gradient(90deg, #e74c3c, #3498db); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">missing</h1>
+</div>
+
+<div class="demo">
+    <div class="label">Positive letter-spacing (per-grapheme fragments)</div>
+    <h1 style="font: 700 48px sans-serif; letter-spacing: 2px; background-image: linear-gradient(90deg, #e74c3c, #3498db); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">missing</h1>
+</div>
+
+<div class="demo">
+    <div class="label">Punctuation splitting the text into fragments</div>
+    <h1 style="font: 700 48px sans-serif; background-image: linear-gradient(90deg, #e74c3c, #3498db); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">also-missing</h1>
+</div>
+
+<div class="demo">
+    <div class="label">Letter-spacing with background color only</div>
+    <h2 style="font: 700 32px sans-serif; letter-spacing: 3px; background-color: #8e44ad; -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Clip 2.4</h2>
+</div>
+
 </body>
 </html>

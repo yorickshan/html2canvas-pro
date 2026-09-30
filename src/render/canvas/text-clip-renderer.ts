@@ -97,9 +97,24 @@ export class TextClipRenderer {
         offCtx.restore();
 
         // ── Clip background to text glyphs ──
-        // destination-in: keep background pixels only where the source (text) is non-transparent.
-        offCtx.globalCompositeOperation = 'destination-in';
-        offCtx.fillStyle = '#000';
+        // Glyphs are accumulated on a separate mask canvas with normal
+        // compositing: a per-fragment destination-in pass keeps only pixels
+        // covered by the current fragment, so fragments (graphemes with
+        // letter-spacing, words around punctuation) would erase each other
+        // and leave nothing behind. One destination-in pass against the
+        // combined mask keeps the background wherever any fragment painted.
+        const mask = ownerDocument.createElement('canvas');
+        mask.width = width;
+        mask.height = height;
+        const maskCtx = mask.getContext('2d');
+        if (!maskCtx) {
+            return;
+        }
+        maskCtx.font = offCtx.font;
+        maskCtx.textBaseline = offCtx.textBaseline;
+        maskCtx.textAlign = offCtx.textAlign;
+        maskCtx.direction = offCtx.direction;
+        maskCtx.fillStyle = '#000';
 
         const writingMode = styles.writingMode;
         const letterSpacing = styles.letterSpacing;
@@ -112,7 +127,7 @@ export class TextClipRenderer {
 
                 if (letterSpacing > 0) {
                     this.renderTextMaskWithLetterSpacing(
-                        offCtx,
+                        maskCtx,
                         textBound,
                         letterSpacing,
                         localLeft,
@@ -120,10 +135,13 @@ export class TextClipRenderer {
                         writingMode
                     );
                 } else {
-                    offCtx.fillText(textBound.text, localLeft, localTop);
+                    maskCtx.fillText(textBound.text, localLeft, localTop);
                 }
             }
         }
+
+        offCtx.globalCompositeOperation = 'destination-in';
+        offCtx.drawImage(mask, 0, 0);
 
         // ── Composite back to main canvas ──
         this.ctx.drawImage(offscreen, bounds.left, bounds.top);
