@@ -68,5 +68,29 @@
     <h2 style="font: 700 32px sans-serif; letter-spacing: 3px; background-color: #8e44ad; -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Clip 2.4</h2>
 </div>
 
+<!-- Shadow and stroke interactions: shadows paint beneath the clipped
+     background (silhouettes in the shadow colour); the stroke band joins the
+     clip region, so the gradient fills the stroke as well. -->
+
+<div class="demo">
+    <div class="label">Text shadow beneath clipped gradient</div>
+    <h1 style="font: 700 48px sans-serif; text-shadow: 3px 3px 0 rgba(0,0,0,0.55); background-image: linear-gradient(90deg, #e74c3c, #3498db); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Shadow</h1>
+</div>
+
+<div class="demo">
+    <div class="label">Blurred text shadow beneath clipped gradient</div>
+    <h1 style="font: 700 48px sans-serif; text-shadow: 0 4px 8px rgba(0,0,0,0.6); background-image: linear-gradient(90deg, #16a085, #2980b9); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Blur</h1>
+</div>
+
+<div class="demo">
+    <div class="label">Text stroke joins the clip region</div>
+    <h1 style="font: 700 48px sans-serif; -webkit-text-stroke: 3px #1b2a6b; background-image: linear-gradient(90deg, #f39c12, #d35400); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Stroke</h1>
+</div>
+
+<div class="demo">
+    <div class="label">Stroke and shadow combined</div>
+    <h1 style="font: 700 48px sans-serif; -webkit-text-stroke: 2px #4a235a; text-shadow: 2px 2px 0 rgba(0,0,0,0.4); background-image: linear-gradient(90deg, #27ae60, #145a32); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0;">Both</h1>
+</div>
+
 </body>
 </html>

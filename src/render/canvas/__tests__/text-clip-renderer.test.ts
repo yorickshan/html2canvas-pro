@@ -32,6 +32,9 @@ const makePaint = (width: number, height: number, overrides: PaintOverrides = {}
                 writingMode: 0,
                 letterSpacing: 0,
                 fontSize: { number: 16, unit: 'px' },
+                textShadow: [],
+                webkitTextStrokeWidth: 0,
+                webkitTextStrokeColor: { r: 0, g: 0, b: 0, a: 0 },
                 ...overrides.styles
             },
             bounds: new Bounds(10, 20, width, height),
@@ -57,14 +60,15 @@ const createRenderer = () => {
     const renderer = new TextClipRenderer({
         ctx,
         context,
+        scale: 2,
         createFontStyle: () => ['16px Arial', 'Arial', '16px']
     });
     return { renderer, ctx };
 };
 
 /**
- * The renderer creates two canvases: the background offscreen and the glyph
- * mask. Returns the intercepted contexts in creation order ([offscreen, mask]).
+ * The renderer creates one canvas per glyph layer. Returns the intercepted
+ * contexts in creation order: [offscreen, mask, ...shadow layers, composite].
  */
 const setupMockContexts = (): CanvasRenderingContext2D[] => {
     const contexts: CanvasRenderingContext2D[] = [];
@@ -117,14 +121,21 @@ describe('TextClipRenderer', () => {
         expect(offCtx.fillText).not.toHaveBeenCalled();
         expect(offCtx.globalCompositeOperation).toBe('destination-in');
         expect(offCtx.drawImage).toHaveBeenCalledTimes(1);
-        const [mask, dx, dy] = (offCtx.drawImage as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-        expect((mask as HTMLCanvasElement).width).toBe(200);
-        expect((mask as HTMLCanvasElement).height).toBe(50);
-        expect(dx).toBe(0);
-        expect(dy).toBe(0);
+        const [mask, dx, dy, dw, dh] = (offCtx.drawImage as unknown as ReturnType<typeof vi.fn>).mock
+            .calls[0] as unknown as number[];
+        expect((mask as HTMLCanvasElement).width).toBe(400);
+        expect((mask as HTMLCanvasElement).height).toBe(100);
+        expect([dx, dy, dw, dh]).toEqual([0, 0, 400, 100]);
 
-        // Clipped result is composited back onto the main canvas.
+        // Clipped result is composited back onto the main canvas at CSS size
+        // (the main context is already scaled), so the device-pixel offscreen
+        // maps 1:1 onto the backing store and stays sharp at scale 2.
         expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+        const [comp, left, top, compW, compH] = (ctx.drawImage as unknown as ReturnType<typeof vi.fn>).mock
+            .calls[0] as unknown as number[];
+        expect((comp as HTMLCanvasElement).width).toBe(400);
+        expect((comp as HTMLCanvasElement).height).toBe(100);
+        expect([left, top, compW, compH]).toEqual([10, 20, 200, 50]);
     });
 
     it('draws letter-spaced fragments to the mask instead of the background canvas', async () => {
@@ -140,5 +151,82 @@ describe('TextClipRenderer', () => {
         expect(offCtx.globalCompositeOperation).toBe('destination-in');
         expect(offCtx.drawImage).toHaveBeenCalledTimes(1);
         expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+    });
+
+    it('includes the stroke band in the mask when -webkit-text-stroke is set', async () => {
+        const contexts = setupMockContexts();
+        const { renderer, ctx } = createRenderer();
+
+        await renderer.render(
+            makePaint(200, 50, {
+                fragments: ['A'],
+                styles: { webkitTextStrokeWidth: 2, webkitTextStrokeColor: { r: 0, g: 0, b: 0, a: 1 } }
+            })
+        );
+        expect(contexts.length).toBe(2);
+        const [offCtx, maskCtx] = contexts;
+
+        // Both fill and stroke contribute to the clip region; the stroke
+        // width/lineJoin mirror the main text renderer.
+        expect(maskCtx.fillText).toHaveBeenCalledTimes(1);
+        expect(maskCtx.strokeText).toHaveBeenCalledTimes(1);
+        expect(maskCtx.strokeText).toHaveBeenCalledWith('A', 0, expect.any(Number));
+        expect(maskCtx.lineWidth).toBe(2);
+        expect(offCtx.drawImage).toHaveBeenCalledTimes(1);
+        expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+    });
+
+    it('paints shadow silhouettes beneath the clipped background', async () => {
+        const contexts = setupMockContexts();
+        const { renderer, ctx } = createRenderer();
+
+        await renderer.render(
+            makePaint(200, 50, {
+                fragments: ['A'],
+                styles: {
+                    textShadow: [
+                        {
+                            color: { r: 0, g: 0, b: 0, a: 1 },
+                            offsetX: { number: 2 },
+                            offsetY: { number: 2 },
+                            blur: { number: 0 }
+                        },
+                        {
+                            color: { r: 255, g: 0, b: 0, a: 1 },
+                            offsetX: { number: 4 },
+                            offsetY: { number: 4 },
+                            blur: { number: 0 }
+                        }
+                    ]
+                }
+            })
+        );
+        // offscreen + mask + one shadow layer + composite
+        expect(contexts.length).toBe(4);
+        const [offCtx, maskCtx, shadowCtx, compositeCtx] = contexts;
+
+        // Each shadow is cast once per fragment, in reverse order (deepest
+        // shadow drawn first), with device-pixel offsets. The properties
+        // left on the context belong to the last-drawn (frontmost) shadow.
+        expect(shadowCtx.fillText).toHaveBeenCalledTimes(2);
+        expect(shadowCtx.shadowOffsetX).toBe(4);
+        expect(shadowCtx.shadowOffsetY).toBe(4);
+        // The composite layers shadows first, then the clipped background.
+        expect(compositeCtx.drawImage).toHaveBeenCalledTimes(2);
+        expect(compositeCtx.drawImage).toHaveBeenNthCalledWith(1, expect.anything(), 0, 0);
+        expect(offCtx.globalCompositeOperation).toBe('destination-in');
+        expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+    });
+
+    it('composites straight onto the main canvas when no shadows are present', async () => {
+        const contexts = setupMockContexts();
+        const { renderer, ctx } = createRenderer();
+
+        await renderer.render(makePaint(200, 50, { fragments: ['A'] }));
+        expect(contexts.length).toBe(2);
+        expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+        const [, left, top] = (ctx.drawImage as unknown as ReturnType<typeof vi.fn>).mock
+            .calls[0] as unknown as number[];
+        expect([left, top]).toEqual([10, 20]);
     });
 });

@@ -150,6 +150,7 @@ export class CanvasRenderer {
         this.textClipRenderer = new TextClipRenderer({
             ctx: this.ctx,
             context: this.context,
+            scale: options.scale,
             createFontStyle: (styles) => this.textRenderer.createFontStyle(styles)
         });
 

@@ -481,3 +481,36 @@ coordinates) is composited in the mirrored space.
 - The reflection mirrors the element's border box; combined with
   `filter`/`mask` outsets the mirror source is clipped to the element box.
 - `box-reflect` makes the element a stacking context, consistent with WebKit.
+
+---
+
+### background-clip: text support
+
+`background-clip: text` clips the element's background (colour and images) to
+the glyphs of its text, with `color: transparent` leaving only the gradient
+text. The background is painted to a device-pixel offscreen surface and clipped
+to a glyph mask built from the same text layout the main renderer uses
+(per-grapheme draws under letter-spacing), then composited 1:1 onto the main
+canvas — sharp at any `devicePixelRatio`.
+
+```html
+<!-- Gradient text -->
+<h1 style="background-image: linear-gradient(90deg, #4b55d8, #262b7e);
+           -webkit-background-clip: text; background-clip: text; color: transparent;">
+  Gradient heading
+</h1>
+```
+
+**Interaction with text shadows and stroke:**
+
+- `text-shadow` paints **beneath** the clipped background — silhouettes in the
+  shadow colour, in the browser's shadow order (the last shadow deepest).
+- `-webkit-text-stroke` **joins the clip region**: the gradient fills the
+  stroke band as well as the glyph interiors, matching WebKit.
+
+**Limitations (current scope):**
+
+- Horizontal text only; vertical writing modes fall back to a single mask
+  draw per fragment.
+- The clip region covers fill (+ stroke band when `-webkit-text-stroke` is
+  present); `text-emphasis` marks are not part of it.

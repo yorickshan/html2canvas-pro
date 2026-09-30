@@ -32,7 +32,7 @@
     "screenshot"
   ],
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=24.0.0"
   },
   "homepage": "https://yorickshan.github.io/html2canvas-pro/",
   "repository": {

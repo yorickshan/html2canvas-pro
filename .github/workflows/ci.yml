@@ -39,9 +39,12 @@ jobs:
                       if [ "$file" = "dist/html2canvas-pro.js" ] && [ "$size" -gt 614400 ]; then
                         echo "::warning file=$file,title=Bundle size warning::UMD bundle exceeds 600 KB (${size_kb} KB)"
                       fi
-                      # Alert if minified bundle exceeds 250 KB
-                      if [ "$file" = "dist/html2canvas-pro.min.js" ] && [ "$size" -gt 256000 ]; then
-                        echo "::warning file=$file,title=Bundle size warning::Minified bundle exceeds 250 KB (${size_kb} KB)"
+                      # Alert if minified bundle exceeds 300 KB (raised from
+                      # 250 KB in v2.5.0 when background-clip: text, masking,
+                      # backdrop-filter and box-reflect landed; current size
+                      # is ~275 KiB)
+                      if [ "$file" = "dist/html2canvas-pro.min.js" ] && [ "$size" -gt 307200 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::Minified bundle exceeds 300 KB (${size_kb} KB)"
                       fi
                       # Alert if ESM bundle exceeds 550 KB
                       if [ "$file" = "dist/html2canvas-pro.esm.js" ] && [ "$size" -gt 563200 ]; then
