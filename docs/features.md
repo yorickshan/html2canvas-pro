@@ -25,6 +25,8 @@ Below is a list of all the supported CSS properties and values.
    - border-image
      - border-image-source
      - border-image-slice
+     - border-image-width
+     - border-image-outset
      - border-image-repeat
    - border-radius
    - border-style
@@ -70,6 +72,7 @@ Below is a list of all the supported CSS properties and values.
    - font-weight
  - height
  - image-rendering (`auto`, `pixelated`, `crisp-edges`, `smooth`)
+ - image-set() (**background-image value** — candidate closest to `devicePixelRatio` is selected)
  - isolation (**Stacking-context flag** — blended descendants are structurally scoped; pixel-level group isolation is not composited separately)
  - left
  - letter-spacing
@@ -105,6 +108,7 @@ Below is a list of all the supported CSS properties and values.
    - text-decoration-style (`solid`, `double`, `dotted`, `dashed`, `wavy`)
    - text-decoration-thickness
    - text-underline-offset
+ - text-emphasis / text-emphasis-style / text-emphasis-color / text-emphasis-position (**Horizontal text**; see [Text emphasis](#text-emphasis-support))
  - text-overflow
  - text-shadow
  - text-transform
@@ -115,6 +119,7 @@ Below is a list of all the supported CSS properties and values.
  - white-space
  - width
  - webkit-line-clamp
+ - webkit-box-reflect (**Non-standard** — see [Box reflection](#-webkit-box-reflect-support))
  - webkit-text-fill-color (**Fill override** — falls back to `color` for `currentcolor`)
  - webkit-text-stroke
  - word-break
@@ -126,6 +131,10 @@ Below is a list of all the supported CSS properties and values.
 
 ## What's new in v2.4.x
 
+- **`text-emphasis`** — CJK emphasis marks (`filled`/`open` dot, circle, double-circle, triangle, sesame, or a custom string) in any colour, above or below the text
+- **`-webkit-box-reflect`** — mirrored copies below/above/left/right with offset and gradient mask
+- **`image-set()`** — the DPR-appropriate candidate is selected from the computed value
+- **`border-image-width` / `border-image-outset`** — the border-image geometry family is complete
 - **`mask-image` support** — alpha masks with `mask-position` / `mask-size` / `mask-repeat`, composited on a dedicated surface (see [Mask support](#mask-support))
 - **`backdrop-filter: blur()`** — frosted-glass captures via backdrop capture and the filter surface pipeline (see [Backdrop-filter support](#backdrop-filter-support))
 - **`conic-gradient()` and `repeating-radial-gradient()`** — completing the gradient family
@@ -419,3 +428,56 @@ itself.
   but not their cross-layer behaviour.
 - The effect is applied in the main renderer only, not inside nested filter
   surfaces.
+
+---
+
+### Text emphasis support
+
+`text-emphasis` draws marks above (or below) each grapheme cluster — the
+classic CJK emphasis treatment, also handy for highlighting runs of text.
+
+```html
+<!-- CJK emphasis dots -->
+<p style="text-emphasis: filled circle #cc0000;">这些文字会带红色圆点</p>
+
+<!-- Open sesame marks below the text -->
+<p style="text-emphasis: open sesame; text-emphasis-position: under left;">強調テキスト</p>
+
+<!-- Custom string marks -->
+<p style="text-emphasis: '★';">Starred text</p>
+```
+
+Supported shapes: `dot`, `circle`, `double-circle`, `triangle`, `sesame`, each
+in `filled` (default) or `open` form, plus a custom `<string>` mark rendered at
+half the font size. `text-emphasis-color` accepts any colour and falls back to
+the text colour for `currentcolor`.
+
+**Limitations (current scope):**
+
+- Horizontal text only; in vertical writing modes the marks are skipped.
+
+---
+
+### -webkit-box-reflect support
+
+`-webkit-box-reflect` paints a mirrored copy of the element (including its
+subtree) below, above, left or right of it, with an optional offset and mask —
+the classic WebKit reflection effect. The element is rasterised through the
+composited surface path and mirrored, then the mask (defined in element
+coordinates) is composited in the mirrored space.
+
+```html
+<!-- Gradient reflection below an image -->
+<img src="screenshot.png" style="-webkit-box-reflect: below 4px linear-gradient(transparent, rgba(255, 255, 255, 0.6));" />
+
+<!-- Masked reflection to the right -->
+<div style="-webkit-box-reflect: right 0px linear-gradient(to left, black, transparent);">
+  content
+</div>
+```
+
+**Limitations (current scope):**
+
+- The reflection mirrors the element's border box; combined with
+  `filter`/`mask` outsets the mirror source is clipped to the element box.
+- `box-reflect` makes the element a stacking context, consistent with WebKit.

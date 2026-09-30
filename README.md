@@ -36,6 +36,7 @@ html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/
 - `mask-image` alpha masks with position/size/repeat (see [mask support](docs/features.md#mask-support))
 - `backdrop-filter: blur()` for frosted-glass captures (see [backdrop-filter support](docs/features.md#backdrop-filter-support))
 - `conic-gradient()` and `repeating-radial-gradient()` — complete gradient family
+- `text-emphasis` (CJK emphasis marks), `-webkit-box-reflect`, `image-set()`, `border-image-outset` / `border-image-width`
 - `accent-color`, `outline`, `-webkit-text-fill-color`, `isolation`
 - `filter` compositing for eligible layers — `blur()` / `drop-shadow()` rendered on a dedicated surface with correct layer `opacity` (see [filter support notes](docs/filter-support.md))
 - Faithful `box-shadow` rendering, including inset shadows, blur scaling, and shadows through transformed ancestors
