@@ -28,6 +28,7 @@ import {
 } from './node-type-guards';
 
 import { contains } from '../core/bitwise';
+import { ISOLATION } from '../css/property-descriptors/isolation';
 import { DISPLAY } from '../css/property-descriptors/display';
 
 const LIST_OWNERS = ['OL', 'UL', 'MENU'];
@@ -135,6 +136,9 @@ const createsRealStackingContext = (node: Element, container: ElementContainer, 
         container.styles.isPositionedWithZIndex() ||
         container.styles.opacity < 1 ||
         Boolean(container.styles.filter) ||
+        Boolean(container.styles.backdropFilter) ||
+        container.styles.maskImage.length > 0 ||
+        container.styles.isolation === ISOLATION.ISOLATE ||
         container.styles.isTransformed() ||
         (isBodyElement(node) && root.styles.isTransparent())
     );

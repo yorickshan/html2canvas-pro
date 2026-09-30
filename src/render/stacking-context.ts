@@ -314,6 +314,18 @@ export const buildClipPathEffect = (clipPath: ClipPathValue, bounds: Bounds): Cl
             });
         }
 
+        case CLIP_PATH_TYPE.XYWH: {
+            const x = bLeft + getAbsoluteValue(clipPath.x, bWidth);
+            const y = bTop + getAbsoluteValue(clipPath.y, bHeight);
+            const w = Math.max(0, getAbsoluteValue(clipPath.width, bWidth));
+            const h = Math.max(0, getAbsoluteValue(clipPath.height, bHeight));
+            return new ClipPathEffect((ctx) => {
+                ctx.beginPath();
+                ctx.rect(x, y, w, h);
+                ctx.clip();
+            });
+        }
+
         case CLIP_PATH_TYPE.NONE:
             return null;
 

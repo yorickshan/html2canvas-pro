@@ -333,7 +333,7 @@ export class TextRenderer {
     }
 
     private renderTextFillWithShadows(text: TextBounds, styles: CSSParsedDeclaration, baseline: number): void {
-        this.ctx.fillStyle = asString(styles.color);
+        this.ctx.fillStyle = this.resolveFillColor(styles);
         this.renderTextWithLetterSpacing(text, styles.letterSpacing, baseline, styles.writingMode);
 
         const textShadows: TextShadow = styles.textShadow;
@@ -370,7 +370,7 @@ export class TextRenderer {
         paintOrderLayers.forEach((paintOrderLayer: number) => {
             switch (paintOrderLayer) {
                 case PAINT_ORDER_LAYER.FILL:
-                    this.ctx.fillStyle = asString(styles.color);
+                    this.ctx.fillStyle = this.resolveFillColor(styles);
                     this.renderTextWithLetterSpacing(textBound, styles.letterSpacing, baseline, styles.writingMode);
                     break;
                 case PAINT_ORDER_LAYER.STROKE:
@@ -458,6 +458,16 @@ export class TextRenderer {
     }
 
     /**
+     * -webkit-text-fill-color overrides the fill colour while leaving
+     * decorations and strokes on `color` (e.g. the classic transparent-fill
+     * gradient text). Falls back to `color` when the computed value could not
+     * be resolved (currentcolor).
+     */
+    private resolveFillColor(styles: CSSParsedDeclaration): string {
+        return asString(styles.webkitTextFillColor ?? styles.color);
+    }
+
+    /**
      * Render text with -webkit-line-clamp truncation.
      * Groups text bounds by their Y position into visual lines, then renders
      * only the first N-1 complete lines followed by an ellipsis on the Nth line.
@@ -503,7 +513,7 @@ export class TextRenderer {
             const bounds = new TextBounds(truncated, first.bounds);
             for (const layer of paintOrder) {
                 if (layer === PAINT_ORDER_LAYER.FILL) {
-                    this.ctx.fillStyle = asString(styles.color);
+                    this.ctx.fillStyle = this.resolveFillColor(styles);
                     this.renderTextWithLetterSpacing(bounds, styles.letterSpacing, baseline, styles.writingMode);
                 } else if (layer === PAINT_ORDER_LAYER.STROKE) {
                     this.renderTextStrokeWithStyle(bounds, styles, baseline);

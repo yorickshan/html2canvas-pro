@@ -148,14 +148,14 @@ export function renderFormElements(
                 new Vector(container.bounds.left + size * 0.84, container.bounds.top + size * 0.34085),
                 new Vector(container.bounds.left + size * 0.39363, container.bounds.top + size * 0.79)
             ]);
-            ctx.fillStyle = asString(INPUT_COLOR);
+            ctx.fillStyle = asString(container.styles.accentColor ?? INPUT_COLOR);
             ctx.fill();
             ctx.restore();
         } else if (container.type === RADIO && container.checked) {
             ctx.save();
             ctx.beginPath();
             ctx.arc(container.bounds.left + size / 2, container.bounds.top + size / 2, size / 4, 0, Math.PI * 2, true);
-            ctx.fillStyle = asString(INPUT_COLOR);
+            ctx.fillStyle = asString(container.styles.accentColor ?? INPUT_COLOR);
             ctx.fill();
             ctx.restore();
         }

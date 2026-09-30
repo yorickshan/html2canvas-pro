@@ -104,6 +104,12 @@ import { borderImageSource } from './property-descriptors/border-image-source';
 import { borderImageSlice } from './property-descriptors/border-image-slice';
 import { borderImageRepeat } from './property-descriptors/border-image-repeat';
 import { boxDecorationBreak } from './property-descriptors/box-decoration-break';
+import { accentColor } from './property-descriptors/accent-color';
+import { webkitTextFillColor } from './property-descriptors/webkit-text-fill-color';
+import { isolation } from './property-descriptors/isolation';
+import { outlineColor, outlineOffset, outlineStyle, outlineWidth } from './property-descriptors/outline';
+import { backdropFilter } from './property-descriptors/backdrop-filter';
+import { maskImage, maskPosition, maskRepeat, maskSize } from './property-descriptors/mask';
 import { PARSE_CACHE_MAX_PER_DESCRIPTOR } from '../core/constants';
 
 export const STANDARD_PROPERTIES: [string, CSSPropertyDescriptor<unknown>, string][] = [
@@ -188,7 +194,19 @@ export const STANDARD_PROPERTIES: [string, CSSPropertyDescriptor<unknown>, strin
     ['borderImageSource', borderImageSource, 'borderImageSource'],
     ['borderImageSlice', borderImageSlice, 'borderImageSlice'],
     ['borderImageRepeat', borderImageRepeat, 'borderImageRepeat'],
-    ['boxDecorationBreak', boxDecorationBreak, 'boxDecorationBreak']
+    ['boxDecorationBreak', boxDecorationBreak, 'boxDecorationBreak'],
+    ['accentColor', accentColor, 'accentColor'],
+    ['webkitTextFillColor', webkitTextFillColor, 'webkitTextFillColor'],
+    ['isolation', isolation, 'isolation'],
+    ['outlineColor', outlineColor, 'outlineColor'],
+    ['outlineStyle', outlineStyle, 'outlineStyle'],
+    ['outlineWidth', outlineWidth, 'outlineWidth'],
+    ['outlineOffset', outlineOffset, 'outlineOffset'],
+    ['backdropFilter', backdropFilter, 'backdropFilter'],
+    ['maskImage', maskImage, 'maskImage'],
+    ['maskPosition', maskPosition, 'maskPosition'],
+    ['maskRepeat', maskRepeat, 'maskRepeat'],
+    ['maskSize', maskSize, 'maskSize']
 ];
 
 const parseCache = new Map<CSSPropertyDescriptor<any>, Map<string, unknown>>();

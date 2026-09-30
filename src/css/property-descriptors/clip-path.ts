@@ -17,7 +17,8 @@ export const enum CLIP_PATH_TYPE {
     CIRCLE = 2,
     ELLIPSE = 3,
     POLYGON = 4,
-    PATH = 5
+    PATH = 5,
+    XYWH = 6
 }
 
 /** Radius keyword or length-percentage for circle/ellipse. */
@@ -77,8 +78,22 @@ export interface PathClipPath {
     d: string;
 }
 
+/**
+ * xywh( <length-percentage>{2} <length-percentage>{2} [ round <'border-radius'> ]? )
+ * A rectangle at (x, y) with the given width and height, from the top-left
+ * corner of the reference box. The optional round clause is parsed but
+ * ignored (same as inset).
+ */
+export interface XywhClipPath {
+    type: CLIP_PATH_TYPE.XYWH;
+    x: LengthPercentage;
+    y: LengthPercentage;
+    width: LengthPercentage;
+    height: LengthPercentage;
+}
+
 export type ClipPathValue =
-    NoneClipPath | InsetClipPath | CircleClipPath | EllipseClipPath | PolygonClipPath | PathClipPath;
+    NoneClipPath | InsetClipPath | CircleClipPath | EllipseClipPath | PolygonClipPath | PathClipPath | XywhClipPath;
 
 const NONE: NoneClipPath = { type: CLIP_PATH_TYPE.NONE };
 
@@ -237,6 +252,65 @@ const parsePath = (values: CSSValue[]): PathClipPath | NoneClipPath => {
     return { type: CLIP_PATH_TYPE.PATH, d: stringToken.value };
 };
 
+/**
+ * xywh( <length-percentage>{2} <length-percentage>{2} [ round <'border-radius'> ]? )
+ * Values are x, y, width, height in that order. All four are required for a
+ * valid shape; anything else falls back to NONE.
+ */
+const parseXywh = (values: CSSValue[]): XywhClipPath | NoneClipPath => {
+    const lengths: LengthPercentage[] = [];
+    for (const token of values) {
+        if (token.type === TokenType.WHITESPACE_TOKEN) continue;
+        if (isIdentToken(token) && token.value === 'round') break;
+        if (isLengthPercentage(token)) lengths.push(token);
+    }
+    if (lengths.length < 4) return NONE;
+    return {
+        type: CLIP_PATH_TYPE.XYWH,
+        x: at(lengths, 0),
+        y: at(lengths, 1),
+        width: at(lengths, 2),
+        height: at(lengths, 3)
+    };
+};
+
+/**
+ * rect( [ <length-percentage> | auto ]{4} [ round <'border-radius'> ]? )
+ * Distances from the top/right/bottom/left edges — the same shape as inset,
+ * except `auto` means zero inset for top/left and full extent for
+ * right/bottom. Expressed as an InsetClipPath, so it reuses the inset
+ * renderer untouched.
+ */
+const parseRect = (values: CSSValue[]): InsetClipPath | NoneClipPath => {
+    const lengths: (LengthPercentage | 'auto')[] = [];
+    for (const token of values) {
+        if (token.type === TokenType.WHITESPACE_TOKEN) continue;
+        if (isIdentToken(token)) {
+            if (token.value === 'round') break;
+            if (token.value === 'auto') {
+                lengths.push('auto');
+                continue;
+            }
+            return NONE;
+        }
+        if (isLengthPercentage(token)) lengths.push(token);
+    }
+    if (lengths.length !== 4) return NONE;
+
+    // auto resolves per-edge at parse time using absolute percentages.
+    const resolve = (value: LengthPercentage | 'auto', edge: 'top' | 'right' | 'bottom' | 'left'): LengthPercentage => {
+        if (value !== 'auto') return value;
+        return edge === 'top' || edge === 'left' ? ZERO_LENGTH : HUNDRED_PERCENT;
+    };
+    return {
+        type: CLIP_PATH_TYPE.INSET,
+        top: resolve(at(lengths, 0), 'top'),
+        right: resolve(at(lengths, 1), 'right'),
+        bottom: resolve(at(lengths, 2), 'bottom'),
+        left: resolve(at(lengths, 3), 'left')
+    };
+};
+
 export const clipPath: IPropertyValueDescriptor<ClipPathValue> = {
     name: 'clip-path',
     initialValue: 'none',
@@ -259,6 +333,10 @@ export const clipPath: IPropertyValueDescriptor<ClipPathValue> = {
                     return parsePolygon(token.values);
                 case 'path':
                     return parsePath(token.values);
+                case 'xywh':
+                    return parseXywh(token.values);
+                case 'rect':
+                    return parseRect(token.values);
             }
         }
 

@@ -92,6 +92,12 @@ import { borderImageSource } from './property-descriptors/border-image-source';
 import { borderImageSlice } from './property-descriptors/border-image-slice';
 import { borderImageRepeat } from './property-descriptors/border-image-repeat';
 import { boxDecorationBreak } from './property-descriptors/box-decoration-break';
+import { type AccentColor } from './property-descriptors/accent-color';
+import { type WebkitTextFillColor } from './property-descriptors/webkit-text-fill-color';
+import { type ISOLATION } from './property-descriptors/isolation';
+import { type OUTLINE_STYLE, type OutlineColor } from './property-descriptors/outline';
+import { type FilterValue } from './property-descriptors/filter';
+import { type MaskImage, type MaskPosition, type MaskRepeat, type MaskSize } from './property-descriptors/mask';
 
 export class CSSParsedDeclaration {
     animationDuration!: ReturnType<typeof duration.parse>;
@@ -181,6 +187,18 @@ export class CSSParsedDeclaration {
     borderImageSlice!: ReturnType<typeof borderImageSlice.parse>;
     borderImageRepeat!: ReturnType<typeof borderImageRepeat.parse>;
     boxDecorationBreak!: ReturnType<typeof boxDecorationBreak.parse>;
+    accentColor!: AccentColor;
+    webkitTextFillColor!: WebkitTextFillColor;
+    isolation!: ISOLATION;
+    outlineColor!: OutlineColor;
+    outlineStyle!: OUTLINE_STYLE;
+    outlineWidth!: number;
+    outlineOffset!: number;
+    backdropFilter!: FilterValue;
+    maskImage!: MaskImage;
+    maskPosition!: MaskPosition;
+    maskRepeat!: MaskRepeat;
+    maskSize!: MaskSize;
 
     // ── Grouped read-only accessors ──────────────────────────────
     private _border?: BorderStyles;

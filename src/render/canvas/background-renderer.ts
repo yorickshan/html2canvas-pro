@@ -15,12 +15,15 @@ import { ElementContainer } from '../../dom/element-container';
 import { Path } from '../path';
 import {
     CSSImageType,
+    CSSConicGradientImage,
     CSSLinearGradientImage,
     CSSRadialGradientImage,
     CSSURLImage,
+    isConicGradient,
     isLinearGradient,
     isRadialGradient,
-    isRepeatingLinearGradient
+    isRepeatingLinearGradient,
+    isRepeatingRadialGradient
 } from '../../css/types/image';
 import { calculateBackgroundRendering, getBackgroundValueForIndex } from '../background';
 import { calculateGradientDirection, calculateRadius, processColorStops } from '../../css/types/functions/gradient';
@@ -99,6 +102,10 @@ export class BackgroundRenderer {
                 this.renderRepeatingLinearGradient(container, backgroundImage, index);
             } else if (isRadialGradient(backgroundImage)) {
                 this.renderRadialGradient(container, backgroundImage, index);
+            } else if (isRepeatingRadialGradient(backgroundImage)) {
+                this.renderRepeatingRadialGradient(container, backgroundImage, index);
+            } else if (isConicGradient(backgroundImage)) {
+                this.renderConicGradient(container, backgroundImage, index);
             }
 
             if (layerCount > 0) {
@@ -355,6 +362,120 @@ export class BackgroundRenderer {
                 this.ctx.restore();
             }
         }
+    }
+
+    /**
+     * Render a repeating radial gradient.
+     *
+     * Canvas radial gradients have no native repeat mode, so the stop list is
+     * stacked: with period p (the last stop position) the stops are re-added
+     * k*p + s for k = 0..ceil(radius / p) - 1, clipped to the [0, 1] gradient
+     * range. The full repeating gradient is then rasterised with the same
+     * ellipse pattern trick as the plain radial renderer.
+     */
+    private renderRepeatingRadialGradient(
+        container: ElementContainer,
+        backgroundImage: CSSRadialGradientImage,
+        index: number
+    ): void {
+        const [path, left, top, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
+        const position = backgroundImage.position.length === 0 ? [FIFTY_PERCENT] : backgroundImage.position;
+        const x = getAbsoluteValue(at(position, 0), width);
+        const y = getAbsoluteValue(at(position, position.length - 1), height);
+
+        let [rx, ry] = calculateRadius(backgroundImage, x, y, width, height);
+        if (rx === 0 || ry === 0) {
+            rx = Math.max(rx, 0.01);
+            ry = Math.max(ry, 0.01);
+        }
+        if (!(rx > 0 && ry > 0)) {
+            return;
+        }
+
+        // processColorStops returns stops normalised to [0, 1] where 1 spans
+        // 2*rx (the diameter used as line length). The canvas gradient here has
+        // radius rx, so normalised position 1 corresponds to gradient stop 0.5.
+        const processed = processColorStops(backgroundImage.stops, rx * 2);
+        const firstStop = at(processed, 0);
+        const lastStop = at(processed, processed.length - 1);
+        const period = Math.max(lastStop.stop - firstStop.stop, 0.01);
+
+        const stops: Array<{ stop: number; color: string }> = [];
+        const rings = Math.ceil(0.5 / period);
+        for (let k = 0; k < rings; k++) {
+            for (const s of processed) {
+                const stop = (k * period + (s.stop - firstStop.stop)) / 2;
+                if (stop > 1) break;
+                stops.push({ stop, color: asString(s.color) });
+            }
+        }
+        // Continue with the last colour out to the ending shape.
+        stops.push({ stop: 1, color: asString(lastStop.color) });
+
+        const cacheKey = `rrg|${Math.round(x)}x${Math.round(y)}|${Math.round(rx)}x${Math.round(ry)}|${stops.length}|${JSON.stringify(backgroundImage.stops)}`;
+        let pattern = this.patternCache.get(cacheKey);
+        if (!pattern) {
+            const ownerDocument = this.canvas.ownerDocument ?? document;
+            const offscreen = ownerDocument.createElement('canvas');
+            offscreen.width = Math.ceil(rx * 2);
+            offscreen.height = Math.ceil(ry * 2);
+            const offCtx = offscreen.getContext('2d');
+            if (offCtx) {
+                const gradient = offCtx.createRadialGradient(rx, rx, 0, rx, rx, rx);
+                stops.forEach((s) => gradient.addColorStop(s.stop, s.color));
+                offCtx.fillStyle = gradient;
+                if (rx !== ry) offCtx.scale(1, ry / rx);
+                offCtx.fillRect(0, 0, rx * 2, ry * 2);
+                pattern = this.ctx.createPattern(offscreen, 'no-repeat') as CanvasPattern;
+                this.patternCache.set(cacheKey, pattern);
+            }
+        }
+
+        if (pattern) {
+            this.path(path);
+            this.ctx.save();
+            this.ctx.clip();
+            this.ctx.translate(left + x - rx, top + y - ry);
+            this.ctx.fillStyle = pattern;
+            this.ctx.fillRect(0, 0, rx * 2, ry * 2);
+            this.ctx.restore();
+        }
+    }
+
+    /**
+     * Render a conic gradient.
+     *
+     * Color stops are angular: percentages of the full 360° sweep, normalised
+     * by processing against a line length of 1. Canvas createConicGradient
+     * measures its start angle in the same clockwise-from-12-o'clock space as
+     * CSS `from <angle>`.
+     */
+    private renderConicGradient(
+        container: ElementContainer,
+        backgroundImage: CSSConicGradientImage,
+        index: number
+    ): void {
+        const [path, left, top, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
+        const position = backgroundImage.position.length === 0 ? [FIFTY_PERCENT] : backgroundImage.position;
+        const cx = left + getAbsoluteValue(at(position, 0), width);
+        const cy = top + getAbsoluteValue(at(position, position.length - 1), height);
+
+        // Canvas conic gradients start at 3 o'clock; CSS `from 0deg` starts at
+        // 12 o'clock (verified against Chrome), so shift by -90°.
+        const gradient = this.ctx.createConicGradient(backgroundImage.angle - Math.PI / 2, cx, cy);
+        // Stops arrive normalised to [0, 1]; regions beyond the last stop pad
+        // with its colour, matching canvas gradient semantics.
+        const stops = processColorStops(backgroundImage.stops, 1);
+        stops.forEach((s) => {
+            gradient.addColorStop(Math.min(1, Math.max(0, s.stop)), asString(s.color));
+        });
+
+        this.path(path);
+        this.ctx.save();
+        this.ctx.clip();
+        this.ctx.fillStyle = gradient;
+        this.ctx.fill();
+        this.ctx.restore();
     }
 
     /**

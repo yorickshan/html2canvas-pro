@@ -9,13 +9,17 @@ import { webkitGradient } from './functions/-webkit-gradient';
 import { radialGradient } from './functions/radial-gradient';
 import { prefixRadialGradient } from './functions/-prefix-radial-gradient';
 import { repeatingLinearGradient } from './functions/repeating-linear-gradient';
+import { repeatingRadialGradient } from './functions/repeating-radial-gradient';
+import { conicGradient } from './functions/conic-gradient';
 import { Context } from '../../core/context';
 
 export const enum CSSImageType {
     URL,
     LINEAR_GRADIENT,
     RADIAL_GRADIENT,
-    REPEATING_LINEAR_GRADIENT
+    REPEATING_LINEAR_GRADIENT,
+    REPEATING_RADIAL_GRADIENT,
+    CONIC_GRADIENT
 }
 
 export const isLinearGradient = (background: ICSSImage): background is CSSLinearGradientImage => {
@@ -28,6 +32,14 @@ export const isRadialGradient = (background: ICSSImage): background is CSSRadial
 
 export const isRepeatingLinearGradient = (background: ICSSImage): background is CSSLinearGradientImage => {
     return background.type === CSSImageType.REPEATING_LINEAR_GRADIENT;
+};
+
+export const isRepeatingRadialGradient = (background: ICSSImage): background is CSSRadialGradientImage => {
+    return background.type === CSSImageType.REPEATING_RADIAL_GRADIENT;
+};
+
+export const isConicGradient = (background: ICSSImage): background is CSSConicGradientImage => {
+    return background.type === CSSImageType.CONIC_GRADIENT;
 };
 
 export interface UnprocessedGradientColorStop {
@@ -77,9 +89,19 @@ export const enum CSSRadialExtent {
 export type CSSRadialSize = CSSRadialExtent | LengthPercentage[];
 
 export interface CSSRadialGradientImage extends ICSSGradientImage {
-    type: CSSImageType.RADIAL_GRADIENT;
+    type: CSSImageType.RADIAL_GRADIENT | CSSImageType.REPEATING_RADIAL_GRADIENT;
     shape: CSSRadialShape;
     size: CSSRadialSize;
+    position: LengthPercentage[];
+}
+
+/**
+ * conic-gradient( [ from <angle> ]? [ at <position> ]?, <color-stop-list> )
+ * `angle` is the `from` angle in radians, measured clockwise from 12 o'clock.
+ */
+export interface CSSConicGradientImage extends ICSSGradientImage {
+    type: CSSImageType.CONIC_GRADIENT;
+    angle: number;
     position: LengthPercentage[];
 }
 
@@ -127,5 +149,11 @@ const SUPPORTED_IMAGE_FUNCTIONS: Record<string, (context: Context, args: CSSValu
     '-webkit-repeating-linear-gradient': repeatingLinearGradient,
     '-moz-repeating-linear-gradient': repeatingLinearGradient,
     '-ms-repeating-linear-gradient': repeatingLinearGradient,
-    '-o-repeating-linear-gradient': repeatingLinearGradient
+    '-o-repeating-linear-gradient': repeatingLinearGradient,
+    'repeating-radial-gradient': repeatingRadialGradient,
+    '-webkit-repeating-radial-gradient': repeatingRadialGradient,
+    '-moz-repeating-radial-gradient': repeatingRadialGradient,
+    'conic-gradient': conicGradient,
+    '-webkit-conic-gradient': conicGradient,
+    '-moz-conic-gradient': conicGradient
 };
