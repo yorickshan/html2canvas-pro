@@ -162,15 +162,23 @@ export class TextClipRenderer {
             }
         }
 
+        // The offscreen context is scaled to CSS pixels, so the device-sized
+        // mask must be drawn at CSS size (width/height) — passing device
+        // dimensions here would double-scale the mask by `scale` and misalign
+        // the clip region whenever scale ≠ 1.
         offscreen.ctx.globalCompositeOperation = 'destination-in';
-        offscreen.ctx.drawImage(mask.canvas, 0, 0, deviceWidth, deviceHeight);
+        offscreen.ctx.drawImage(mask.canvas, 0, 0, width, height);
 
         // ── Composite to the main canvas ──
         // Text shadows paint beneath the clipped background in browsers, so
-        // they are rendered on their own canvas and layered under it. The
-        // main context is scaled to CSS pixels — drawImage at CSS size maps
-        // the device-pixel surfaces onto the backing store 1:1.
-        const shadowCanvas = this.renderShadowSilhouettes(
+        // they are rendered on their own canvases and layered under it. Each
+        // shadow gets its own canvas: canvas shadow properties cast from
+        // whatever is already drawn, so reusing one canvas would make every
+        // previously drawn glyph (and its silhouette) cast again. Layers are
+        // stacked in browser order — the last shadow declared sits deepest.
+        // The main context is scaled to CSS pixels — drawImage at CSS size
+        // maps the device-pixel surfaces onto the backing store 1:1.
+        const shadowCanvases = this.renderShadowSilhouettes(
             paint,
             ownerDocument,
             deviceWidth,
@@ -180,12 +188,15 @@ export class TextClipRenderer {
             drawOptions
         );
 
-        if (shadowCanvas) {
+        if (shadowCanvases) {
             const composite = this.createLayer(ownerDocument, deviceWidth, deviceHeight);
             if (!composite) {
                 return;
             }
-            composite.ctx.drawImage(shadowCanvas, 0, 0);
+            // composite layer has no transform applied — device-pixel drawImage 1:1.
+            for (const shadowCanvas of shadowCanvases) {
+                composite.ctx.drawImage(shadowCanvas, 0, 0);
+            }
             composite.ctx.drawImage(offscreen.canvas, 0, 0);
             this.ctx.drawImage(composite.canvas, bounds.left, bounds.top, bounds.width, bounds.height);
         } else {
@@ -254,9 +265,9 @@ export class TextClipRenderer {
     }
 
     /**
-     * Paint the text-shadow silhouettes for every glyph onto a dedicated
-     * canvas, in browser order (the last shadow sits deepest). Returns null
-     * when the element has no text shadows.
+     * Paint the text-shadow silhouettes for every glyph, one canvas per
+     * shadow, returned front-to-back (the last shadow sits deepest). Returns
+     * null when the element has no text shadows.
      */
     private renderShadowSilhouettes(
         paint: ElementPaint,
@@ -266,17 +277,13 @@ export class TextClipRenderer {
         fontSource: CanvasRenderingContext2D,
         styles: CSSParsedDeclaration,
         drawOptions: GlyphDrawOptions
-    ): HTMLCanvasElement | null {
+    ): HTMLCanvasElement[] | null {
         const textShadows: TextShadow = styles.textShadow;
         if (!textShadows.length) {
             return null;
         }
 
-        const layer = this.createGlyphLayer(ownerDocument, deviceWidth, deviceHeight, fontSource);
-        if (!layer) {
-            return null;
-        }
-
+        const canvases: HTMLCanvasElement[] = [];
         // The canvas shadow* properties cast the blurred silhouette in the
         // shadow colour; the source glyph is painted in the same colour and
         // ends up covered by the clipped background composited on top.
@@ -284,6 +291,10 @@ export class TextClipRenderer {
         // transform), matching the main text renderer.
         for (let i = textShadows.length - 1; i >= 0; i--) {
             const textShadow = at(textShadows, i);
+            const layer = this.createGlyphLayer(ownerDocument, deviceWidth, deviceHeight, fontSource);
+            if (!layer) {
+                continue;
+            }
             layer.ctx.shadowColor = asString(textShadow.color);
             layer.ctx.shadowOffsetX = textShadow.offsetX.number * this.scale;
             layer.ctx.shadowOffsetY = textShadow.offsetY.number * this.scale;
@@ -296,9 +307,10 @@ export class TextClipRenderer {
                     });
                 }
             }
+            canvases.push(layer.canvas);
         }
 
-        return layer.canvas;
+        return canvases.length ? canvases : null;
     }
 
     private getTextStrokeLineJoin(): CanvasLineJoin {

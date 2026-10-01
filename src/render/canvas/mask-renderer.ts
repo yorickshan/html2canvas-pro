@@ -182,9 +182,11 @@ const paintGradientLayer = (ctx: CanvasRenderingContext2D, layer: ICSSImage, are
     let gradient: CanvasGradient | null = null;
     if (layer.type === CSSImageType.LINEAR_GRADIENT || layer.type === CSSImageType.REPEATING_LINEAR_GRADIENT) {
         const linear = layer as CSSLinearGradientImage;
-        // calculateGradientDirection returns [lineLength, x0, y0, x1, y1].
-        const [lineLength, gx0, gy0, gx1, gy1] = calculateGradientDirection(linear.angle || 0, width, height);
-        gradient = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+        // calculateGradientDirection returns [lineLength, x0, x1, y0, y1] in
+        // area-local coordinates; the gradient line must be offset into the
+        // same page-coordinate space the fillRect below uses.
+        const [lineLength, lx0, lx1, ly0, ly1] = calculateGradientDirection(linear.angle || 0, width, height);
+        gradient = ctx.createLinearGradient(area.left + lx0, area.top + ly0, area.left + lx1, area.top + ly1);
         processColorStops(linear.stops, lineLength || 1).forEach((s) =>
             gradient!.addColorStop(Math.min(1, Math.max(0, s.stop)), asString(s.color))
         );

@@ -30,6 +30,7 @@ import {
 import { contains } from '../core/bitwise';
 import { ISOLATION } from '../css/property-descriptors/isolation';
 import { DISPLAY } from '../css/property-descriptors/display';
+import { MIX_BLEND_MODE } from '../css/property-descriptors/mix-blend-mode';
 
 const LIST_OWNERS = ['OL', 'UL', 'MENU'];
 
@@ -148,6 +149,12 @@ const createsRealStackingContext = (node: Element, container: ElementContainer, 
 const createsStackingContext = (styles: CSSParsedDeclaration): boolean => {
     // Positioned and floating elements create stacking contexts
     if (styles.isPositioned() || styles.isFloating()) {
+        return true;
+    }
+
+    // mix-blend-mode blends the element as one isolated group with the
+    // backdrop, which requires its own stacking context (same as opacity<1).
+    if (styles.mixBlendMode !== MIX_BLEND_MODE.NORMAL) {
         return true;
     }
 

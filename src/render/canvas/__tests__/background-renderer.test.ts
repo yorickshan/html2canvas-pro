@@ -403,39 +403,44 @@ describe('BackgroundRenderer', () => {
     });
 
     describe('repeating linear gradients', () => {
-        it('renders one cycle as a repeating pattern', async () => {
+        it('stacks whole cycle stops onto the gradient line', async () => {
             const { renderer, ctx } = createRenderer();
             // angle 0 -> line length is the element height (50); stops at 0px and 25px
             const gradient = repeatingGradientImage(0, 25);
             await renderer.renderBackgroundImage(container({ backgroundImage: [gradient] }));
 
-            const offCtx = createdContexts[0] as CanvasRenderingContext2D;
-            const repeatingGradient = (offCtx.createLinearGradient as ReturnType<typeof vi.fn>).mock.results[0]?.value;
-            expect(repeatingGradient.addColorStop).toHaveBeenCalledWith(0, 'rgb(255,0,0)');
-            expect(repeatingGradient.addColorStop).toHaveBeenCalledWith(1, 'rgb(0,0,255)');
-
-            expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            const [patternSource, repeatMode] = vi.mocked(ctx.createPattern).mock.calls[0]! as [
-                HTMLCanvasElement,
-                string
-            ];
-            expect(patternSource.width).toBe(25);
-            expect(patternSource.height).toBe(25);
-            expect(repeatMode).toBe('repeat');
+            // The cycle period is 25px of a 50px line, so exactly two cycles
+            // are stacked as stops (0, 0.5, then 0.5, 1) plus the tail fill.
+            expect(ctx.createLinearGradient).toHaveBeenCalledTimes(1);
+            const repeatingGradient = (ctx.createLinearGradient as ReturnType<typeof vi.fn>).mock.results[0]!.value as {
+                addColorStop: ReturnType<typeof vi.fn>;
+            };
+            const calls = (repeatingGradient.addColorStop as ReturnType<typeof vi.fn>).mock.calls;
+            expect(calls[0]).toEqual([0, 'rgb(255,0,0)']);
+            expect(calls[1]).toEqual([0.5, 'rgb(0,0,255)']);
+            expect(calls[2]).toEqual([0.5, 'rgb(255,0,0)']);
+            expect(calls[3]).toEqual([1, 'rgb(0,0,255)']);
+            // The tail continues the last colour to the line end.
+            expect(calls[calls.length - 1]).toEqual([1, 'rgb(0,0,255)']);
+            // Painted directly as one gradient fill — no pattern tiling.
+            expect(ctx.createPattern).not.toHaveBeenCalled();
             expect(ctx.fill).toHaveBeenCalledTimes(1);
         });
 
-        it('falls back to a plain linear gradient when the stop span is empty', async () => {
+        it('collapses to the last colour when the stop span is empty', async () => {
             const { renderer, ctx } = createRenderer();
             // the second stop is clamped up to the first, so the repeating span is zero
             const gradient = repeatingGradientImage(20, 5);
             await renderer.renderBackgroundImage(container({ backgroundImage: [gradient] }));
 
-            // fallback paints the full area (100x50) instead of a 20x20 cycle
-            expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            const [patternSource] = vi.mocked(ctx.createPattern).mock.calls[0]!;
-            expect(patternSource.width).toBe(100);
-            expect(patternSource.height).toBe(50);
+            // A degenerate period paints the last colour across the area.
+            expect(ctx.createLinearGradient).toHaveBeenCalledTimes(1);
+            const repeatingGradient = (ctx.createLinearGradient as ReturnType<typeof vi.fn>).mock.results[0]!.value as {
+                addColorStop: ReturnType<typeof vi.fn>;
+            };
+            const calls = (repeatingGradient.addColorStop as ReturnType<typeof vi.fn>).mock.calls;
+            expect(calls[0]).toEqual([0, 'rgb(0,0,255)']);
+            expect(calls[calls.length - 1]).toEqual([1, 'rgb(0,0,255)']);
             expect(ctx.fill).toHaveBeenCalledTimes(1);
         });
     });

@@ -9,6 +9,7 @@ import {
     EffectTarget,
     FilterEffect,
     IElementEffect,
+    isBlendEffect,
     isClipEffect,
     isFilterEffect,
     isOpacityEffect,
@@ -152,7 +153,12 @@ export class ElementPaint {
         let parent = this === surfaceRoot ? null : this.parent;
         const sourceEffects = (paint: ElementPaint) =>
             paint.effects.filter(
-                (effect) => paint !== surfaceRoot || (!isFilterEffect(effect) && !isOpacityEffect(effect))
+                (effect) =>
+                    paint !== surfaceRoot ||
+                    (!isFilterEffect(effect) &&
+                        !isOpacityEffect(effect) &&
+                        !isBlendEffect(effect) &&
+                        !isClipEffect(effect))
             );
         const effects = sourceEffects(this);
         while (parent) {

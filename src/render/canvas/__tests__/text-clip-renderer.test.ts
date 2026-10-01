@@ -117,7 +117,10 @@ describe('TextClipRenderer', () => {
         expect(maskCtx.fillText).toHaveBeenNthCalledWith(3, 'missing', 80, expect.any(Number));
 
         // The background canvas never receives glyphs directly; the combined
-        // mask is applied exactly once via destination-in.
+        // mask is applied exactly once via destination-in. The mask canvas is
+        // device-sized (scale 2) but drawn at CSS size — the offscreen context
+        // is already scaled to CSS pixels, so device dimensions would
+        // double-scale the clip region.
         expect(offCtx.fillText).not.toHaveBeenCalled();
         expect(offCtx.globalCompositeOperation).toBe('destination-in');
         expect(offCtx.drawImage).toHaveBeenCalledTimes(1);
@@ -125,7 +128,7 @@ describe('TextClipRenderer', () => {
             .calls[0] as unknown as number[];
         expect((mask as HTMLCanvasElement).width).toBe(400);
         expect((mask as HTMLCanvasElement).height).toBe(100);
-        expect([dx, dy, dw, dh]).toEqual([0, 0, 400, 100]);
+        expect([dx, dy, dw, dh]).toEqual([0, 0, 200, 50]);
 
         // Clipped result is composited back onto the main canvas at CSS size
         // (the main context is already scaled), so the device-pixel offscreen
@@ -201,18 +204,19 @@ describe('TextClipRenderer', () => {
                 }
             })
         );
-        // offscreen + mask + one shadow layer + composite
-        expect(contexts.length).toBe(4);
-        const [offCtx, maskCtx, shadowCtx, compositeCtx] = contexts;
+        // offscreen + mask + one shadow layer per shadow + composite
+        expect(contexts.length).toBe(5);
+        const [offCtx, maskCtx, deepShadowCtx, frontShadowCtx, compositeCtx] = contexts;
 
-        // Each shadow is cast once per fragment, in reverse order (deepest
-        // shadow drawn first), with device-pixel offsets. The properties
-        // left on the context belong to the last-drawn (frontmost) shadow.
-        expect(shadowCtx.fillText).toHaveBeenCalledTimes(2);
-        expect(shadowCtx.shadowOffsetX).toBe(4);
-        expect(shadowCtx.shadowOffsetY).toBe(4);
+        // Each shadow gets its own canvas (a shared canvas would make every
+        // previously drawn glyph cast again), drawn in reverse order — the
+        // last declared shadow deepest — with device-pixel offsets.
+        expect(deepShadowCtx.fillText).toHaveBeenCalledTimes(1);
+        expect(deepShadowCtx.shadowOffsetX).toBe(8);
+        expect(frontShadowCtx.fillText).toHaveBeenCalledTimes(1);
+        expect(frontShadowCtx.shadowOffsetX).toBe(4);
         // The composite layers shadows first, then the clipped background.
-        expect(compositeCtx.drawImage).toHaveBeenCalledTimes(2);
+        expect(compositeCtx.drawImage).toHaveBeenCalledTimes(3);
         expect(compositeCtx.drawImage).toHaveBeenNthCalledWith(1, expect.anything(), 0, 0);
         expect(offCtx.globalCompositeOperation).toBe('destination-in');
         expect(ctx.drawImage).toHaveBeenCalledTimes(1);

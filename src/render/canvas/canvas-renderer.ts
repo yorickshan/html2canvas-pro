@@ -7,11 +7,21 @@ import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
 import { Path, transformPath } from '../path';
 import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
 import { BoundCurves, calculateBorderBoxPath, calculateContentBoxPath, calculatePaddingBoxPath } from '../bound-curves';
-import { CSSImageType, CSSURLImage } from '../../css/types/image';
+import {
+    CSSImageType,
+    CSSURLImage,
+    CSSLinearGradientImage,
+    CSSRadialGradientImage,
+    CSSConicGradientImage,
+    ICSSImage
+} from '../../css/types/image';
+import { calculateGradientDirection, calculateRadius, processColorStops } from '../../css/types/functions/gradient';
+import { getAbsoluteValue } from '../../css/types/length-percentage';
+import { at } from '../../core/util';
 import { getBackgroundValueForIndex } from '../background';
 import { contentBox } from '../box-sizing';
 import { ReplacedElementContainer } from '../../dom/replaced-elements';
-import { EffectTarget, isClipEffect, isFilterEffect, isOpacityEffect } from '../effects';
+import { EffectTarget, isBlendEffect, isClipEffect, isFilterEffect, isOpacityEffect } from '../effects';
 import { CLIP_PATH_TYPE } from '../../css/property-descriptors/clip-path';
 import { MIX_BLEND_MODE } from '../../css/property-descriptors/mix-blend-mode';
 import {
@@ -165,13 +175,19 @@ export class CanvasRenderer {
             const filter = parseSimpleFilter(styles.filter);
             const hasMask = styles.maskImage.length > 0;
             const reflect = styles.webkitBoxReflect;
+            // mix-blend-mode blends the element (background + content) as one
+            // isolated group with the backdrop, so it also requires the
+            // composited surface path — setting globalCompositeOperation on
+            // the main canvas would blend each paint call separately and,
+            // for light-coloured content (white text over multiply), erase it.
+            const hasBlend = styles.mixBlendMode !== MIX_BLEND_MODE.NORMAL;
             if (
                 stack.element !== this.surfaceRoot &&
                 !this.legacySubtree &&
-                (hasMask || reflect || (filter && (styles.filter || styles.opacity < 1))) &&
+                (hasMask || reflect || hasBlend || (filter && (styles.filter || styles.opacity < 1))) &&
                 this.canComposite(stack.element)
             ) {
-                if (!(await this.renderCompositedStack(stack, filter, hasMask, reflect))) {
+                if (!(await this.renderCompositedStack(stack, filter, hasMask, reflect, hasBlend))) {
                     // A rejected optional surface must preserve the previous subtree path.
                     this.legacySubtree = true;
                     try {
@@ -186,7 +202,7 @@ export class CanvasRenderer {
         }
     }
 
-    // Draft scope: transformed, blended and clip-path subtrees keep the old path.
+    // Draft scope: transformed and clip-path subtrees keep the old path.
     // The surface root owns its filter/opacity; ancestors are applied at composition.
     private canComposite(paint: ElementPaint): boolean {
         const supported = (container: ElementContainer): boolean => {
@@ -194,7 +210,6 @@ export class CanvasRenderer {
             return (
                 !styles.isTransformed() &&
                 styles.zoom === 1 &&
-                styles.mixBlendMode === MIX_BLEND_MODE.NORMAL &&
                 styles.clipPath.type === CLIP_PATH_TYPE.NONE &&
                 !contains(styles.display, DISPLAY.LIST_ITEM) &&
                 parseSimpleFilter(styles.filter) !== null
@@ -214,7 +229,8 @@ export class CanvasRenderer {
         stack: StackingContext,
         filter: SimpleFilter | null,
         hasMask: boolean,
-        reflect: BoxReflect | null
+        reflect: BoxReflect | null,
+        hasBlend = false
     ): Promise<boolean> {
         const signal = this.options.signal;
         if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
@@ -269,16 +285,37 @@ export class CanvasRenderer {
                 .filter(
                     (effect) =>
                         !own.includes(effect) ||
-                        (!isFilterEffect(effect) && !isOpacityEffect(effect) && !isClipEffect(effect))
+                        (!isFilterEffect(effect) &&
+                            !isOpacityEffect(effect) &&
+                            !isBlendEffect(effect) &&
+                            !isClipEffect(effect))
                 );
             this.effectsRenderer.applyEffects(effects);
-            this.ctx.drawImage(
-                composited,
-                options.x,
-                options.y,
-                composited.width / options.scale,
-                composited.height / options.scale
-            );
+            if (hasBlend) {
+                // The isolated surface already contains the element's full
+                // paint (background + content); blend it with the backdrop as
+                // one group via the element's mix-blend-mode. save/restore
+                // keeps the composite operation from leaking into later paints.
+                this.ctx.save();
+                this.ctx.globalCompositeOperation = stack.element.container.styles
+                    .mixBlendMode as GlobalCompositeOperation;
+                this.ctx.drawImage(
+                    composited,
+                    options.x,
+                    options.y,
+                    composited.width / options.scale,
+                    composited.height / options.scale
+                );
+                this.ctx.restore();
+            } else {
+                this.ctx.drawImage(
+                    composited,
+                    options.x,
+                    options.y,
+                    composited.width / options.scale,
+                    composited.height / options.scale
+                );
+            }
             if (reflect) {
                 await this.drawReflection(composited, stack.element.container.bounds, bounds, reflect);
             }
@@ -386,11 +423,16 @@ export class CanvasRenderer {
             }
 
             if (reflect.mask) {
+                // The mask surface must match the reflection's device-pixel
+                // size (w×h here is already device scale). Painting it at CSS
+                // dimensions would only cover the top-left fraction of the
+                // reflection, and destination-in would erase the rest.
                 maskCanvas = document.createElement('canvas');
                 maskCanvas.width = w;
                 maskCanvas.height = h;
                 const mctx = maskCanvas.getContext('2d');
                 if (mctx) {
+                    mctx.scale(scale, scale);
                     await paintMaskLayers(
                         mctx,
                         [reflect.mask],
@@ -412,7 +454,7 @@ export class CanvasRenderer {
                             ctx.scale(1, -1);
                         }
                         ctx.globalCompositeOperation = 'destination-in';
-                        ctx.drawImage(maskCanvas, 0, 0);
+                        ctx.drawImage(maskCanvas, 0, 0, w, h);
                     } finally {
                         ctx.restore();
                     }
@@ -721,41 +763,46 @@ export class CanvasRenderer {
         // Render border-image if present (replaces traditional borders per CSS spec)
         if (styles.borderImageSource) {
             const source = styles.borderImageSource;
+            const bounds = paint.container.bounds;
+            const borderWidths: [number, number, number, number] = [
+                Math.max(0, styles.borderTopWidth),
+                Math.max(0, styles.borderRightWidth),
+                Math.max(0, styles.borderBottomWidth),
+                Math.max(0, styles.borderLeftWidth)
+            ];
+            let image: HTMLImageElement | HTMLCanvasElement | null = null;
             if (source.type === CSSImageType.URL) {
                 const url = (source as CSSURLImage).url;
                 try {
-                    const image = await this.context.cache.match(url);
-                    if (image) {
-                        const bounds = paint.container.bounds;
-                        const borderWidths: [number, number, number, number] = [
-                            Math.max(0, styles.borderTopWidth),
-                            Math.max(0, styles.borderRightWidth),
-                            Math.max(0, styles.borderBottomWidth),
-                            Math.max(0, styles.borderLeftWidth)
-                        ];
-                        const outset = resolveBorderImageOutset(styles.borderImageOutset, borderWidths);
-                        const area = bounds.add(
-                            -outset.left,
-                            -outset.top,
-                            outset.left + outset.right,
-                            outset.top + outset.bottom
-                        );
-                        const widths = resolveBorderImageWidths(styles.borderImageWidth, borderWidths, area);
-                        this.borderImageRenderer.renderBorderImage(
-                            bounds,
-                            image as HTMLImageElement,
-                            styles.borderImageSlice,
-                            styles.borderImageRepeat,
-                            widths[0],
-                            widths[1],
-                            widths[2],
-                            widths[3],
-                            outset
-                        );
-                    }
+                    image = (await this.context.cache.match(url)) ?? null;
                 } catch (e) {
                     this.context.logger.error(`Error loading border-image ${url}`);
                 }
+            } else {
+                // Gradient sources: rasterise the gradient across the border
+                // image area, then run the same 9-slice pipeline as for images.
+                image = this.rasterizeGradientSource(source, bounds);
+            }
+            if (image) {
+                const outset = resolveBorderImageOutset(styles.borderImageOutset, borderWidths);
+                const area = bounds.add(
+                    -outset.left,
+                    -outset.top,
+                    outset.left + outset.right,
+                    outset.top + outset.bottom
+                );
+                const widths = resolveBorderImageWidths(styles.borderImageWidth, borderWidths, area);
+                this.borderImageRenderer.renderBorderImage(
+                    bounds,
+                    image as HTMLImageElement,
+                    styles.borderImageSlice,
+                    styles.borderImageRepeat,
+                    widths[0],
+                    widths[1],
+                    widths[2],
+                    widths[3],
+                    outset
+                );
             }
             // When border-image is present, skip regular border rendering
             return;
@@ -865,6 +912,77 @@ export class CanvasRenderer {
         } finally {
             this.ctx.restore();
         }
+    }
+
+    /**
+     * Rasterise a gradient border-image-source across the border image area.
+     * CSS allows any <image> as the border-image source; gradients are painted
+     * over the whole border-image box and then sliced by the regular 9-slice
+     * pipeline, matching browser behaviour for `border-image: linear-gradient()`.
+     * Returns null when the gradient could not be painted.
+     */
+    private rasterizeGradientSource(source: ICSSImage, bounds: Bounds): HTMLCanvasElement | null {
+        const width = Math.max(1, Math.ceil(bounds.width));
+        const height = Math.max(1, Math.ceil(bounds.height));
+        const ownerDocument = this.ctx.canvas.ownerDocument ?? document;
+        const canvas = ownerDocument.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return null;
+        }
+
+        if (source.type === CSSImageType.LINEAR_GRADIENT || source.type === CSSImageType.REPEATING_LINEAR_GRADIENT) {
+            const gradientImage = source as CSSLinearGradientImage;
+            const [lineLength, x0, y0, x1, y1] = calculateGradientDirection(gradientImage.angle, width, height);
+            const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
+            processColorStops(gradientImage.stops, lineLength || width).forEach((colorStop) => {
+                gradient.addColorStop(Math.min(1, Math.max(0, colorStop.stop)), asString(colorStop.color));
+            });
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            return canvas;
+        }
+        if (source.type === CSSImageType.RADIAL_GRADIENT || source.type === CSSImageType.REPEATING_RADIAL_GRADIENT) {
+            const gradientImage = source as CSSRadialGradientImage;
+            const cx = getAbsoluteValue(at(gradientImage.position, 0), width);
+            const cy = getAbsoluteValue(at(gradientImage.position, 1), height);
+            const [rx, ry] = calculateRadius(gradientImage, cx, cy, width, height);
+            if (rx <= 0 || ry <= 0) {
+                return null;
+            }
+            // Elliptical gradients are painted as a circle of the horizontal
+            // radius with the context scaled vertically around the center.
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(1, ry / rx);
+            ctx.translate(-cx, -cy);
+            const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
+            processColorStops(gradientImage.stops, rx).forEach((colorStop) => {
+                gradient.addColorStop(Math.min(1, Math.max(0, colorStop.stop)), asString(colorStop.color));
+            });
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            ctx.restore();
+            return canvas;
+        }
+        if (source.type === CSSImageType.CONIC_GRADIENT) {
+            const gradientImage = source as CSSConicGradientImage;
+            // Canvas conic gradients measure angles from the positive x-axis
+            // clockwise; CSS conic gradients start at the 12 o'clock position.
+            const cx = getAbsoluteValue(at(gradientImage.position, 0), width);
+            const cy = getAbsoluteValue(at(gradientImage.position, 1), height);
+            const gradient = ctx.createConicGradient(gradientImage.angle - Math.PI / 2, cx, cy);
+            processColorStops(gradientImage.stops, Math.max(width, height)).forEach((colorStop) => {
+                gradient.addColorStop(Math.min(1, Math.max(0, colorStop.stop)), asString(colorStop.color));
+            });
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            return canvas;
+        }
+        this.context.logger.warn('Unsupported border-image source; only URL and gradient images are supported');
+        return null;
     }
 
     /**

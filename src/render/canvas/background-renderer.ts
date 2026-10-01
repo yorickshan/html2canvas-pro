@@ -188,69 +188,57 @@ export class BackgroundRenderer {
         index: number
     ): void {
         const [path, x, y, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
-        const [lineLength, x0, x1, y0, y1] = calculateGradientDirection(backgroundImage.angle, width, height);
+        const [lineLength, lx0, lx1, ly0, ly1] = calculateGradientDirection(backgroundImage.angle, width, height);
+        // calculateGradientDirection returns endpoints in background-area
+        // local coordinates; the fill happens on a context already translated
+        // to page coordinates, so shift the gradient line by the area origin.
+        const gx0 = x + lx0;
+        const gx1 = x + lx1;
+        const gy0 = y + ly0;
+        const gy1 = y + ly1;
 
-        // Determine the repeating pattern length from color stops.
-        // processColorStops normalises stops to [0, 1] of the gradient line,
-        // so scale the span back to absolute pixels for the pattern canvas.
+        // Draw the stripes directly on the gradient line: the one-cycle stop
+        // list is stacked k·period + s for k = 0..cycles-1 (clamped to [0,1]
+        // of the line), exactly like the repeating radial renderer. This
+        // avoids pattern tiling, whose tile must be an integer translation
+        // period of the stripe phase along both axes — impossible for most
+        // angled gradients (a 45° stripe needs irrational tile sizes), which
+        // made every tile seam drift and the stripes alias.
         const processedStops = processColorStops(backgroundImage.stops, lineLength || 1);
         const lastStop = at(processedStops, processedStops.length - 1);
         const firstStop = at(processedStops, 0);
-        const stopSpan = lastStop.stop - firstStop.stop;
-        const patternLength = stopSpan * (lineLength || 1);
+        const period = Math.max(lastStop.stop - firstStop.stop, 0.01);
 
-        if (patternLength <= 0) {
-            // Fallback: render as normal linear gradient
-            this.renderLinearGradient(container, backgroundImage, index);
+        // A degenerate period (all stops clamped to one point) repeats
+        // nothing — CSS renders the last colour across the whole area.
+        if (lastStop.stop - firstStop.stop < 1e-6) {
+            const gradient = this.ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+            gradient.addColorStop(0, asString(lastStop.color));
+            gradient.addColorStop(1, asString(lastStop.color));
+            this.path(path);
+            this.ctx.fillStyle = gradient;
+            this.ctx.fill();
             return;
         }
 
-        // Scale direction vectors to match the pattern length
-        const dirX = x1 - x0;
-        const dirY = y1 - y0;
-        const totalLength = Math.sqrt(dirX * dirX + dirY * dirY);
-        const scale = patternLength / (totalLength || 1);
-        const pX0 = x0;
-        const pY0 = y0;
-        const pX1 = x0 + dirX * scale;
-        const pY1 = y0 + dirY * scale;
-
-        const ownerDocument = this.canvas.ownerDocument ?? document;
-
-        // Cache key for this repeating gradient pattern
-        const cacheKey = `rlg|${backgroundImage.angle}|${Math.round(patternLength)}|${JSON.stringify(backgroundImage.stops)}`;
-
-        let pattern = this.patternCache.get(cacheKey);
-        if (!pattern) {
-            const canvas = ownerDocument.createElement('canvas');
-            // Create a canvas large enough to hold one full repeating unit
-            const canvasSize = Math.max(1, Math.ceil(patternLength));
-            canvas.width = canvasSize;
-            canvas.height = canvasSize;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                return;
-            }
-
-            const gradient = ctx.createLinearGradient(pX0 - x, pY0 - y, pX1 - x, pY1 - y);
-
-            // Normalize stops to [0, 1] range for one repeating unit
-            processedStops.forEach((colorStop) => {
-                gradient.addColorStop((colorStop.stop - firstStop.stop) / stopSpan, asString(colorStop.color));
-            });
-
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvasSize, canvasSize);
-
-            if (canvasSize > 0) {
-                pattern = this.ctx.createPattern(canvas, 'repeat') as CanvasPattern;
-                this.patternCache.set(cacheKey, pattern);
+        const stops: Array<{ stop: number; color: string }> = [];
+        const cycles = Math.ceil(1 / period);
+        for (let k = 0; k < cycles; k++) {
+            for (const s of processedStops) {
+                const stop = k * period + (s.stop - firstStop.stop);
+                if (stop > 1) break;
+                stops.push({ stop, color: asString(s.color) });
             }
         }
+        // Continue with the last colour out to the ending shape.
+        stops.push({ stop: 1, color: asString(lastStop.color) });
 
-        if (pattern) {
-            this.renderRepeat(path, pattern, x, y);
-        }
+        const gradient = this.ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+        stops.forEach((s) => gradient.addColorStop(Math.min(1, Math.max(0, s.stop)), s.color));
+
+        this.path(path);
+        this.ctx.fillStyle = gradient;
+        this.ctx.fill();
     }
 
     /**
@@ -325,7 +313,11 @@ export class BackgroundRenderer {
             // (2rx × 2ry). Sizing it as a max(rx, ry) square stretched the gradient past the
             // canvas edge whenever ry > rx, clipping the ellipse before its last stop and
             // leaving a hard horizontal seam on tall elements.
-            const stops = processColorStops(backgroundImage.stops, rx * 2);
+            // The stop line length is rx (the canvas gradient radius), NOT the
+            // diameter: absolute-px stops like `#ff6b6b 0 14px` must land at
+            // 14px from the centre. Normalising against the diameter halved
+            // every absolute-px stop.
+            const stops = processColorStops(backgroundImage.stops, rx);
             const lastStop = stops[stops.length - 1];
 
             let pattern = this.patternCache.get(cacheKey);
@@ -392,19 +384,18 @@ export class BackgroundRenderer {
             return;
         }
 
-        // processColorStops returns stops normalised to [0, 1] where 1 spans
-        // 2*rx (the diameter used as line length). The canvas gradient here has
-        // radius rx, so normalised position 1 corresponds to gradient stop 0.5.
-        const processed = processColorStops(backgroundImage.stops, rx * 2);
+        // processColorStops normalises against rx (the canvas gradient
+        // radius), so a normalised stop maps 1:1 onto canvas gradient stops.
+        const processed = processColorStops(backgroundImage.stops, rx);
         const firstStop = at(processed, 0);
         const lastStop = at(processed, processed.length - 1);
         const period = Math.max(lastStop.stop - firstStop.stop, 0.01);
 
         const stops: Array<{ stop: number; color: string }> = [];
-        const rings = Math.ceil(0.5 / period);
+        const rings = Math.ceil(1 / period);
         for (let k = 0; k < rings; k++) {
             for (const s of processed) {
-                const stop = (k * period + (s.stop - firstStop.stop)) / 2;
+                const stop = k * period + (s.stop - firstStop.stop);
                 if (stop > 1) break;
                 stops.push({ stop, color: asString(s.color) });
             }
