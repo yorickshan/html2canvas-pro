@@ -315,27 +315,58 @@ export async function renderListMarker(
             }
         }
     } else if (paint.listValue && container.styles.listStyleType !== LIST_STYLE_TYPE.NONE) {
-        const [font] = textRenderer.createFontStyle(styles);
-        ctx.font = font ?? '';
-        ctx.fillStyle = asString(styles.color);
-        ctx.textBaseline = 'middle';
-        ctx.textAlign = 'right';
+        // Geometric markers (disc / circle / square) are drawn as shapes:
+        // rendering them as text glyphs relies on the font's bullet glyph,
+        // which is far smaller than the browser's marker (~0.36em circle).
+        const type = container.styles.listStyleType;
+        if (type === LIST_STYLE_TYPE.DISC || type === LIST_STYLE_TYPE.CIRCLE || type === LIST_STYLE_TYPE.SQUARE) {
+            const size = styles.fontSize.number * 0.45;
+            const cx = container.bounds.left - size * 0.9;
+            const cy =
+                container.bounds.top +
+                getAbsoluteValue(container.styles.paddingTop, container.bounds.width) +
+                computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2;
+            ctx.save();
+            ctx.fillStyle = asString(styles.color);
+            ctx.beginPath();
+            if (type === LIST_STYLE_TYPE.SQUARE) {
+                ctx.rect(cx - size / 2, cy - size / 2, size, size);
+            } else {
+                ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
+                if (type === LIST_STYLE_TYPE.CIRCLE) {
+                    ctx.strokeStyle = asString(styles.color);
+                    ctx.lineWidth = size * 0.18;
+                }
+            }
+            if (type === LIST_STYLE_TYPE.CIRCLE) {
+                ctx.stroke();
+            } else {
+                ctx.fill();
+            }
+            ctx.restore();
+        } else {
+            const [font] = textRenderer.createFontStyle(styles);
+            ctx.font = font ?? '';
+            ctx.fillStyle = asString(styles.color);
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'right';
 
-        const bounds = new Bounds(
-            container.bounds.left,
-            container.bounds.top + getAbsoluteValue(container.styles.paddingTop, container.bounds.width),
-            container.bounds.width,
-            computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 1
-        );
+            const bounds = new Bounds(
+                container.bounds.left,
+                container.bounds.top + getAbsoluteValue(container.styles.paddingTop, container.bounds.width),
+                container.bounds.width,
+                computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 1
+            );
 
-        textRenderer.renderTextWithLetterSpacing(
-            new TextBounds(paint.listValue, bounds),
-            styles.letterSpacing,
-            computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 2,
-            styles.writingMode
-        );
-        ctx.textBaseline = 'bottom';
-        ctx.textAlign = 'left';
+            textRenderer.renderTextWithLetterSpacing(
+                new TextBounds(paint.listValue, bounds),
+                styles.letterSpacing,
+                computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2 + 2,
+                styles.writingMode
+            );
+            ctx.textBaseline = 'bottom';
+            ctx.textAlign = 'left';
+        }
     }
 }
 
