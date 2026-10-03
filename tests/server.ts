@@ -18,7 +18,10 @@ const __dirname = dirname(__filename);
 
 export const app = express();
 app.use('/', serveIndex(path.resolve(__dirname, '../'), { icons: true }));
-app.use([/^\/src($|\/)/, '/'], express.static(path.resolve(__dirname, '../')));
+// Express 5 fails to fall through an array of paths on app.use, so mount
+// the regex and the root separately or every static file 404s.
+app.use(/^\/src($|\/)/, express.static(path.resolve(__dirname, '../')));
+app.use('/', express.static(path.resolve(__dirname, '../')));
 
 // Add route to handle redirect-image test case
 app.get('/redirect-image', (_req, res) => {
