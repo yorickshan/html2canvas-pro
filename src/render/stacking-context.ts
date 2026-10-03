@@ -116,9 +116,15 @@ export class ElementPaint {
         }
 
         if (this.container.styles.zoom !== 1) {
-            const origin = this.container.styles.transformOrigin;
-            const offsetX = this.container.bounds.left + getAbsoluteValue(origin[0], this.container.bounds.width);
-            const offsetY = this.container.bounds.top + getAbsoluteValue(origin[1], this.container.bounds.height);
+            // CSS `zoom` lays the element out in unzoomed coordinates and
+            // scales the whole render by the zoom factor from the element's
+            // visual top-left corner. parseChildNode has already converted
+            // this subtree's bounds/textBounds back to unzoomed layout
+            // coordinates relative to that corner, so zooming the entire
+            // paint with the corner as the fixed point restores both the
+            // visual size and the left alignment.
+            const offsetX = this.container.bounds.left;
+            const offsetY = this.container.bounds.top;
             const z = this.container.styles.zoom;
             const zoomMatrix: Matrix = [z, 0, 0, z, 0, 0];
             this.effects.push(new TransformEffect(offsetX, offsetY, zoomMatrix));

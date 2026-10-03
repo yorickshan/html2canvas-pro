@@ -606,10 +606,13 @@ describe('ElementPaint effect construction', () => {
         expect(paint.effects[0]?.type).toBe(5 /* EffectType.FILTER */);
     });
 
-    it('zoom other than 1 adds a scaling TransformEffect', () => {
+    it('zoom other than 1 adds no transform (bounds already include zoom)', () => {
+        // ElementContainer.bounds comes from getBoundingClientRect, which
+        // already reflects the layout-time zoom factor. Painting an extra
+        // zoom TransformEffect scaled the already-scaled bounds a second
+        // time (~1.3× too large).
         const paint = paintOf({ zoom: '2' });
-        const transform = paint.effects[0] as unknown as { matrix: number[] };
-        expect(transform.matrix).toEqual([2, 0, 0, 2, 0, 0]);
+        expect(paint.effects.some((effect) => effect.type === 2 /* EffectType.TRANSFORM */)).toBe(false);
     });
 });
 

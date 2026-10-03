@@ -31,13 +31,21 @@ import { contains } from '../core/bitwise';
 import { ISOLATION } from '../css/property-descriptors/isolation';
 import { DISPLAY } from '../css/property-descriptors/display';
 import { MIX_BLEND_MODE } from '../css/property-descriptors/mix-blend-mode';
+import { Bounds } from '../css/layout/bounds';
+import { TextBounds } from '../css/layout/text';
 
 const LIST_OWNERS = ['OL', 'UL', 'MENU'];
 
-const parseNodeTree = (context: Context, node: Node, parent: ElementContainer, root: ElementContainer) => {
+const parseNodeTree = (
+    context: Context,
+    node: Node,
+    parent: ElementContainer,
+    root: ElementContainer,
+    zoomScale = 1
+) => {
     for (let childNode = node.firstChild, nextNode; childNode; childNode = nextNode) {
         nextNode = childNode.nextSibling;
-        parseChildNode(context, childNode, parent, root);
+        parseChildNode(context, childNode, parent, root, zoomScale);
     }
 };
 
@@ -49,10 +57,38 @@ const parseNodeTree = (context: Context, node: Node, parent: ElementContainer, r
  * this, slotted shadow-DOM content such as web component labels was silently
  * dropped because `parseNodeTree` only iterates `node.firstChild` (issue #226).
  */
-const parseChildNode = (context: Context, childNode: Node, parent: ElementContainer, root: ElementContainer) => {
+const parseChildNode = (
+    context: Context,
+    childNode: Node,
+    parent: ElementContainer,
+    root: ElementContainer,
+    zoomScale = 1
+) => {
     // Fixes #2238 #1624 - Fix the issue of TextNode content being overlooked in rendering due to being perceived as blank by trim().
     if (isTextNode(childNode) && childNode.data.length > 0) {
-        parent.textNodes.push(new TextContainer(context, childNode, parent.styles));
+        const textContainer = new TextContainer(context, childNode, parent.styles);
+        if (zoomScale !== 1) {
+            // Inside a zoomed ancestor, getClientRects returns zoomed (visual)
+            // coordinates. The renderer paints this subtree in unzoomed layout
+            // coordinates (relative to the zoomed element's visual top-left,
+            // which the zoom TransformEffect keeps fixed), so convert text
+            // bounds into that space.
+            const originLeft = parent.bounds.left;
+            const originTop = parent.bounds.top;
+            textContainer.textBounds = textContainer.textBounds.map(
+                (tb) =>
+                    new TextBounds(
+                        tb.text,
+                        new Bounds(
+                            originLeft + (tb.bounds.left - originLeft) / zoomScale,
+                            originTop + (tb.bounds.top - originTop) / zoomScale,
+                            tb.bounds.width / zoomScale,
+                            tb.bounds.height / zoomScale
+                        )
+                    )
+            );
+        }
+        parent.textNodes.push(textContainer);
     } else if (isElementNode(childNode)) {
         if (isSlotElement(childNode) && childNode.assignedNodes) {
             // Slotted content is laid out at the slot's position: parse each
@@ -60,9 +96,27 @@ const parseChildNode = (context: Context, childNode: Node, parent: ElementContai
             // parent container.
             childNode
                 .assignedNodes()
-                .forEach((assignedNode: Node) => parseChildNode(context, assignedNode, parent, root));
+                .forEach((assignedNode: Node) => parseChildNode(context, assignedNode, parent, root, zoomScale));
         } else {
             const container = createContainer(context, childNode);
+            // A zoomed element lays itself out in unzoomed coordinates and is
+            // visually scaled by its own TransformEffect from the element's
+            // visual top-left corner. Its bounds therefore keep the visual
+            // left/top (position in the parent flow) but the width/height
+            // must be converted back to the unzoomed layout size — the
+            // TransformEffect scales them back up during painting.
+            // Descendants are laid out in unzoomed coordinates relative to
+            // that corner: parseChildNode converts their bounds into that
+            // space as the subtree is parsed.
+            const ownZoom = container.styles.zoom || 1;
+            if (ownZoom !== 1) {
+                container.bounds = new Bounds(
+                    container.bounds.left,
+                    container.bounds.top,
+                    container.bounds.width / ownZoom,
+                    container.bounds.height / ownZoom
+                );
+            }
             if (container.styles.isVisible()) {
                 if (createsRealStackingContext(childNode, container, root)) {
                     container.createsRealStackingContext = true;
@@ -75,10 +129,11 @@ const parseChildNode = (context: Context, childNode: Node, parent: ElementContai
                 }
 
                 parent.elements.push(container);
+                const childZoom = zoomScale * (container.styles.zoom || 1);
                 if (childNode.shadowRoot) {
-                    parseNodeTree(context, childNode.shadowRoot, container, root);
+                    parseNodeTree(context, childNode.shadowRoot, container, root, childZoom);
                 } else if (!isTextareaElement(childNode) && !isSVGElement(childNode) && !isSelectElement(childNode)) {
-                    parseNodeTree(context, childNode, container, root);
+                    parseNodeTree(context, childNode, container, root, childZoom);
                 }
             }
         }
