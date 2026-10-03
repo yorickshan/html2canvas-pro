@@ -46,7 +46,9 @@ const isPlaceholder = (node: HTMLInputElement): boolean => {
 export const CHECKBOX = 'checkbox';
 export const RADIO = 'radio';
 export const PASSWORD = 'password';
-export const INPUT_COLOR = 0x2a2a2aff;
+// Fallback for `accent-color: auto`: the default accent colour browsers use
+// for checked controls (Chrome/Safari/Firefox all ship the same blue).
+export const INPUT_COLOR = 0x0075ffff;
 // Default placeholder color (similar to browsers: rgba(117, 117, 117, 1) or #757575)
 export const PLACEHOLDER_COLOR = 0x757575ff;
 
