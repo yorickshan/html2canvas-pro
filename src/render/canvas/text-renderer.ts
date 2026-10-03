@@ -589,9 +589,12 @@ export class TextRenderer {
         const baseline = this.measureBaselineCached(fontString ?? '', styles.fontSize.number);
 
         // -webkit-line-clamp
+        // Chrome reports `display: -webkit-box` as `flow-root` in computed
+        // styles, so accept FLOW_ROOT as well as BLOCK here — otherwise the
+        // clamp branch is skipped and the text renders without truncation.
         const clamp =
             styles.webkitLineClamp > 0 &&
-            (styles.display & DISPLAY.BLOCK) !== 0 &&
+            (styles.display & (DISPLAY.BLOCK | DISPLAY.FLOW_ROOT)) !== 0 &&
             styles.overflowY === OVERFLOW.HIDDEN &&
             text.textBounds.length > 0;
         if (clamp) {
