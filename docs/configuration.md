@@ -67,7 +67,7 @@ Options that control how images are processed and loaded.
 | imageSmoothing | `true` | Whether to apply smoothing to images. Set to `false` for pixel-perfect rendering of pixel art, sprites, and low-res images. Also respects CSS `image-rendering` property | `false` |
 | imageSmoothingQuality | browser default | Quality level for image smoothing when `imageSmoothing` is enabled: `'low'`, `'medium'`, or `'high'`. Higher quality may be slower for large images | `'high'` |
 | imageTimeout | `15000` | Timeout for loading an image (in milliseconds). Set to `0` to disable timeout | `30000` |
-| maxCacheSize | `100` | Maximum number of image resources kept in the internal LRU cache (max `10000`) | `500` |
+| maxCacheSize | `100` | Maximum number of image resources kept in the internal LRU cache (max `10000`). Eviction is suspended while a render preloads its own images, so pages with more unique images than the cap still capture every picture | `500` |
 | proxy | `null` | Url to the [proxy](./proxy) which is to be used for loading cross-origin images. If left empty, cross-origin images won't be loaded | `"https://proxy.example.com/"` |
 | useCORS | `false` | Whether to attempt to load images from a server using CORS | `true` |
 

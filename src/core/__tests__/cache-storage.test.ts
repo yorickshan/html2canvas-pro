@@ -323,3 +323,82 @@ describe('Cache.preloadAll progress callback', () => {
         strictEqual(onProgress.mock.calls.length, 0);
     });
 });
+
+describe('Cache.defer-mode eviction exemption', () => {
+    const makeCache = (maxCacheSize: number) => {
+        const config = new Html2CanvasConfig({ window: window });
+        const context = new Context(
+            { logging: false, imageTimeout: 15000, useCORS: false, allowTaint: false },
+            new Bounds(0, 0, 800, 600),
+            config
+        );
+        return new Cache(context, { imageTimeout: 15000, useCORS: false, allowTaint: false, maxCacheSize });
+    };
+
+    class MockImage {
+        crossOrigin: string | null = null;
+        complete = false;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        set src(_v: string) {
+            setTimeout(() => {
+                this.complete = true;
+                this.onload?.();
+            }, 0);
+        }
+    }
+
+    it('keeps every deferred image when more unique URLs are collected than maxSize', async () => {
+        const cache = makeCache(3);
+        vi.stubGlobal('Image', MockImage);
+        try {
+            cache.startDefer();
+            const urls = [
+                'https://example.com/1.png',
+                'https://example.com/2.png',
+                'https://example.com/3.png',
+                'https://example.com/4.png',
+                'https://example.com/5.png'
+            ];
+            urls.forEach((url) => cache.addImage(url));
+            // Collected, not loaded yet.
+            strictEqual(cache.size(), 0);
+
+            await cache.preloadAll(2);
+
+            // The renderer never reloads on match(); every collected image
+            // must still be present even though maxSize is 3.
+            strictEqual(cache.size(), 5);
+            for (const url of urls) {
+                ok(cache.match(url) !== undefined, `${url} must survive the preload window`);
+            }
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+
+    it('resumes LRU eviction after preloadAll completes', async () => {
+        const cache = makeCache(3);
+        vi.stubGlobal('Image', MockImage);
+        try {
+            cache.startDefer();
+            const urls = [
+                'https://example.com/1.png',
+                'https://example.com/2.png',
+                'https://example.com/3.png',
+                'https://example.com/4.png'
+            ];
+            urls.forEach((url) => cache.addImage(url));
+            await cache.preloadAll(2);
+            strictEqual(cache.size(), 4);
+
+            // Normal-mode loads evict again (shared-cache memory bound).
+            cache.addImage('https://example.com/5.png');
+            strictEqual(cache.size(), 4);
+            strictEqual(cache.match('https://example.com/1.png'), undefined);
+            ok(cache.match('https://example.com/5.png') !== undefined);
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+});

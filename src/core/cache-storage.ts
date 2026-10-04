@@ -7,7 +7,12 @@ export interface ResourceOptions {
     allowTaint: boolean;
     proxy?: string;
     customIsSameOrigin?: (this: void, src: string, oldFn: (src: string) => boolean) => boolean | Promise<boolean>;
-    maxCacheSize?: number; // Maximum cache size (default: 100, max: 10000)
+    /**
+     * LRU cap for normal-mode (immediate) loads. Default: 100.
+     * Suspended between startDefer() and preloadAll() so every image collected
+     * during a render stays available to the renderer, which never reloads.
+     */
+    maxCacheSize?: number;
 }
 
 interface CacheEntry {
@@ -23,6 +28,14 @@ export class Cache {
     private _deferMode = false;
     /** URLs collected during defer mode, pending batch preload. */
     private _collectedUrls: Set<string> = new Set();
+    /**
+     * Eviction is suspended between startDefer() and the end of preloadAll():
+     * the render pipeline loads every image it is going to paint inside that
+     * window, and match() never reloads, so an LRU eviction there would
+     * silently drop images from the output on pages with more unique images
+     * than maxSize.
+     */
+    private _evictionEnabled = true;
 
     constructor(
         private readonly context: Context,
@@ -49,6 +62,7 @@ export class Cache {
      */
     startDefer(): void {
         this._deferMode = true;
+        this._evictionEnabled = false;
     }
 
     /**
@@ -68,23 +82,27 @@ export class Cache {
         const urls = Array.from(this._collectedUrls);
         this._collectedUrls.clear();
 
-        if (urls.length === 0) {
-            return;
-        }
+        try {
+            if (urls.length === 0) {
+                return;
+            }
 
-        const limit = Math.max(1, Math.min(concurrency, 100));
-        this.context.logger.debug(`Preloading ${urls.length} image(s) with concurrency ${limit}`);
+            const limit = Math.max(1, Math.min(concurrency, 100));
+            this.context.logger.debug(`Preloading ${urls.length} image(s) with concurrency ${limit}`);
 
-        // Load in batches to respect the concurrency cap while maximising
-        // parallelism within each batch.
-        let settled = 0;
-        onProgress?.(0, urls.length);
-        for (let i = 0; i < urls.length; i += limit) {
-            const batch = urls.slice(i, i + limit);
-            const operations = batch.map((url) => this._addImageWithPending(url));
-            await Promise.allSettled(operations);
-            settled += batch.length;
-            onProgress?.(settled, urls.length);
+            // Load in batches to respect the concurrency cap while maximising
+            // parallelism within each batch.
+            let settled = 0;
+            onProgress?.(0, urls.length);
+            for (let i = 0; i < urls.length; i += limit) {
+                const batch = urls.slice(i, i + limit);
+                const operations = batch.map((url) => this._addImageWithPending(url));
+                await Promise.allSettled(operations);
+                settled += batch.length;
+                onProgress?.(settled, urls.length);
+            }
+        } finally {
+            this._evictionEnabled = true;
         }
     }
 
@@ -195,7 +213,7 @@ export class Cache {
         if (this._cache.has(key)) {
             // Update existing entry: move to end of Map
             this._cache.delete(key);
-        } else if (this._cache.size >= this.maxSize) {
+        } else if (this._evictionEnabled && this._cache.size >= this.maxSize) {
             // Evict LRU (first key = least recently used) — O(1)
             const lruKey = this._cache.keys().next().value;
             if (lruKey !== undefined) {
