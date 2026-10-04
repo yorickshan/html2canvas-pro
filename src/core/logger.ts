@@ -4,8 +4,6 @@ export interface LoggerOptions {
 }
 
 export class Logger {
-    static instances: { [key: string]: Logger } = {};
-
     private readonly id: string;
     private readonly enabled: boolean;
     private readonly start: number;

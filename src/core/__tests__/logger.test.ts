@@ -63,9 +63,3 @@ describe('Logger', () => {
         expect(t2).toBeGreaterThanOrEqual(t1);
     });
 });
-
-describe('Logger static API', () => {
-    it('static instances is an object', () => {
-        expect(typeof Logger.instances).toBe('object');
-    });
-});
