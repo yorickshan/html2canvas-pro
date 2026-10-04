@@ -13,11 +13,12 @@ import {
     EffectType,
     EffectTarget
 } from '../effects';
+import type { Matrix } from '../../css/property-descriptors/transform';
 
 describe('Effect classes', () => {
     describe('TransformEffect', () => {
         it('constructs with offset and matrix', () => {
-            const matrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+            const matrix = [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as Matrix;
             const effect = new TransformEffect(10, 20, matrix);
             expect(effect.type).toBe(EffectType.TRANSFORM);
             expect(effect.target).toBe(EffectTarget.BACKGROUND_BORDERS | EffectTarget.CONTENT);
@@ -64,7 +65,7 @@ describe('Effect classes', () => {
 
 describe('effect type guards', () => {
     it('isTransformEffect identifies TransformEffect', () => {
-        const effect = new TransformEffect(0, 0, [1, 0, 0, 0, 1, 0, 0, 0, 1]);
+        const effect = new TransformEffect(0, 0, [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as Matrix);
         expect(isTransformEffect(effect)).toBe(true);
         expect(isOpacityEffect(effect)).toBe(false);
         expect(isFilterEffect(effect)).toBe(false);

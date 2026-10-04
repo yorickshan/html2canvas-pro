@@ -24,7 +24,13 @@ describe('drop-shadow integration (Issue #223)', () => {
             restore() {
                 drawCalls.push('restore');
             },
-            fillRect(x: number, y: number, w: number, h: number) {
+            fillRect(
+                this: { shadowOffsetX: number; shadowOffsetY: number; shadowBlur: number; shadowColor: string },
+                x: number,
+                y: number,
+                w: number,
+                h: number
+            ) {
                 // Verify shadow is set when drawing happens
                 drawCalls.push(`fillRect(${x},${y},${w},${h})`);
                 drawCalls.push(

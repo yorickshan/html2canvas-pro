@@ -108,7 +108,7 @@ describe('TextClipRenderer', () => {
 
         await renderer.render(makePaint(200, 50, { fragments: ['also', '-', 'missing'] }));
         expect(contexts.length).toBe(2);
-        const [offCtx, maskCtx] = contexts;
+        const [offCtx, maskCtx] = contexts as [CanvasRenderingContext2D, CanvasRenderingContext2D];
 
         // Glyphs are drawn to the mask with normal compositing, one per fragment.
         expect(maskCtx.fillText).toHaveBeenCalledTimes(3);
@@ -125,9 +125,9 @@ describe('TextClipRenderer', () => {
         expect(offCtx.globalCompositeOperation).toBe('destination-in');
         expect(offCtx.drawImage).toHaveBeenCalledTimes(1);
         const [mask, dx, dy, dw, dh] = (offCtx.drawImage as unknown as ReturnType<typeof vi.fn>).mock
-            .calls[0] as unknown as number[];
-        expect((mask as HTMLCanvasElement).width).toBe(400);
-        expect((mask as HTMLCanvasElement).height).toBe(100);
+            .calls[0] as unknown as [HTMLCanvasElement, number, number, number, number];
+        expect(mask.width).toBe(400);
+        expect(mask.height).toBe(100);
         expect([dx, dy, dw, dh]).toEqual([0, 0, 200, 50]);
 
         // Clipped result is composited back onto the main canvas at CSS size
@@ -135,9 +135,9 @@ describe('TextClipRenderer', () => {
         // maps 1:1 onto the backing store and stays sharp at scale 2.
         expect(ctx.drawImage).toHaveBeenCalledTimes(1);
         const [comp, left, top, compW, compH] = (ctx.drawImage as unknown as ReturnType<typeof vi.fn>).mock
-            .calls[0] as unknown as number[];
-        expect((comp as HTMLCanvasElement).width).toBe(400);
-        expect((comp as HTMLCanvasElement).height).toBe(100);
+            .calls[0] as unknown as [HTMLCanvasElement, number, number, number, number];
+        expect(comp.width).toBe(400);
+        expect(comp.height).toBe(100);
         expect([left, top, compW, compH]).toEqual([10, 20, 200, 50]);
     });
 
@@ -147,7 +147,7 @@ describe('TextClipRenderer', () => {
 
         await renderer.render(makePaint(200, 50, { fragments: ['a', 'b'], styles: { letterSpacing: 2 } }));
         expect(contexts.length).toBe(2);
-        const [offCtx, maskCtx] = contexts;
+        const [offCtx, maskCtx] = contexts as [CanvasRenderingContext2D, CanvasRenderingContext2D];
 
         expect(maskCtx.fillText).toHaveBeenCalledTimes(2);
         expect(offCtx.fillText).not.toHaveBeenCalled();
@@ -167,7 +167,7 @@ describe('TextClipRenderer', () => {
             })
         );
         expect(contexts.length).toBe(2);
-        const [offCtx, maskCtx] = contexts;
+        const [offCtx, maskCtx] = contexts as [CanvasRenderingContext2D, CanvasRenderingContext2D];
 
         // Both fill and stroke contribute to the clip region; the stroke
         // width/lineJoin mirror the main text renderer.
@@ -206,7 +206,13 @@ describe('TextClipRenderer', () => {
         );
         // offscreen + mask + one shadow layer per shadow + composite
         expect(contexts.length).toBe(5);
-        const [offCtx, maskCtx, deepShadowCtx, frontShadowCtx, compositeCtx] = contexts;
+        const [offCtx, , deepShadowCtx, frontShadowCtx, compositeCtx] = contexts as [
+            CanvasRenderingContext2D,
+            CanvasRenderingContext2D,
+            CanvasRenderingContext2D,
+            CanvasRenderingContext2D,
+            CanvasRenderingContext2D
+        ];
 
         // Each shadow gets its own canvas (a shared canvas would make every
         // previously drawn glyph cast again), drawn in reverse order — the

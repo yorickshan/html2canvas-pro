@@ -258,7 +258,7 @@ import { CSSImageType } from '../../types/image';
 import type { Context } from '../../../core/context';
 describe('list-style-image descriptor', () => {
     const context = { cache: { addImage: () => undefined } } as unknown as Context;
-    const parse = (value: string) => listStyleImage.parse(context, Parser.parseValues(value)[0]);
+    const parse = (value: string) => listStyleImage.parse(context, Parser.parseValues(value)[0]!);
 
     it('has correct name', () => expect(listStyleImage.name).toBe('list-style-image'));
     it('has defined initialValue', () => expect(listStyleImage.initialValue).toBeDefined());

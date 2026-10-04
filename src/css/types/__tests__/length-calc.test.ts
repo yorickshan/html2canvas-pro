@@ -12,6 +12,7 @@ import {
     parseOptionalCalcOrLength
 } from '../length-percentage';
 import type { CSSFunction } from '../../syntax/parser';
+import type { LengthPercentage } from '../length-percentage';
 
 const parseCalc = (value: string): CSSFunction => Parser.parseValue(value) as CSSFunction;
 
@@ -28,7 +29,7 @@ describe('calc length-percentage', () => {
     });
 
     it('defers percentage components for later resolution', () => {
-        const token = parseCalcForLengthPercentage(parseCalc('calc(10px + 5%)')) as {
+        const token = parseCalcForLengthPercentage(parseCalc('calc(10px + 5%)')) as unknown as LengthPercentage & {
             number: number;
             _calcPercentage: number;
             _calcPixelOffset: number;

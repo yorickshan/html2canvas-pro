@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { CSSParsedDeclaration } from '../index';
 import { backgroundImage } from '../property-descriptors/background-image';
 import { listStyleImage } from '../property-descriptors/list-style-image';
@@ -6,6 +6,9 @@ import { borderImageSource } from '../property-descriptors/border-image-source';
 
 vi.mock('../../core/context');
 import { Context } from '../../core/context';
+
+// vi.mock replaces the class; the real constructor is never invoked.
+const MockContext = Context as unknown as new () => Context;
 
 vi.mock('../../core/features');
 
@@ -40,14 +43,14 @@ describe('parseCache', () => {
             } as unknown as CSSStyleDeclaration;
 
             // First construction — addImage should be called
-            const ctx1 = new Context();
+            const ctx1 = new MockContext();
             new CSSParsedDeclaration(ctx1, mockDeclaration);
             expect(ctx1.cache.addImage).toHaveBeenCalledWith('http://example.com/bg.png');
 
             // Second construction with a different context but same CSS value —
             // addImage MUST be called again (was the bug: cached parse result
             // meant addImage was never called for the second context)
-            const ctx2 = new Context();
+            const ctx2 = new MockContext();
             new CSSParsedDeclaration(ctx2, mockDeclaration);
             expect(ctx2.cache.addImage).toHaveBeenCalledWith('http://example.com/bg.png');
         });
@@ -58,11 +61,11 @@ describe('parseCache', () => {
                 listStyleImage: 'url("http://example.com/list.png")'
             } as unknown as CSSStyleDeclaration;
 
-            const ctx1 = new Context();
+            const ctx1 = new MockContext();
             new CSSParsedDeclaration(ctx1, mockDeclaration);
             expect(ctx1.cache.addImage).toHaveBeenCalledWith('http://example.com/list.png');
 
-            const ctx2 = new Context();
+            const ctx2 = new MockContext();
             new CSSParsedDeclaration(ctx2, mockDeclaration);
             expect(ctx2.cache.addImage).toHaveBeenCalledWith('http://example.com/list.png');
         });
@@ -73,11 +76,11 @@ describe('parseCache', () => {
                 borderImageSource: 'url("http://example.com/border.png")'
             } as unknown as CSSStyleDeclaration;
 
-            const ctx1 = new Context();
+            const ctx1 = new MockContext();
             new CSSParsedDeclaration(ctx1, mockDeclaration);
             expect(ctx1.cache.addImage).toHaveBeenCalledWith('http://example.com/border.png');
 
-            const ctx2 = new Context();
+            const ctx2 = new MockContext();
             new CSSParsedDeclaration(ctx2, mockDeclaration);
             expect(ctx2.cache.addImage).toHaveBeenCalledWith('http://example.com/border.png');
         });

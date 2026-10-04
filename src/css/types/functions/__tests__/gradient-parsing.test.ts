@@ -13,7 +13,7 @@ import { Context } from '../../../../core/context';
 const parse = (fn: (context: Context, tokens: CSSValueTokens) => unknown, value: string) => {
     const functionToken = Parser.parseValue(value);
     strictEqual(functionToken.type, TokenType.FUNCTION, `expected a function token for ${value}`);
-    return fn({} as Context, (functionToken as { values: never }).values);
+    return fn({} as Context, (functionToken as unknown as { values: never }).values);
 };
 
 type CSSValueTokens = Parameters<typeof radialGradient>[1];

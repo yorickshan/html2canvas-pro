@@ -4,11 +4,11 @@ import { ElementContainer } from '../../dom/element-container';
 import { Context } from '../../core/context';
 import { Parser } from '../../css/syntax/parser';
 import { FLAG_INTEGER, TokenType } from '../../css/syntax/tokenizer';
-import { backgroundClip, BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
-import { backgroundOrigin, BACKGROUND_ORIGIN } from '../../css/property-descriptors/background-origin';
+import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
+import { BACKGROUND_ORIGIN } from '../../css/property-descriptors/background-origin';
 import { backgroundPosition } from '../../css/property-descriptors/background-position';
-import { backgroundRepeat, BACKGROUND_REPEAT } from '../../css/property-descriptors/background-repeat';
-import { backgroundSize, BACKGROUND_SIZE, BackgroundSizeInfo } from '../../css/property-descriptors/background-size';
+import { BACKGROUND_REPEAT } from '../../css/property-descriptors/background-repeat';
+import { backgroundSize, BackgroundSizeInfo } from '../../css/property-descriptors/background-size';
 import { LengthPercentage } from '../../css/types/length-percentage';
 import {
     calculateBackgroundPaintingArea,
@@ -36,14 +36,11 @@ const pct = (n: number): LengthPercentage => ({
 
 /** Parses a single layer of a background-size value (e.g. '50% 50%') into tokens. */
 const parseSizeLayer = (value: string): BackgroundSizeInfo[] =>
-    backgroundSize.parse({} as Context, Parser.parseValues(value))[0];
+    backgroundSize.parse({} as Context, Parser.parseValues(value))[0]!;
 
 /** Parses a single layer of a background-position value (e.g. '10px 20px'). */
 const parsePositionLayer = (value: string): LengthPercentage[] =>
-    backgroundPosition.parse({} as Context, Parser.parseValues(value))[0];
-
-const parseRepeat = (value: string): BACKGROUND_REPEAT[] =>
-    backgroundRepeat.parse({} as Context, Parser.parseValues(value));
+    backgroundPosition.parse({} as Context, Parser.parseValues(value))[0]!;
 
 interface ContainerStyleOverrides {
     backgroundOrigin?: BACKGROUND_ORIGIN[];

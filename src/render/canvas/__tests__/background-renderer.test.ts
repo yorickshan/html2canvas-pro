@@ -11,6 +11,7 @@ import { FLAG_INTEGER, TokenType } from '../../../css/syntax/token-types';
 import { color } from '../../../css/types/color';
 import { CSSImageType, CSSRadialExtent, CSSRadialShape } from '../../../css/types/image';
 import { backgroundPosition } from '../../../css/property-descriptors/background-position';
+import type { LengthPercentage } from '../../../css/types/length-percentage';
 import { backgroundSize } from '../../../css/property-descriptors/background-size';
 import { BACKGROUND_REPEAT } from '../../../css/property-descriptors/background-repeat';
 import { IMAGE_RENDERING } from '../../../css/property-descriptors/image-rendering';
@@ -25,7 +26,8 @@ const px = (n: number) => ({
 });
 
 const parseSizeLayer = (value: string) => backgroundSize.parse({} as Context, Parser.parseValues(value))[0];
-const parsePositionLayer = (value: string) => backgroundPosition.parse({} as Context, Parser.parseValues(value))[0];
+const parsePositionLayer = (value: string): LengthPercentage[] =>
+    backgroundPosition.parse({} as Context, Parser.parseValues(value))[0]!;
 
 const AUTO_TOKEN = { type: TokenType.IDENT_TOKEN, value: 'auto', flags: 0 };
 
@@ -238,8 +240,9 @@ describe('BackgroundRenderer', () => {
             );
             // auto size with 1x1 intrinsic dimensions renders at 1x1
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            expect(vi.mocked(ctx.createPattern).mock.calls[0]![0]?.width).toBe(1);
-            expect(vi.mocked(ctx.createPattern).mock.calls[0]![0]?.height).toBe(1);
+            const pattern = vi.mocked(ctx.createPattern).mock.calls[0]![0] as HTMLImageElement | undefined;
+            expect(pattern?.width).toBe(1);
+            expect(pattern?.height).toBe(1);
         });
 
         it('reuses the cached pattern for identical rendering parameters', async () => {
@@ -395,7 +398,7 @@ describe('BackgroundRenderer', () => {
             (element as { bounds: Bounds }).bounds = new Bounds(0, 0, 0, 0);
             await renderer.renderBackgroundImage(element);
             expect(ctx.createPattern).toHaveBeenCalledTimes(1);
-            const [patternSource] = vi.mocked(ctx.createPattern).mock.calls[0]!;
+            const [patternSource] = vi.mocked(ctx.createPattern).mock.calls[0]! as unknown as [HTMLImageElement];
             expect(patternSource.width).toBe(1);
             expect(patternSource.height).toBe(1);
             expect(ctx.fill).toHaveBeenCalledTimes(1);
@@ -483,6 +486,7 @@ describe('BackgroundRenderer', () => {
 
         it('clamps a zero radius gradient to a minimum size without scaling', async () => {
             const { renderer, ctx } = createRenderer();
+            const centerPosition = parsePositionLayer('50px 50px');
             await renderer.renderBackgroundImage(
                 container({
                     backgroundImage: [
@@ -490,7 +494,7 @@ describe('BackgroundRenderer', () => {
                             shape: CSSRadialShape.CIRCLE,
                             size: CSSRadialExtent.CLOSEST_SIDE,
                             // center at the bottom edge -> zero closest-side radius
-                            position: [parsePositionLayer('50px 50px')[0], parsePositionLayer('50px 50px')[1]]
+                            position: [centerPosition[0]!, centerPosition[1]!]
                         })
                     ]
                 })

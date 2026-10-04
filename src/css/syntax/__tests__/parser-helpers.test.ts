@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { CSSValue } from '../parser';
 import {
     Parser,
     isDimensionToken,
@@ -97,7 +98,7 @@ describe('nonFunctionArgSeparator', () => {
 
 describe('parseFunctionArgs', () => {
     it('splits tokens by commas into argument groups', () => {
-        const tokens = [
+        const tokens: CSSValue[] = [
             { type: TokenType.NUMBER_TOKEN, flags: 0, number: 1 },
             { type: TokenType.COMMA_TOKEN },
             { type: TokenType.NUMBER_TOKEN, flags: 0, number: 2 },
@@ -116,7 +117,7 @@ describe('parseFunctionArgs', () => {
     });
 
     it('handles single argument with whitespace', () => {
-        const tokens = [
+        const tokens: CSSValue[] = [
             { type: TokenType.WHITESPACE_TOKEN },
             { type: TokenType.NUMBER_TOKEN, flags: 0, number: 1 },
             { type: TokenType.WHITESPACE_TOKEN }
@@ -130,7 +131,7 @@ describe('parseFunctionArgs', () => {
     // comma-separated slots (e.g. an invalid shadow list). They must be skipped,
     // not treated as a fatal parse error.
     it('skips empty argument groups between commas instead of throwing', () => {
-        const tokens = [
+        const tokens: CSSValue[] = [
             { type: TokenType.NUMBER_TOKEN, flags: 0, number: 1 },
             { type: TokenType.COMMA_TOKEN },
             { type: TokenType.COMMA_TOKEN },
@@ -141,7 +142,7 @@ describe('parseFunctionArgs', () => {
     });
 
     it('returns empty array for whitespace-only tokens', () => {
-        const tokens = [{ type: TokenType.WHITESPACE_TOKEN }, { type: TokenType.WHITESPACE_TOKEN }];
+        const tokens: CSSValue[] = [{ type: TokenType.WHITESPACE_TOKEN }, { type: TokenType.WHITESPACE_TOKEN }];
         expect(parseFunctionArgs(tokens)).toHaveLength(0);
     });
 });

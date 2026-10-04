@@ -14,7 +14,7 @@ import { Context } from '../../../../core/context';
 
 const parseList = (descriptor: { parse: (c: never, t: never) => unknown }, value: string): unknown =>
     descriptor.parse(undefined as never, Parser.parseValues(value) as never);
-const parseValue = (value: string) => new Parser(Parser.parseValues(value)).parseComponentValue();
+const parseValue = (value: string) => new Parser(Parser.parseValues(value) as never).parseComponentValue();
 
 const createContext = (dpr: number): Context => {
     // jsdom's real window keeps OriginChecker happy; DPR is mocked per test.
@@ -56,7 +56,10 @@ describe('text-emphasis', () => {
 
 describe('border-image-width / outset', () => {
     it('parses width kinds and expands 1–4 values', () => {
-        const one = parseList(borderImageWidth, '5px') as { top: { kind: string; value: number } };
+        const one = parseList(borderImageWidth, '5px') as {
+            top: { kind: string; value: number };
+            bottom: { kind: string; value: number };
+        };
         expect(one.top).toEqual({ kind: 'length', value: 5 });
         expect(one.bottom).toEqual({ kind: 'length', value: 5 });
 
@@ -108,7 +111,7 @@ describe('-webkit-box-reflect', () => {
             Parser.parseValues(
                 'below 0px linear-gradient(rgba(0, 0, 0, 0), rgb(255, 255, 255)) 0 fill / auto / 0 stretch'
             ) as never
-        ) as { direction: string; mask: { type: number } | null };
+        ) as { direction: string; offset: number; mask: { type: number } | null };
         expect(value.direction).toBe('below');
         expect(value.mask).toBeTruthy();
         expect(value.mask!.type).toBe(CSSImageType.LINEAR_GRADIENT);

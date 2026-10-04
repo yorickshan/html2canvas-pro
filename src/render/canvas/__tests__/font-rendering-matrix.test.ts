@@ -14,6 +14,7 @@
  */
 
 import { strictEqual, ok } from 'assert';
+import type { CSSParsedDeclaration } from '../../../css';
 import { TextRenderer, TextRendererDependencies } from '../text-renderer';
 import { Bounds } from '../../../css/layout/bounds';
 import { TextBounds } from '../../../css/layout/text';
@@ -41,7 +42,7 @@ describe('Font Rendering Matrix', () => {
             direction: 'ltr' as CanvasDirection,
             textAlign: 'left' as CanvasTextAlign,
             fillText() {},
-            measureText(text: string) {
+            measureText() {
                 return {
                     width: 30,
                     fontBoundingBoxAscent: opts.fontBoundingBoxAscent ?? 14,
@@ -72,28 +73,29 @@ describe('Font Rendering Matrix', () => {
     };
 
     // Helper to create mock styles
-    const createMockStyles = (overrides: Record<string, unknown> = {}) => ({
-        fontFamily: ['Arial'],
-        fontSize: { number: 16, unit: 'px' },
-        fontStyle: 'normal',
-        fontVariant: [],
-        fontWeight: 'normal',
-        color: { r: 0, g: 0, b: 0, a: 1 },
-        letterSpacing: 0,
-        webkitTextStrokeWidth: 0,
-        textShadow: [],
-        textDecorationLine: [],
-        paintOrder: [PAINT_ORDER_LAYER.FILL],
-        direction: DIRECTION.LTR,
-        writingMode: WRITING_MODE.HORIZONTAL_TB,
-        display: DISPLAY.BLOCK,
-        webkitLineClamp: 0,
-        textOverflow: TEXT_OVERFLOW.CLIP,
-        overflowX: OVERFLOW.VISIBLE,
-        overflowY: OVERFLOW.VISIBLE,
-        lineHeight: { value: 1.2, type: 1 },
-        ...overrides
-    });
+    const createMockStyles = (overrides: Record<string, unknown> = {}) =>
+        ({
+            fontFamily: ['Arial'],
+            fontSize: { number: 16, unit: 'px' },
+            fontStyle: 'normal',
+            fontVariant: [],
+            fontWeight: 'normal',
+            color: { r: 0, g: 0, b: 0, a: 1 },
+            letterSpacing: 0,
+            webkitTextStrokeWidth: 0,
+            textShadow: [],
+            textDecorationLine: [],
+            paintOrder: [PAINT_ORDER_LAYER.FILL],
+            direction: DIRECTION.LTR,
+            writingMode: WRITING_MODE.HORIZONTAL_TB,
+            display: DISPLAY.BLOCK,
+            webkitLineClamp: 0,
+            textOverflow: TEXT_OVERFLOW.CLIP,
+            overflowX: OVERFLOW.VISIBLE,
+            overflowY: OVERFLOW.VISIBLE,
+            lineHeight: { value: 1.2, type: 1 },
+            ...overrides
+        }) as unknown as CSSParsedDeclaration;
 
     describe('System Fonts', () => {
         it('should render Arial with correct baseline', async () => {

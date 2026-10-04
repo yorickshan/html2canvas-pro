@@ -6,7 +6,6 @@ import {
     isSVGElementNode,
     isInputElement,
     isHTMLElement,
-    isSVGElement,
     isBodyElement,
     isCanvasElement,
     isVideoElement,

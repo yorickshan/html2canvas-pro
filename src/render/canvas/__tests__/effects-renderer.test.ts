@@ -26,7 +26,8 @@ describe('EffectsRenderer', () => {
 
         // Test public methods exist
         strictEqual(typeof renderer.applyEffects, 'function');
-        strictEqual(typeof renderer.applyEffect, 'function');
-        strictEqual(typeof renderer.popEffect, 'function');
+        const internals = renderer as unknown as Record<string, unknown>;
+        strictEqual(typeof internals.applyEffect, 'function');
+        strictEqual(typeof internals.popEffect, 'function');
     });
 });

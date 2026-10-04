@@ -72,7 +72,7 @@ describe('text-emphasis rendering', () => {
             createStyles({ textEmphasisStyle: { fill: true, shape: 'circle' } })
         );
         // one fill per grapheme cluster plus one for the text itself
-        expect(ctx.fill.mock.calls.length).toBeGreaterThanOrEqual(2);
+        expect((ctx.fill as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(2);
         expect(ctx.arc).toHaveBeenCalled();
     });
 
@@ -83,14 +83,16 @@ describe('text-emphasis rendering', () => {
             createText('ab'),
             createStyles({ textEmphasisStyle: { fill: false, shape: 'dot' } })
         );
-        expect(ctx.stroke.mock.calls.length).toBeGreaterThanOrEqual(2);
+        expect((ctx.stroke as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(2);
     });
 
     it('draws the custom string instead of a shape', async () => {
         const ctx = createMockCtx();
         const renderer = new TextRenderer(createDeps(ctx));
         await renderer.renderTextNode(createText('ab'), createStyles({ textEmphasisStyle: '★' }));
-        const stringCalls = ctx.fillText.mock.calls.filter((call) => call[0] === '★');
+        const stringCalls = (ctx.fillText as ReturnType<typeof vi.fn>).mock.calls.filter(
+            (call: unknown[]) => call[0] === '★'
+        );
         expect(stringCalls.length).toBe(2); // one mark per grapheme cluster
     });
 

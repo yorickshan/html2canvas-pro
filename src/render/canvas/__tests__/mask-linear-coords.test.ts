@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { paintMaskLayers, type MaskLayerStyles } from '../mask-renderer';
+import { paintMaskLayers } from '../mask-renderer';
 import { BACKGROUND_REPEAT } from '../../../css/property-descriptors/background-repeat';
-import { CSSImageType } from '../../../css/types/image';
+import { CSSImageType, type CSSLinearGradientImage } from '../../../css/types/image';
 import { ZERO_LENGTH } from '../../../css/types/length-percentage';
 
 /**
@@ -32,7 +32,7 @@ describe('paintMaskLayers linear gradient coordinates', () => {
                         { color: 0x000000ff, stop: { type: 16, number: 0, flags: 4 } },
                         { color: 0x00000000, stop: null }
                     ]
-                }
+                } as CSSLinearGradientImage
             ],
             {
                 maskPosition: [[ZERO_LENGTH, ZERO_LENGTH]],
@@ -44,7 +44,7 @@ describe('paintMaskLayers linear gradient coordinates', () => {
         );
 
         expect(ctx.fillRect).toHaveBeenCalledWith(300, 200, 120, 90);
-        const [x0, y0, x1, y1] = gradArgs[0];
+        const [x0 = 0, y0 = 0, x1 = 0, y1 = 0] = gradArgs[0] ?? [];
         // Line must span the area in page coordinates: x from 300 to 420,
         // y constant at the vertical centre (200 + 45).
         expect(x0).toBe(300);

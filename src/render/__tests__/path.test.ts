@@ -38,8 +38,8 @@ describe('transformPath', () => {
     it('translates vectors at index 0 with deltaX and deltaY', () => {
         const path = [new Vector(10, 20)];
         const result = transformPath(path, 5, 5, 2, 2);
-        expect(result[0]?.x).toBe(15);
-        expect(result[0]?.y).toBe(25);
+        expect((result[0] as Vector | undefined)?.x).toBe(15);
+        expect((result[0] as Vector | undefined)?.y).toBe(25);
     });
 
     it('handles empty path', () => {

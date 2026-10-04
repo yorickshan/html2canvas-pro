@@ -71,13 +71,13 @@ describe('repeating-conic-gradient', () => {
     it('is registered as a supported image function (no longer throws)', () => {
         const gradient = image.parse(
             context,
-            Parser.parseValues('repeating-conic-gradient(#e74c3c 0 10%, #f1c40f 0 20%)')[0]
+            Parser.parseValues('repeating-conic-gradient(#e74c3c 0 10%, #f1c40f 0 20%)')[0]!
         );
         expect(gradient.type).toBe(CSSImageType.REPEATING_CONIC_GRADIENT);
     });
 });
 
-const parseClipToken = (value: string) => new Parser(Parser.parseValues(value)).parseComponentValue();
+const parseClipToken = (value: string) => new Parser(Parser.parseValues(value) as never).parseComponentValue();
 
 describe('clip-path xywh() and rect()', () => {
     it('parses xywh into an xywh shape', () => {

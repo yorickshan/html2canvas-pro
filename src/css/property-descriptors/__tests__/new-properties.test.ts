@@ -12,7 +12,7 @@ import { CSSImageType } from '../../types/image';
 import { Context } from '../../../core/context';
 import { Html2CanvasConfig } from '../../../config';
 
-const parseToken = (value: string) => new Parser(Parser.parseValues(value)).parseComponentValue();
+const parseToken = (value: string) => new Parser(Parser.parseValues(value) as never).parseComponentValue();
 
 describe('accent-color', () => {
     it('parses colors and the auto keyword', () => {
@@ -82,7 +82,7 @@ describe('mask descriptors', () => {
     });
 
     it('parses mask-position/size/repeat like their background counterparts', () => {
-        const position = maskPosition.parse(context, Parser.parseValues('50% 50%')) as {
+        const position = maskPosition.parse(context, Parser.parseValues('50% 50%')) as unknown as {
             0: { number: number }[];
         };
         expect(position[0]?.[0]?.number).toBe(50);

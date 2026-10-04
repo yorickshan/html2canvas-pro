@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Context } from '../../core/context';
+import { Context } from '../../../core/context';
 import { PropertyDescriptorParsingType } from '../../property-descriptor';
 import { listStyleType, LIST_STYLE_TYPE } from '../list-style-type';
 

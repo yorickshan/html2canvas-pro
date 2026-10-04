@@ -52,8 +52,9 @@ describe('createCanvasPath', () => {
         createCanvasPath(ctx, [new Vector(50, 50), new Vector(100, 100)]);
 
         // beginPath must be called before moveTo
-        const beginPathOrder = ctx.beginPath.mock.invocationCallOrder[0];
-        const moveToOrder = ctx.moveTo.mock.invocationCallOrder[0];
+        const mockOf = (fn: unknown) => (fn as ReturnType<typeof vi.fn>).mock;
+        const beginPathOrder = mockOf(ctx.beginPath).invocationCallOrder[0] ?? 0;
+        const moveToOrder = mockOf(ctx.moveTo).invocationCallOrder[0] ?? 0;
         expect(beginPathOrder).toBeLessThan(moveToOrder);
     });
 
@@ -62,8 +63,9 @@ describe('createCanvasPath', () => {
         createCanvasPath(ctx, [new Vector(0, 0), new Vector(100, 0)]);
 
         // closePath must be called after the last lineTo
-        const closePathOrder = ctx.closePath.mock.invocationCallOrder[0];
-        const lineToOrder = ctx.lineTo.mock.invocationCallOrder[0];
+        const mockOf = (fn: unknown) => (fn as ReturnType<typeof vi.fn>).mock;
+        const closePathOrder = mockOf(ctx.closePath).invocationCallOrder[0] ?? 0;
+        const lineToOrder = mockOf(ctx.lineTo).invocationCallOrder[0] ?? 0;
         expect(closePathOrder).toBeGreaterThan(lineToOrder);
     });
 });

@@ -309,7 +309,7 @@ describe('FEATURES detection paths', () => {
                 get: () => source,
                 set: (value: string) => {
                     source = value;
-                    queueMicrotask(() => img.onload?.());
+                    queueMicrotask(() => img.onload?.(new Event('load')));
                 }
             });
             return img;

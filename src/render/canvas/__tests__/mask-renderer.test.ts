@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { paintMaskLayers, type MaskLayerStyles } from '../mask-renderer';
 import { BACKGROUND_REPEAT } from '../../../css/property-descriptors/background-repeat';
-import { CSSImageType } from '../../../css/types/image';
+import { CSSImageType, type CSSURLImage, type CSSLinearGradientImage } from '../../../css/types/image';
 import { FIFTY_PERCENT, ZERO_LENGTH } from '../../../css/types/length-percentage';
 
 const ctx = () => {
@@ -26,7 +26,7 @@ describe('paintMaskLayers', () => {
         const img = { naturalWidth: 64, naturalHeight: 32, width: 64, height: 32 } as HTMLImageElement;
         await paintMaskLayers(
             c,
-            [{ url: 'x.png', type: CSSImageType.URL }],
+            [{ url: 'x.png', type: CSSImageType.URL } as CSSURLImage],
             styles(),
             { left: 0, top: 0, width: 200, height: 100 },
             async () => img
@@ -39,7 +39,7 @@ describe('paintMaskLayers', () => {
         const img = { naturalWidth: 50, naturalHeight: 50, width: 50, height: 50 } as HTMLImageElement;
         await paintMaskLayers(
             c,
-            [{ url: 'x.png', type: CSSImageType.URL }],
+            [{ url: 'x.png', type: CSSImageType.URL } as CSSURLImage],
             styles({ maskRepeat: [BACKGROUND_REPEAT.REPEAT] }),
             { left: 0, top: 0, width: 200, height: 100 },
             async () => img
@@ -53,8 +53,8 @@ describe('paintMaskLayers', () => {
         const img = { naturalWidth: 100, naturalHeight: 100, width: 100, height: 100 } as HTMLImageElement;
         await paintMaskLayers(
             c,
-            [{ url: 'x.png', type: CSSImageType.URL }],
-            styles({ maskSize: [[{ type: 16, number: 50, flags: 4, unit: '%' }]] }),
+            [{ url: 'x.png', type: CSSImageType.URL } as CSSURLImage],
+            styles({ maskSize: [[{ type: 16, number: 50, flags: 4, unit: '%' } as never]] }),
             { left: 0, top: 0, width: 200, height: 100 },
             async () => img
         );
@@ -73,7 +73,7 @@ describe('paintMaskLayers', () => {
                         { color: 0x000000ff, stop: { type: 16, number: 0, flags: 4 } },
                         { color: 0xffffffff, stop: null }
                     ]
-                }
+                } as CSSLinearGradientImage
             ],
             styles(),
             { left: 10, top: 20, width: 200, height: 100 },
@@ -87,7 +87,7 @@ describe('paintMaskLayers', () => {
         const img = { naturalWidth: 100, naturalHeight: 100, width: 100, height: 100 } as HTMLImageElement;
         await paintMaskLayers(
             c,
-            [{ url: 'x.png', type: CSSImageType.URL }],
+            [{ url: 'x.png', type: CSSImageType.URL } as CSSURLImage],
             styles({ maskPosition: [[FIFTY_PERCENT, ZERO_LENGTH]] }),
             { left: 0, top: 0, width: 300, height: 100 },
             async () => img

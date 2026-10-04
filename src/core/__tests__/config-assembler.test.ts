@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
     coerceNumberOptions,
     assembleResourceOptions,
-    assembleContextOptions,
     assembleWindowOptions,
     assembleCloneOptions,
     assembleRenderOptions
