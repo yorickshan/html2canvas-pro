@@ -253,9 +253,28 @@ describe('duration descriptor', () => {
 
 // --- list-style-image ---
 import { listStyleImage } from '../list-style-image';
+import { Parser } from '../../syntax/parser';
+import { CSSImageType } from '../../types/image';
+import type { Context } from '../../../core/context';
 describe('list-style-image descriptor', () => {
+    const context = { cache: { addImage: () => undefined } } as unknown as Context;
+    const parse = (value: string) => listStyleImage.parse(context, Parser.parseValues(value)[0]);
+
     it('has correct name', () => expect(listStyleImage.name).toBe('list-style-image'));
     it('has defined initialValue', () => expect(listStyleImage.initialValue).toBeDefined());
+    it('none parses to null', () => {
+        expect(parse('none')).toBeNull();
+    });
+    it('parses a supported url', () => {
+        expect(parse('url("marker.png")')).toMatchObject({ type: CSSImageType.URL, url: 'marker.png' });
+    });
+    it('returns null instead of throwing on unsupported image functions', () => {
+        // cross-fade() is not supported by the library; it must not fail the
+        // entire capture. (repeating-conic-gradient used to be the example
+        // here but gained support in the same release.)
+        expect(parse('cross-fade(url(a.png), url(b.png))')).toBeNull();
+        expect(parse('paint(circle)')).toBeNull();
+    });
 });
 
 // --- opacity ---
