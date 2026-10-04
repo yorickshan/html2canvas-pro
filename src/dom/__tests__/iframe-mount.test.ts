@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { addBase, createIFrameContainer } from '../iframe-mount';
+import { describe, it, expect, vi } from 'vitest';
+import { addBase, createIFrameContainer, resolveTrustedTypesPolicy } from '../iframe-mount';
 import { IGNORE_ATTRIBUTE } from '../slot-cloner';
 import { Context } from '../../core/context';
 import { Html2CanvasConfig } from '../../config';
@@ -59,5 +59,35 @@ describe('Context.adjustWindowBounds', () => {
         expect(context.windowBounds.top).toBe(17);
         expect(context.windowBounds.width).toBe(800);
         expect(context.windowBounds.height).toBe(600);
+    });
+});
+
+describe('resolveTrustedTypesPolicy', () => {
+    it('returns null when Trusted Types are unavailable', () => {
+        expect(resolveTrustedTypesPolicy(null)).toBeNull();
+        expect(resolveTrustedTypesPolicy({} as Window)).toBeNull();
+    });
+
+    it('creates the policy once per realm and reuses it', () => {
+        const createPolicy = vi.fn(() => ({ createHTML: (s: string) => s }));
+        const win = { trustedTypes: { createPolicy } } as unknown as Window;
+
+        const first = resolveTrustedTypesPolicy(win);
+        const second = resolveTrustedTypesPolicy(win);
+
+        expect(createPolicy).toHaveBeenCalledTimes(1);
+        expect(second).toBe(first);
+        expect(first?.createHTML('<html></html>')).toBe('<html></html>');
+    });
+
+    it('caches failures so a refused policy does not throw again on later renders', () => {
+        const createPolicy = vi.fn(() => {
+            throw new TypeError('Policy names must be unique');
+        });
+        const win = { trustedTypes: { createPolicy } } as unknown as Window;
+
+        expect(resolveTrustedTypesPolicy(win)).toBeNull();
+        expect(resolveTrustedTypesPolicy(win)).toBeNull();
+        expect(createPolicy).toHaveBeenCalledTimes(1);
     });
 });

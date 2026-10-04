@@ -32,6 +32,7 @@ import { convertP3, p3FromXYZ } from './color-spaces/p3';
 import { a98FromXYZ, convertA98rgb } from './color-spaces/a98';
 import { convertProPhoto, proPhotoFromXYZ } from './color-spaces/pro-photo';
 import { convertRec2020, rec2020FromXYZ } from './color-spaces/rec2020';
+import { colorMix } from './functions/color-mix';
 
 export type Color = number;
 
@@ -345,7 +346,8 @@ const SUPPORTED_COLOR_FUNCTIONS: {
     oklch: packOkLch,
     oklab: packOkLab,
     lab: packLab,
-    color: _color
+    color: _color,
+    'color-mix': colorMix
 };
 
 export const parseColor = (context: Context, value: string): Color =>

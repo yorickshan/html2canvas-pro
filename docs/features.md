@@ -165,6 +165,8 @@ All previously listed unsupported properties are now implemented:
  - **object-position** — Controls alignment of replaced elements (images, canvas, SVG) within their content box
  - **repeating-linear-gradient()** — Repeating linear gradient backgrounds
  - **zoom** — Element zoom via CSS transform scale
+ - **translate / scale / rotate** — CSS Transforms Level 2 individual transform properties, composed with `transform` in spec order (translate → rotate → scale → transform) around the shared `transform-origin`
+ - **color-mix()** — Interpolation in `srgb`, `srgb-linear`, `lab`, `oklab`, `lch`, `oklch`, `hsl`, `xyz`, `xyz-d50`, `xyz-d65` with alpha premultiplication and named hue methods; unsupported forms degrade to transparent. Modern browsers hand html2canvas-pro the already-resolved `color()`/`lab()`/`oklab()` computed value, so captures work there even without this parser
 
 ## Additional Features
 

@@ -2,6 +2,9 @@
 
 Implemented in `1720a274cc94e31fb7777bde184ca0b9621b4601`. Measurements below were recorded on 16 September 2026. The native backend is now used by the production renderer, not just the benchmark. The public API and surface eligibility rules are unchanged.
 
+> **Historical report.** Measurements below were recorded on 16 September 2026 against that
+> specific build; they are retained as evidence and are not refreshed for later releases.
+
 **Over-budget follow-up:** the [controlled attribution report](./filter-overbudget.md) now separates the earlier release/draft gap from memory-budget overhead. The corrected filter descriptor makes legacy blur actually execute; descriptor-only and direct-legacy controls reproduce the same pixels. The historical numbers below are retained, not reclassified as an isolated cost of budget rejection.
 
 ## Rendering policy

@@ -247,3 +247,59 @@ describe('IGNORE_ATTRIBUTE', () => {
         expect(IGNORE_ATTRIBUTE.length).toBeGreaterThan(0);
     });
 });
+
+describe('DocumentCloner document-level adoptedStyleSheets', () => {
+    const adoptedCloneOptions: CloneOptions = {
+        ignoreElements: undefined,
+        onclone: undefined,
+        allowTaint: false
+    };
+
+    it('serializes document adopted sheets into the cloned <head>', () => {
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync('#doc-adopted-rule { color: rgb(1, 2, 3); }');
+        document.adoptedStyleSheets = [sheet];
+        try {
+            const el = document.createElement('div');
+            document.body.appendChild(el);
+            try {
+                const cloner = new DocumentCloner(createMockContext(), el, {
+                    ...adoptedCloneOptions,
+                    inlineImages: false,
+                    copyStyles: false
+                });
+                const documentElement = (cloner as unknown as { documentElement: HTMLElement }).documentElement;
+                const style = documentElement.querySelector('head style:last-of-type');
+                expect(style?.textContent).toContain('#doc-adopted-rule');
+            } finally {
+                document.body.removeChild(el);
+            }
+        } finally {
+            document.adoptedStyleSheets = [];
+        }
+    });
+
+    it('skips document adopted sheets when computed styles are inlined (copyStyles)', () => {
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync('#doc-adopted-rule { color: rgb(1, 2, 3); }');
+        document.adoptedStyleSheets = [sheet];
+        try {
+            const el = document.createElement('div');
+            document.body.appendChild(el);
+            try {
+                const cloner = new DocumentCloner(createMockContext(), el, {
+                    ...adoptedCloneOptions,
+                    inlineImages: false,
+                    copyStyles: true
+                });
+                const documentElement = (cloner as unknown as { documentElement: HTMLElement }).documentElement;
+                const styles = Array.from(documentElement.querySelectorAll('head style'));
+                expect(styles.some((style) => style.textContent?.includes('#doc-adopted-rule'))).toBe(false);
+            } finally {
+                document.body.removeChild(el);
+            }
+        } finally {
+            document.adoptedStyleSheets = [];
+        }
+    });
+});

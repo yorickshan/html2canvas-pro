@@ -69,7 +69,7 @@ export function filterOutset(filter: SimpleFilter): number {
 }
 
 function canvasLike(source: HTMLCanvasElement): HTMLCanvasElement {
-    const canvas = document.createElement('canvas');
+    const canvas = (source.ownerDocument ?? document).createElement('canvas');
     canvas.width = source.width;
     canvas.height = source.height;
     return canvas;
@@ -226,8 +226,9 @@ export async function renderSvgFilterSurface(
         }
     }
     const namespace = 'http://www.w3.org/2000/svg';
+    const svgDocument = source.ownerDocument ?? document;
     const element = (tag: string, attributes: Record<string, string | number> = {}) => {
-        const node = document.createElementNS(namespace, tag);
+        const node = svgDocument.createElementNS(namespace, tag);
         Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
         return node;
     };
@@ -286,7 +287,8 @@ export async function renderSvgFilterSurface(
             filter: 'url(#composited-filter)'
         })
     );
-    const image = new Image();
+    const imageWindow = svgDocument.defaultView as (Window & { Image?: typeof Image }) | null;
+    const image = imageWindow?.Image ? new imageWindow.Image() : new Image();
     let output: HTMLCanvasElement | undefined;
     try {
         image.src = `data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;

@@ -113,6 +113,8 @@ import { maskImage, maskPosition, maskRepeat, maskSize } from './property-descri
 import { textEmphasisColor, textEmphasisPosition, textEmphasisStyle } from './property-descriptors/text-emphasis';
 import { borderImageOutset, borderImageWidth } from './property-descriptors/border-image-width';
 import { webkitBoxReflect } from './property-descriptors/webkit-box-reflect';
+import { translate } from './property-descriptors/translate';
+import { scale } from './property-descriptors/scale';
 import { PARSE_CACHE_MAX_PER_DESCRIPTOR } from '../core/constants';
 
 export const STANDARD_PROPERTIES: [string, CSSPropertyDescriptor<unknown>, string][] = [
@@ -178,6 +180,8 @@ export const STANDARD_PROPERTIES: [string, CSSPropertyDescriptor<unknown>, strin
     ['transform', transform, 'transform'],
     ['transformOrigin', transformOrigin, 'transformOrigin'],
     ['rotate', rotate, 'rotate'],
+    ['translate', translate, 'translate'],
+    ['scale', scale, 'scale'],
     ['visibility', visibility, 'visibility'],
     ['webkitTextStrokeColor', webkitTextStrokeColor, 'webkitTextStrokeColor'],
     ['webkitTextStrokeWidth', webkitTextStrokeWidth, 'webkitTextStrokeWidth'],

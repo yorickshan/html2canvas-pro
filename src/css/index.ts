@@ -80,6 +80,8 @@ import { textAlign } from './property-descriptors/text-align';
 import { transform } from './property-descriptors/transform';
 import { transformOrigin } from './property-descriptors/transform-origin';
 import { rotate } from './property-descriptors/rotate';
+import { translate } from './property-descriptors/translate';
+import { scale } from './property-descriptors/scale';
 import { LengthPercentage } from './types/length-percentage';
 import { webkitTextStrokeWidth } from './property-descriptors/webkit-text-stroke-width';
 import { objectFit } from './property-descriptors/object-fit';
@@ -174,6 +176,8 @@ export class CSSParsedDeclaration {
     transform!: ReturnType<typeof transform.parse>;
     transformOrigin!: ReturnType<typeof transformOrigin.parse>;
     rotate!: ReturnType<typeof rotate.parse>;
+    translate!: ReturnType<typeof translate.parse>;
+    scale!: ReturnType<typeof scale.parse>;
     visibility!: ReturnType<typeof visibility.parse>;
     webkitTextStrokeColor!: Color;
     webkitTextStrokeWidth!: ReturnType<typeof webkitTextStrokeWidth.parse>;
@@ -272,7 +276,7 @@ export class CSSParsedDeclaration {
     }
 
     isTransformed(): boolean {
-        return this.transform !== null || this.rotate !== null;
+        return this.transform !== null || this.rotate !== null || this.translate !== null || this.scale !== null;
     }
 
     isPositioned(): boolean {

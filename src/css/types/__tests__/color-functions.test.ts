@@ -42,7 +42,9 @@ describe('color functions', () => {
 
     describe('lab/lch/oklab/oklch', () => {
         it('full percentage lightness equals normalized number', () =>
-            strictEqual(parse('lab(100% 20 30)'), parse('lab(1 20 30)')));
+            // lab() lightness is on a 0..100 scale in both forms (verified in
+            // Chromium: lab(100% 0 0) === lab(100 0 0) === white)
+            strictEqual(parse('lab(100% 20 30)'), parse('lab(100 20 30)')));
         it('lab with slash alpha', () => strictEqual(parse('lab(50% 20 30 / 0.5)'), parse('lab(50% 20 30 / 50%)')));
         it('lch percentage and number lightness are interchangeable', () =>
             strictEqual(parse('lch(50% 20 30)'), parse('lch(50 20 30)')));

@@ -402,3 +402,60 @@ describe('Cache.defer-mode eviction exemption', () => {
         }
     });
 });
+
+describe('Cache image decoding', () => {
+    it('resolves synchronously-complete images via decode() without the 500ms timer', async () => {
+        const decode = vi.fn(() => Promise.resolve());
+        class FakeImage {
+            decode = decode;
+            complete = true;
+            crossOrigin = '';
+            onload: (() => void) | null = null;
+            onerror: (() => void) | null = null;
+            src = '';
+        }
+        const src = 'data:image/png;base64,AAAA';
+        const mockWindow = {
+            Image: FakeImage,
+            document: {
+                createElement: (_name: string) => {
+                    let _href = '';
+                    return {
+                        set href(value: string) {
+                            _href = value;
+                        },
+                        get href() {
+                            return _href;
+                        },
+                        get protocol() {
+                            return 'http:';
+                        },
+                        get hostname() {
+                            return 'localhost';
+                        },
+                        get port() {
+                            return '';
+                        }
+                    };
+                }
+            },
+            location: { href: 'http://localhost/' }
+        } as unknown as Window;
+
+        const context = new Context(
+            { logging: false, imageTimeout: 5000, useCORS: false, allowTaint: false },
+            new Bounds(0, 0, 800, 600),
+            new Html2CanvasConfig({ window: mockWindow })
+        );
+        const cache = new Cache(context, {
+            imageTimeout: 5000,
+            useCORS: false,
+            allowTaint: false
+        });
+
+        await cache.addImage(src);
+        const image = await cache.match(src);
+        expect(image).toBeInstanceOf(FakeImage);
+        expect(decode).toHaveBeenCalledTimes(1);
+    });
+});

@@ -28,12 +28,48 @@ export interface CloneMountOptions {
 }
 
 /**
- * Trusted Types factory (getPolicy / createPolicy) for document.write in strict CSP environments.
- * Used when writing initial HTML to the cloned document.
+ * Trusted Types factory (trustedTypes object) for document.write in strict CSP environments.
  */
-type TrustedTypesFactory = {
+type TrustedTypesFactoryLike = {
     getPolicy?: (name: string) => unknown;
     createPolicy: (name: string, config: object) => unknown;
+};
+
+type TrustedTypePolicyLike = { createHTML: (s: string) => string };
+
+// Named policies cannot be created twice and lookups are realm-scoped, so
+// cache one policy per trustedTypes factory instead of attempting
+// createPolicy on every render (a second attempt throws TypeError).
+const trustedTypePolicies = new WeakMap<TrustedTypesFactoryLike, TrustedTypePolicyLike | null>();
+
+/**
+ * Resolve the Trusted Types policy used for writing the clone document.
+ * Returns null when Trusted Types are unavailable or the policy could not be
+ * created — document.write is not a Trusted Types sink, so the plain string
+ * stays functional in both cases.
+ * @internal – exported for testing only.
+ */
+export const resolveTrustedTypesPolicy = (ownerWindow: Window | null): TrustedTypePolicyLike | null => {
+    const factory = ownerWindow && (ownerWindow as Window & { trustedTypes?: TrustedTypesFactoryLike }).trustedTypes;
+    if (!factory) {
+        return null;
+    }
+    if (trustedTypePolicies.has(factory)) {
+        return trustedTypePolicies.get(factory) ?? null;
+    }
+    let policy: TrustedTypePolicyLike | null = null;
+    try {
+        const existing = factory.getPolicy?.('html2canvas-pro') as TrustedTypePolicyLike | undefined;
+        policy =
+            existing ??
+            (factory.createPolicy('html2canvas-pro', { createHTML: (s: string) => s }) as TrustedTypePolicyLike);
+    } catch (e) {
+        // Duplicate policy name or refused creation: cache the failure so
+        // subsequent renders skip the attempt instead of throwing again.
+        policy = null;
+    }
+    trustedTypePolicies.set(factory, policy);
+    return policy;
 };
 
 export const createIFrameContainer = (
@@ -231,23 +267,15 @@ export const mountCloneInIFrame = (
     const baseUri = ownerDocument.baseURI;
     documentClone.open();
     // rawHTML is always a static, internally-generated string:
-    // serializeDoctype(document.doctype) + '<html></html>'
+    // serializeDoctype(ownerDocument.doctype) + '<html></html>'
     // No user-controlled input — safe for document.write in the sandbox iframe.
-    const rawHTML = serializeDoctype(document.doctype) + '<html></html>';
+    // The doctype comes from the source document, not the global one.
+    const rawHTML = serializeDoctype(ownerDocument.doctype) + '<html></html>';
     try {
-        const ownerWindow = ownerDocument.defaultView;
-        const trustedTypesFactory =
-            ownerWindow && (ownerWindow as Window & { trustedTypes?: TrustedTypesFactory }).trustedTypes;
-        let policy = trustedTypesFactory?.getPolicy?.('html2canvas-pro');
-        if (!policy && trustedTypesFactory) {
-            policy = trustedTypesFactory.createPolicy('html2canvas-pro', {
-                createHTML: (s: string) => s
-            });
-        }
-        // Prefer Trusted Types when available; fallback is the same static HTML.
-        const html = policy ? (policy as { createHTML: (s: string) => string }).createHTML(rawHTML) : rawHTML;
+        const policy = resolveTrustedTypesPolicy(ownerDocument.defaultView);
+        const html = policy ? policy.createHTML(rawHTML) : rawHTML;
         // CodeQL:no - rawHTML is a static internal string, never user-controlled
-        documentClone.write(html as string);
+        documentClone.write(html);
     } catch (_e) {
         // CodeQL:no - rawHTML is a static internal string, never user-controlled
         documentClone.write(rawHTML);

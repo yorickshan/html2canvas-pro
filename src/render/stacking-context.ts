@@ -67,6 +67,21 @@ export class ElementPaint {
             this.effects.push(new OpacityEffect(this.container.styles.opacity));
         }
 
+        // CSS Transforms Level 2 combines the individual transform properties
+        // with `transform` as translate → rotate → scale → transform, all
+        // around the shared transform-origin. Effects are applied in push
+        // order and post-multiply, so pushing in this order yields the spec
+        // matrix product T·R·S·X.
+        if (this.container.styles.translate !== null) {
+            const origin = this.container.styles.transformOrigin;
+            const offsetX = this.container.bounds.left + getAbsoluteValue(origin[0], this.container.bounds.width);
+            const offsetY = this.container.bounds.top + getAbsoluteValue(origin[1], this.container.bounds.height);
+            const [tx, ty] = this.container.styles.translate;
+            const dx = getAbsoluteValue(tx, this.container.bounds.width);
+            const dy = getAbsoluteValue(ty, this.container.bounds.height);
+            this.effects.push(new TransformEffect(offsetX, offsetY, [1, 0, 0, 1, dx, dy]));
+        }
+
         if (this.container.styles.rotate !== null) {
             const origin = this.container.styles.transformOrigin;
             const offsetX = this.container.bounds.left + getAbsoluteValue(origin[0], this.container.bounds.width);
@@ -78,6 +93,14 @@ export class ElementPaint {
             const sin = Math.sin(rad);
             const rotateMatrix: Matrix = [cos, sin, -sin, cos, 0, 0];
             this.effects.push(new TransformEffect(offsetX, offsetY, rotateMatrix));
+        }
+
+        if (this.container.styles.scale !== null) {
+            const origin = this.container.styles.transformOrigin;
+            const offsetX = this.container.bounds.left + getAbsoluteValue(origin[0], this.container.bounds.width);
+            const offsetY = this.container.bounds.top + getAbsoluteValue(origin[1], this.container.bounds.height);
+            const [sx, sy] = this.container.styles.scale;
+            this.effects.push(new TransformEffect(offsetX, offsetY, [sx, 0, 0, sy, 0, 0]));
         }
 
         if (this.container.styles.transform !== null) {

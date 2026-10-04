@@ -2,12 +2,12 @@
  * Origin Checker
  *
  * Provides origin checking functionality without global static state.
- * Each instance maintains its own anchor element and origin reference.
+ * Each instance maintains its own base URI and origin reference.
  *
  * Replaces the static methods in CacheStorage with instance-based approach.
  */
 export class OriginChecker {
-    private readonly link: HTMLAnchorElement;
+    private readonly baseUri: string;
     private readonly origin: string;
 
     constructor(window: Window) {
@@ -19,21 +19,27 @@ export class OriginChecker {
             throw new Error('Window object must have valid location');
         }
 
-        this.link = window.document.createElement('a');
+        this.baseUri = window.location.href;
         this.origin = this.getOrigin(window.location.href);
     }
 
     /**
      * Get the origin (protocol + hostname + port) of a URL
      *
-     * @param url - URL to parse
-     * @returns Origin string (e.g., "https://example.com:8080")
+     * @param url - URL to parse; relative URLs resolve against the context
+     *              window's location, as the anchor element used to
+     * @returns Origin string (e.g. "https://example.com:8080"), or an empty
+     *          string for unparseable URLs — which never matches and is
+     *          therefore treated as cross-origin
      */
     getOrigin(url: string): string {
-        this.link.href = url;
-        // IE9 hack: accessing href twice to ensure it's properly parsed
-        this.link.href = this.link.href;
-        return this.link.protocol + this.link.hostname + this.link.port;
+        // `new URL().origin` replaces the IE9-era double-href anchor hack and
+        // is collision-safe for IPv6 hosts.
+        try {
+            return new URL(url, this.baseUri).origin;
+        } catch (e) {
+            return '';
+        }
     }
 
     /**

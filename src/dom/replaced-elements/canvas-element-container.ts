@@ -1,4 +1,4 @@
-import { ElementContainer } from '../element-container';
+import { ElementContainer, ElementContainerOptions } from '../element-container';
 import { Context } from '../../core/context';
 
 export class CanvasElementContainer extends ElementContainer {
@@ -6,8 +6,8 @@ export class CanvasElementContainer extends ElementContainer {
     intrinsicWidth: number;
     intrinsicHeight: number;
 
-    constructor(context: Context, canvas: HTMLCanvasElement) {
-        super(context, canvas);
+    constructor(context: Context, canvas: HTMLCanvasElement, options: ElementContainerOptions = {}) {
+        super(context, canvas, options);
         this.canvas = canvas;
         this.intrinsicWidth = canvas.width;
         this.intrinsicHeight = canvas.height;

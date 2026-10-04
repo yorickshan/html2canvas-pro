@@ -1,10 +1,13 @@
 import { isElementNode, isScriptElement, isSlotElement, isStyleElement } from './node-type-guards';
 import { Context } from '../core/context';
+import { createAdoptedStylesElement } from './adopted-styles';
 
 /** Options subset needed by SlotCloner */
 export interface SlotClonerOptions {
     ignoreElements?: (element: Element) => boolean;
     copyStyles: boolean;
+    /** CSP nonce applied to synthesized <style> elements (adopted sheets). */
+    cspNonce?: string;
 }
 
 /** Exported for reuse in document-cloner.ts */
@@ -144,6 +147,7 @@ export class SlotCloner {
                 this.safeAppendClonedChild(targetShadowRoot, child, copyStyles);
             }
         }
+        this.appendAdoptedStyleSheets(shadowRoot, targetShadowRoot, copyStyles);
     }
 
     /**
@@ -201,6 +205,38 @@ export class SlotCloner {
             } else {
                 this.appendChildNode(clone, child, copyStyles);
             }
+        }
+        this.appendAdoptedStyleSheets(shadowRoot, clone, copyStyles);
+    }
+
+    /**
+     * Re-materialise the shadow root's constructable stylesheets (adoptedStyleSheets)
+     * as a <style> element in the clone — cloneNode never carries them.
+     *
+     * Skipped when computed styles are inlined per element (copyStyles), mirroring
+     * how <style> elements inside shadow roots are dropped in that mode.
+     */
+    private appendAdoptedStyleSheets(
+        shadowRoot: ShadowRoot,
+        target: ShadowRoot | HTMLElement | SVGElement,
+        copyStyles: boolean
+    ): void {
+        if (copyStyles) {
+            return;
+        }
+        const sheets = shadowRoot.adoptedStyleSheets;
+        if (!sheets || sheets.length === 0) {
+            return;
+        }
+        // The style element must live in the clone's document; a ShadowRoot has
+        // no ownerDocument of its own, so go through its host.
+        const styleDocument = 'host' in target ? target.host.ownerDocument : target.ownerDocument;
+        if (!styleDocument) {
+            return;
+        }
+        const style = createAdoptedStylesElement(styleDocument, sheets, this.options.cspNonce);
+        if (style) {
+            target.appendChild(style);
         }
     }
 }

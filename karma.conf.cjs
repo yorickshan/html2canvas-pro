@@ -6,8 +6,6 @@ const port = 9876;
 const fs = require('fs');
 const path = require('path');
 
-const log = require('karma/lib/logger').create('launcher:MobileSafari');
-
 // Mirrors how karma-firefox-launcher resolves the Firefox binary
 // (FIREFOX_BIN override, then platform-specific default locations) so a
 // missing install can be detected before the launcher crashes the server
@@ -46,107 +44,6 @@ const firefoxAvailable = () => {
 module.exports = function(config) {
     // https://github.com/actions/virtual-environments/blob/master/images/macos/macos-10.15-Readme.md
     const launchers = {
-        Safari_IOS_9: {
-            base: 'MobileSafari',
-            name: 'iPhone 5s',
-            platform: 'iOS',
-            sdk: '9.0'
-        },
-        Safari_IOS_10: {
-            base: 'MobileSafari',
-            name: 'iPhone 5s',
-            platform: 'iOS',
-            sdk: '10.0'
-        },
-        Safari_IOS_12: {
-            base: 'MobileSafari',
-            name: 'iPhone 5s',
-            platform: 'iOS',
-            sdk: '12.4'
-        },
-        Safari_IOS_13: {
-            base: 'MobileSafari',
-            name: 'iPhone 8',
-            platform: 'iOS',
-            sdk: '13.7'
-        },
-        Safari_IOS_14: {
-            base: 'MobileSafari',
-            name: 'iPhone 8',
-            platform: 'iOS',
-            sdk: '14.4'
-        },
-        Safari_IOS_15_0: {
-            base: 'MobileSafari',
-            name: 'iPhone 13',
-            platform: 'iOS',
-            sdk: '15.0'
-        },
-        Safari_IOS_15: {
-            base: 'MobileSafari',
-            name: 'iPhone 13',
-            platform: 'iOS',
-            sdk: '15.2'
-        },
-        SauceLabs_IE9: {
-            base: 'SauceLabs',
-            browserName: 'internet explorer',
-            version: '9.0',
-            platform: 'Windows 7'
-        },
-        SauceLabs_IE10: {
-            base: 'SauceLabs',
-            browserName: 'internet explorer',
-            version: '10.0',
-            platform: 'Windows 7'
-        },
-        SauceLabs_IE11: {
-            base: 'SauceLabs',
-            browserName: 'internet explorer',
-            version: '11.0',
-            platform: 'Windows 7'
-        },
-        SauceLabs_Edge18: {
-            base: 'SauceLabs',
-            browserName: 'MicrosoftEdge',
-            version: '18.17763',
-            platform: 'Windows 10'
-        },
-        SauceLabs_Android4: {
-            base: 'SauceLabs',
-            browserName: 'Browser',
-            platform: 'Android',
-            version: '4.4',
-            device: 'Android Emulator',
-        },
-        SauceLabs_iOS10_3: {
-            base: 'SauceLabs',
-            browserName: 'Safari',
-            platform: 'iOS',
-            version: '10.3',
-            device: 'iPhone 7 Plus Simulator'
-        },
-        SauceLabs_iOS9_3: {
-            base: 'SauceLabs',
-            browserName: 'Safari',
-            platform: 'iOS',
-            version: '9.3',
-            device: 'iPhone 6 Plus Simulator'
-        },
-        IE_9: {
-            base: 'IE',
-            'x-ua-compatible': 'IE=EmulateIE9',
-            flags: ['-extoff']
-        },
-        IE_10: {
-            base: 'IE',
-            'x-ua-compatible': 'IE=EmulateIE10',
-            flags: ['-extoff']
-        },
-        IE_11: {
-            base: 'IE',
-            flags: ['-extoff']
-        },
         Safari_Stable: {
             base: 'SafariNative'
         },
@@ -187,53 +84,6 @@ module.exports = function(config) {
         }
     }
 
-    const MobileSafari = function(baseBrowserDecorator, args) {
-        if(process.platform !== "darwin"){
-            log.error("This launcher only works in MacOS.");
-            this._process.kill();
-            return;
-        }
-        // Only needed when an iOS simulator launcher actually runs; keeps
-        // config parsing working when these optional deps are absent.
-        const simctl = require('node-simctl');
-        const iosSimulator = require('appium-ios-simulator');
-        baseBrowserDecorator(this);
-        this.on('start', url => {
-            simctl.getDevices(args.sdk, args.platform).then(devices => {
-                const d = devices.find(d => {
-                    return d.name === args.name;
-                });
-
-                if (!d) {
-                    log.error(`No device found for sdk ${args.sdk} with name ${args.name}`);
-                    log.info(`Available devices:`, devices);
-                    this._process.kill();
-                    return;
-                }
-
-                return iosSimulator.getSimulator(d.udid).then(device => {
-                    return simctl.bootDevice(d.udid).then(() => device);
-                }).then(device => {
-                    return device.waitForBoot(60 * 5 * 1000).then(() => {
-                        return device.openUrl(url);
-                    });
-                });
-            }).catch(e => {
-                console.log('err,', e);
-            });
-        });
-    };
-
-    MobileSafari.prototype = {
-        name: 'MobileSafari',
-        DEFAULT_CMD: {
-            darwin: '/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/Contents/MacOS/Simulator',
-        },
-        ENV_CMD: null,
-    };
-
-    MobileSafari.$inject = ['baseBrowserDecorator', 'args'];
-
     config.set({
 
         // base path that will be used to resolve all patterns (eg. files, exclude)
@@ -257,12 +107,7 @@ module.exports = function(config) {
             'karma-junit-reporter',
             'karma-chrome-launcher',
             'karma-firefox-launcher',
-            'karma-edge-launcher',
-            'karma-ie-launcher',
-            'karma-safarinative-launcher',
-            {
-                'launcher:MobileSafari': ['type', MobileSafari]
-            }
+            'karma-safarinative-launcher'
         ],
 
         // list of files to exclude

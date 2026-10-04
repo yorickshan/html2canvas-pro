@@ -1,5 +1,5 @@
 import { CSSParsedDeclaration } from '../css';
-import { ElementContainer } from './element-container';
+import { ElementContainer, ElementContainerOptions } from './element-container';
 import { TextContainer } from './text-container';
 import { ImageElementContainer } from './replaced-elements/image-element-container';
 import { CanvasElementContainer } from './replaced-elements/canvas-element-container';
@@ -41,11 +41,12 @@ const parseNodeTree = (
     node: Node,
     parent: ElementContainer,
     root: ElementContainer,
-    zoomScale = 1
+    zoomScale = 1,
+    options: ElementContainerOptions = {}
 ) => {
     for (let childNode = node.firstChild, nextNode; childNode; childNode = nextNode) {
         nextNode = childNode.nextSibling;
-        parseChildNode(context, childNode, parent, root, zoomScale);
+        parseChildNode(context, childNode, parent, root, zoomScale, options);
     }
 };
 
@@ -62,7 +63,8 @@ const parseChildNode = (
     childNode: Node,
     parent: ElementContainer,
     root: ElementContainer,
-    zoomScale = 1
+    zoomScale = 1,
+    options: ElementContainerOptions = {}
 ) => {
     // Fixes #2238 #1624 - Fix the issue of TextNode content being overlooked in rendering due to being perceived as blank by trim().
     if (isTextNode(childNode) && childNode.data.length > 0) {
@@ -96,9 +98,11 @@ const parseChildNode = (
             // parent container.
             childNode
                 .assignedNodes()
-                .forEach((assignedNode: Node) => parseChildNode(context, assignedNode, parent, root, zoomScale));
+                .forEach((assignedNode: Node) =>
+                    parseChildNode(context, assignedNode, parent, root, zoomScale, options)
+                );
         } else {
-            const container = createContainer(context, childNode);
+            const container = createContainer(context, childNode, options);
             // A zoomed element lays itself out in unzoomed coordinates and is
             // visually scaled by its own TransformEffect from the element's
             // visual top-left corner. Its bounds therefore keep the visual
@@ -131,59 +135,67 @@ const parseChildNode = (
                 parent.elements.push(container);
                 const childZoom = zoomScale * (container.styles.zoom || 1);
                 if (childNode.shadowRoot) {
-                    parseNodeTree(context, childNode.shadowRoot, container, root, childZoom);
+                    parseNodeTree(context, childNode.shadowRoot, container, root, childZoom, options);
                 } else if (!isTextareaElement(childNode) && !isSVGElement(childNode) && !isSelectElement(childNode)) {
-                    parseNodeTree(context, childNode, container, root, childZoom);
+                    parseNodeTree(context, childNode, container, root, childZoom, options);
                 }
             }
         }
     }
 };
 
-const createContainer = (context: Context, element: Element): ElementContainer => {
+const createContainer = (
+    context: Context,
+    element: Element,
+    options: ElementContainerOptions = {}
+): ElementContainer => {
     if (isImageElement(element)) {
-        return new ImageElementContainer(context, element);
+        return new ImageElementContainer(context, element, options);
     }
 
     if (isCanvasElement(element)) {
-        return new CanvasElementContainer(context, element);
+        return new CanvasElementContainer(context, element, options);
     }
 
     if (isSVGElement(element)) {
-        return new SVGElementContainer(context, element);
+        return new SVGElementContainer(context, element, options);
     }
 
     if (isLIElement(element)) {
-        return new LIElementContainer(context, element);
+        return new LIElementContainer(context, element, options);
     }
 
     if (isOLElement(element)) {
-        return new OLElementContainer(context, element);
+        return new OLElementContainer(context, element, options);
     }
 
     if (isInputElement(element)) {
-        return new InputElementContainer(context, element);
+        return new InputElementContainer(context, element, options);
     }
 
     if (isSelectElement(element)) {
-        return new SelectElementContainer(context, element);
+        return new SelectElementContainer(context, element, options);
     }
 
     if (isTextareaElement(element)) {
-        return new TextareaElementContainer(context, element);
+        return new TextareaElementContainer(context, element, options);
     }
 
     if (isIFrameElement(element)) {
-        return new IFrameElementContainer(context, element, parseTree);
+        return new IFrameElementContainer(context, element, (ctx, node) => parseTree(ctx, node, options), options);
     }
 
-    return new ElementContainer(context, element);
+    return new ElementContainer(context, element, options);
 };
 
-export const parseTree = (context: Context, element: HTMLElement): ElementContainer => {
-    const container = createContainer(context, element);
+export const parseTree = (
+    context: Context,
+    element: HTMLElement,
+    options: ElementContainerOptions = {}
+): ElementContainer => {
+    const container = createContainer(context, element, options);
     container.createsRealStackingContext = true;
-    parseNodeTree(context, element, container, container);
+    parseNodeTree(context, element, container, container, 1, options);
     return container;
 };
 

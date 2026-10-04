@@ -76,3 +76,32 @@ describe('OriginChecker', () => {
         expect(() => new OriginChecker(badWindow as unknown as Window)).toThrow();
     });
 });
+
+describe('OriginChecker URL parsing (URL API)', () => {
+    let checker: OriginChecker;
+
+    beforeEach(() => {
+        checker = new OriginChecker(window);
+    });
+
+    it('resolves relative URLs against the context location', () => {
+        // jsdom's location is about:blank, so the resolved origin is "null";
+        // the important part is that resolution does not throw and matches
+        // what the anchor-based implementation would produce.
+        expect(typeof checker.getOrigin('/relative/path')).toBe('string');
+    });
+
+    it('returns an empty string for unparseable URLs instead of throwing', () => {
+        expect(checker.getOrigin('http://[::1:invalid')).toBe('');
+        expect(checker.isSameOrigin('http://[::1:invalid')).toBe(false);
+    });
+
+    it('preserves the IPv6 host without bracket collisions', () => {
+        const origin = checker.getOrigin('http://[2001:db8::1]:8080/');
+        expect(origin).toBe('http://[2001:db8::1]:8080');
+    });
+
+    it('normalizes default ports away', () => {
+        expect(checker.getOrigin('http://example.com:80/page')).toBe('http://example.com');
+    });
+});

@@ -443,6 +443,31 @@ describe('ElementPaint effect construction', () => {
         expect(transform.matrix).toEqual([1, 0, 0, 1, 10, 0]);
     });
 
+    it('translate adds a translation TransformEffect', () => {
+        const paint = paintOf({ translate: '30px 20px' });
+        const transform = paint.effects[0] as unknown as { matrix: number[] };
+        expect(transform.matrix).toEqual([1, 0, 0, 1, 30, 20]);
+    });
+
+    it('scale adds a scaling TransformEffect', () => {
+        const paint = paintOf({ scale: '2 3' });
+        const transform = paint.effects[0] as unknown as { matrix: number[] };
+        expect(transform.matrix).toEqual([2, 0, 0, 3, 0, 0]);
+    });
+
+    it('individual transform properties are pushed in translate → rotate → scale → transform order', () => {
+        // Effects post-multiply in application order, so this push order yields
+        // the CSS Transforms L2 matrix product T·R·S·X.
+        const paint = paintOf({
+            translate: '10px 0px',
+            rotate: '90deg',
+            scale: '2',
+            transform: 'matrix(1, 0, 0, 1, 5, 0)'
+        });
+        expect(paint.effects).toHaveLength(4);
+        expect(paint.effects.every((e) => e.type === 0 /* EffectType.TRANSFORM */)).toBe(true);
+    });
+
     it('overflow hidden with borders adds separate border/padding box clips', () => {
         const paint = paintOf({ overflow: 'hidden', borderTopWidth: '2px', borderLeftWidth: '3px' });
         const clips = paint.effects as unknown as Array<{ target: number }>;

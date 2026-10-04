@@ -307,8 +307,12 @@ export class Cache {
 
         this.context.logger.debug(`Added image ${key.substring(0, 256)}`);
 
+        // Allocate the image in the configured window's realm when available
+        // so multi-window captures do not depend on the global constructor.
+        const imageConstructor = (this.context.config.window as Window & { Image?: typeof Image }).Image ?? Image;
+
         return await new Promise((resolve, reject) => {
-            const img = new Image();
+            const img = new imageConstructor();
             img.onload = () => resolve(img);
             img.onerror = reject;
             //ios safari 10.3 taints canvas with data urls unless crossOrigin is set to anonymous
@@ -317,8 +321,18 @@ export class Cache {
             }
             img.src = src;
             if (img.complete === true) {
-                // Inline XML images may fail to parse, throwing an Error later on
-                setTimeout(() => resolve(img), 500);
+                // Cached and data-URL images are complete synchronously, which
+                // means the load event already fired. Wait for the bitmap to
+                // be usable via decode() — without the fixed 500ms timer the
+                // previous fallback added to every such image.
+                if (typeof img.decode === 'function') {
+                    img.decode().then(
+                        () => resolve(img),
+                        () => reject(new Error(`Failed to decode image ${src.substring(0, 256)}`))
+                    );
+                } else {
+                    setTimeout(() => resolve(img), 500);
+                }
             }
         });
     }

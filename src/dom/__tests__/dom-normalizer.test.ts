@@ -165,3 +165,65 @@ describe('DOMNormalizer', () => {
         expect(() => DOMNormalizer.restoreElement(mockElement as Element, emptyStyles)).not.toThrow();
     });
 });
+
+describe('DOMNormalizer translate/scale normalization', () => {
+    const makeContext = (): Context => {
+        const mockWindow = {
+            document: {
+                createElement: (_name: string) => ({})
+            },
+            location: { href: 'http://localhost/' },
+            getComputedStyle: () => ({})
+        } as unknown as Window;
+        return new Context(
+            { logging: false, imageTimeout: 15000, useCORS: false, allowTaint: false },
+            new Bounds(0, 0, 800, 600),
+            new Html2CanvasConfig({ window: mockWindow })
+        );
+    };
+
+    const makeElement = (inlineStyle: Record<string, string>): HTMLElement =>
+        ({ nodeType: 1, tagName: 'DIV', style: { transform: '', ...inlineStyle } }) as unknown as HTMLElement;
+
+    it('neutralizes translate with its identity value and forces the containing block', () => {
+        const el = makeElement({ translate: '30px' });
+        const styles = new CSSParsedDeclaration(makeContext(), { translate: '30px' } as never);
+
+        const original = DOMNormalizer.normalizeElement(el, styles);
+
+        expect(el.style.translate).toBe('0px');
+        expect(el.style.transform).toBe('translate(0, 0)');
+        DOMNormalizer.restoreElement(el, original);
+        expect(el.style.translate).toBe('30px');
+        expect(el.style.transform).toBe('');
+    });
+
+    it('neutralizes scale with its identity value', () => {
+        const el = makeElement({ scale: '2' });
+        const styles = new CSSParsedDeclaration(makeContext(), { scale: '2' } as never);
+
+        const original = DOMNormalizer.normalizeElement(el, styles);
+
+        expect(el.style.scale).toBe('1');
+        expect(el.style.transform).toBe('translate(0, 0)');
+        DOMNormalizer.restoreElement(el, original);
+        expect(el.style.scale).toBe('2');
+        expect(el.style.transform).toBe('');
+    });
+
+    it('leaves an existing transform override in place when transform is also active', () => {
+        const el = makeElement({ transform: 'rotate(10deg)', translate: '5px' });
+        const styles = new CSSParsedDeclaration(makeContext(), {
+            transform: 'rotate(10deg)',
+            translate: '5px'
+        } as never);
+
+        const original = DOMNormalizer.normalizeElement(el, styles);
+
+        expect(el.style.transform).toBe('translate(0, 0)');
+        expect(el.style.translate).toBe('0px');
+        DOMNormalizer.restoreElement(el, original);
+        expect(el.style.transform).toBe('rotate(10deg)');
+        expect(el.style.translate).toBe('5px');
+    });
+});

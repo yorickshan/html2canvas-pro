@@ -1,4 +1,11 @@
-import { fromCodePoint, toCodePoints } from 'css-line-break';
+/**
+ * Runtime feature detection.
+ *
+ * Only checks that still gate real behaviour on supported engines are kept:
+ * range-bounds measurement (iOS 13 quirk), SVG drawing, CORS plumbing and
+ * Intl.Segmenter. Dead IE-era probes (word-breaking, foreignObject support,
+ * response typing) were removed with their always-true/dead consumers.
+ */
 
 const testRangeBounds = (document: Document) => {
     const TEST_HEIGHT = 123;
@@ -24,45 +31,6 @@ const testRangeBounds = (document: Document) => {
     return false;
 };
 
-const testIOSLineBreak = (document: Document) => {
-    const testElement = document.createElement('boundtest');
-    testElement.style.width = '50px';
-    testElement.style.display = 'block';
-    testElement.style.fontSize = '12px';
-    testElement.style.letterSpacing = '0px';
-    testElement.style.wordSpacing = '0px';
-    document.body.appendChild(testElement);
-    const range = document.createRange();
-
-    testElement.innerHTML = typeof ''.repeat === 'function' ? '&#128104;'.repeat(10) : '';
-
-    const node = testElement.firstChild as Text;
-
-    const textList = toCodePoints(node.data).map((i) => fromCodePoint(i));
-    let offset = 0;
-    let prev: DOMRect = {} as DOMRect;
-
-    // ios 13 does not handle range getBoundingClientRect line changes correctly #2177
-    const supports = textList.every((text, i) => {
-        range.setStart(node, offset);
-        range.setEnd(node, offset + text.length);
-        const rect = range.getBoundingClientRect();
-
-        offset += text.length;
-        const boundAhead = rect.x > prev.x || rect.y > prev.y;
-
-        prev = rect;
-        if (i === 0) {
-            return true;
-        }
-
-        return boundAhead;
-    });
-
-    document.body.removeChild(testElement);
-    return supports;
-};
-
 const testCORS = (): boolean => typeof new Image().crossOrigin !== 'undefined';
 
 const testResponseType = (): boolean => typeof new XMLHttpRequest().responseType === 'string';
@@ -84,51 +52,6 @@ const testSVG = (document: Document): boolean => {
         return false;
     }
     return true;
-};
-
-const isGreenPixel = (data: Uint8ClampedArray): boolean =>
-    data[0] === 0 && data[1] === 255 && data[2] === 0 && data[3] === 255;
-
-const testForeignObject = (document: Document): Promise<boolean> => {
-    const canvas = document.createElement('canvas');
-    const size = 100;
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        return Promise.reject(new Error('Failed to get 2D rendering context'));
-    }
-    ctx.fillStyle = 'rgb(0, 255, 0)';
-    ctx.fillRect(0, 0, size, size);
-
-    const img = new Image();
-    const greenImageSrc = canvas.toDataURL();
-    img.src = greenImageSrc;
-    const svg = createForeignObjectSVG(size, size, 0, 0, img);
-    ctx.fillStyle = 'red';
-    ctx.fillRect(0, 0, size, size);
-
-    return loadSerializedSVG(svg)
-        .then((img: HTMLImageElement) => {
-            ctx.drawImage(img, 0, 0);
-            const data = ctx.getImageData(0, 0, size, size).data;
-            ctx.fillStyle = 'red';
-            ctx.fillRect(0, 0, size, size);
-
-            const node = document.createElement('div');
-            node.style.backgroundImage = `url(${greenImageSrc})`;
-            node.style.height = `${size}px`;
-            // Firefox 55 does not render inline <img /> tags
-            return isGreenPixel(data)
-                ? loadSerializedSVG(createForeignObjectSVG(size, size, 0, 0, node))
-                : Promise.reject(new Error('ForeignObject rendering not supported'));
-        })
-        .then((img: HTMLImageElement) => {
-            ctx.drawImage(img, 0, 0);
-            // Edge does not render background-images
-            return isGreenPixel(ctx.getImageData(0, 0, size, size).data);
-        })
-        .catch(() => false);
 };
 
 export const createForeignObjectSVG = (
@@ -173,25 +96,10 @@ export const FEATURES = {
         Object.defineProperty(FEATURES, 'SUPPORT_RANGE_BOUNDS', { value });
         return value;
     },
-    get SUPPORT_WORD_BREAKING(): boolean {
-        'use strict';
-        const value = FEATURES.SUPPORT_RANGE_BOUNDS && testIOSLineBreak(document);
-        Object.defineProperty(FEATURES, 'SUPPORT_WORD_BREAKING', { value });
-        return value;
-    },
     get SUPPORT_SVG_DRAWING(): boolean {
         'use strict';
         const value = testSVG(document);
         Object.defineProperty(FEATURES, 'SUPPORT_SVG_DRAWING', { value });
-        return value;
-    },
-    get SUPPORT_FOREIGNOBJECT_DRAWING(): Promise<boolean> {
-        'use strict';
-        const value =
-            typeof Array.from === 'function' && typeof window.fetch === 'function'
-                ? testForeignObject(document)
-                : Promise.resolve(false);
-        Object.defineProperty(FEATURES, 'SUPPORT_FOREIGNOBJECT_DRAWING', { value });
         return value;
     },
     get SUPPORT_CORS_IMAGES(): boolean {

@@ -72,7 +72,12 @@ export const packLab = (_context: Context, args: CSSValue[]): number => {
     if (isRelativeTransform(args.filter(nonFunctionArgSeparator))) {
         throw new Error('Relative color not supported for lab()');
     }
-    const [l, a, b, alpha] = extractLabComponents(args),
+    const [extractedL, a, b, alpha] = extractLabComponents(args),
+        // lab() lightness is on a 0..100 scale in BOTH number and percentage
+        // form (unlike oklab's 0..1); extractLabComponents normalizes
+        // percentages to oklab's scale, so rescale when the source token was
+        // a percentage.
+        l = isPercentageLightness(args) ? extractedL * 100 : extractedL,
         rgb = srgbLinear2rgb(xyz2rgbLinear(lab2xyz([l, a, b])));
 
     return pack(
@@ -81,6 +86,11 @@ export const packLab = (_context: Context, args: CSSValue[]): number => {
         clamp(Math.round(rgb[2] * 255), 0, 255),
         alpha
     );
+};
+
+const isPercentageLightness = (args: CSSValue[]): boolean => {
+    const t0 = args.filter(nonFunctionArgSeparator)[0];
+    return t0 !== undefined && t0.type === TokenType.PERCENTAGE_TOKEN;
 };
 
 export const packOkLab = (_context: Context, args: CSSValue[]): number => {
@@ -271,7 +281,7 @@ export const hue2rgb = (t1: number, t2: number, hue: number): number => {
     }
 };
 
-const hsl2rgb = ([h, s, l]: [number, number, number]): [number, number, number] => {
+export const hsl2rgb = ([h, s, l]: [number, number, number]): [number, number, number] => {
     if (s === 0) {
         return [l * 255, l * 255, l * 255];
     }
@@ -291,7 +301,7 @@ const hsl2rgb = ([h, s, l]: [number, number, number]): [number, number, number] 
  * @param c
  * @param h
  */
-const lch2lab = ([l, c, h]: [number, number, number]): [number, number, number] => {
+export const lch2lab = ([l, c, h]: [number, number, number]): [number, number, number] => {
     if (c < 0) {
         c = 0;
     }
@@ -306,7 +316,7 @@ const lch2lab = ([l, c, h]: [number, number, number]): [number, number, number] 
  *
  * @param lab
  */
-const oklab2xyz = (lab: [number, number, number]): [number, number, number] => {
+export const oklab2xyz = (lab: [number, number, number]): [number, number, number] => {
     const LMSg = multiplyMatrices(
             [
                 1, 0.3963377773761749, 0.2158037573099136, 1, -0.1055613458156586, -0.0638541728258133, 1,
@@ -330,7 +340,7 @@ const oklab2xyz = (lab: [number, number, number]): [number, number, number] => {
  *
  * @param lab
  */
-const lab2xyz = (lab: [number, number, number]): [number, number, number] => {
+export const lab2xyz = (lab: [number, number, number]): [number, number, number] => {
     const fy = (lab[0] + 16) / 116,
         fx = lab[1] / 500 + fy,
         fz = fy - lab[2] / 200,

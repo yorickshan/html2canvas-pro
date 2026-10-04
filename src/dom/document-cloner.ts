@@ -21,6 +21,7 @@ import { Context } from '../core/context';
 import { DebuggerType, isDebugging } from '../core/debugger';
 import { SlotCloner } from './slot-cloner';
 import { copyCSSStyles } from './copy-css-styles';
+import { createAdoptedStylesElement } from './adopted-styles';
 import { PseudoContentResolver, PseudoElementType, createPseudoHideStyles } from './pseudo-content';
 
 import { mountCloneInIFrame } from './iframe-mount';
@@ -92,7 +93,11 @@ export class DocumentCloner {
         this.pseudoContents = new PseudoContentResolver(context, this.counters);
         this.slotCloner = new SlotCloner(
             (node, copyStyles) => this.cloneNode(node, copyStyles),
-            { ignoreElements: options.ignoreElements, copyStyles: options.copyStyles ?? true },
+            {
+                ignoreElements: options.ignoreElements,
+                copyStyles: options.copyStyles ?? true,
+                cspNonce: options.cspNonce
+            },
             context
         );
         if (!element.ownerDocument) {
@@ -108,6 +113,40 @@ export class DocumentCloner {
         }
 
         this.documentElement = this.cloneNode(element.ownerDocument.documentElement, false) as HTMLElement;
+        this.appendDocumentAdoptedStyles(element.ownerDocument);
+    }
+
+    /**
+     * Re-materialise the source document's constructable stylesheets
+     * (document.adoptedStyleSheets) as a <style> at the end of the clone's
+     * <head>: cloneNode never carries them, and they cascade after all author
+     * sheets, which appending last approximates.
+     *
+     * Skipped when computed styles are inlined per element (copyStyles), like
+     * the other stylesheet-cloning paths.
+     */
+    private appendDocumentAdoptedStyles(ownerDocument: Document): void {
+        if (this.options.copyStyles) {
+            return;
+        }
+        const sheets = ownerDocument.adoptedStyleSheets;
+        if (!sheets || sheets.length === 0) {
+            return;
+        }
+        const head = this.documentElement.getElementsByTagName('head').item(0);
+        if (!head) {
+            return;
+        }
+        // The clone subtree is still owned by the source document until
+        // adoptNode() runs in the iframe mount, so create the element there.
+        const style = createAdoptedStylesElement(
+            this.documentElement.ownerDocument ?? ownerDocument,
+            sheets,
+            this.options.cspNonce
+        );
+        if (style) {
+            head.appendChild(style);
+        }
     }
 
     toIFrame(ownerDocument: Document, windowSize: Bounds): Promise<HTMLIFrameElement> {
@@ -310,7 +349,7 @@ export class DocumentCloner {
 
     cloneNode(node: Node, copyStyles: boolean): Node {
         if (isTextNode(node)) {
-            return document.createTextNode(node.data);
+            return (node.ownerDocument ?? document).createTextNode(node.data);
         }
 
         if (!node.ownerDocument) {

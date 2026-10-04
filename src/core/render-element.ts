@@ -183,7 +183,7 @@ export const renderElement = async (
             // starting individual loads. This avoids serialised loading in
             // DOM-traversal order.
             context.cache.startDefer();
-            root = parseTree(context, clonedElement);
+            root = parseTree(context, clonedElement, { normalizeDom: opts.normalizeDom });
             perfMonitor.end('parse');
 
             emitProgress(opts.onProgress, context, ProgressPhase.PARSE, 50);

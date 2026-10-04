@@ -153,7 +153,7 @@ const paintRadialLayer = (ctx: CanvasRenderingContext2D, layer: CSSRadialGradien
     rx = Math.max(rx, 0.01);
     ry = Math.max(ry, 0.01);
 
-    const offscreen = document.createElement('canvas');
+    const offscreen = (ctx.canvas.ownerDocument ?? document).createElement('canvas');
     offscreen.width = Math.ceil(rx * 2);
     offscreen.height = Math.ceil(ry * 2);
     const offCtx = offscreen.getContext('2d');

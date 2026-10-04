@@ -1,4 +1,4 @@
-import { ElementContainer } from '../element-container';
+import { ElementContainer, ElementContainerOptions } from '../element-container';
 import { parseBounds } from '../../css/layout/bounds';
 import { Context } from '../../core/context';
 
@@ -47,8 +47,8 @@ export class SVGElementContainer extends ElementContainer {
     intrinsicWidth: number;
     intrinsicHeight: number;
 
-    constructor(context: Context, img: SVGSVGElement) {
-        super(context, img);
+    constructor(context: Context, img: SVGSVGElement, options: ElementContainerOptions = {}) {
+        super(context, img, options);
         const s = new XMLSerializer();
         const bounds = parseBounds(context, img);
         img.setAttribute('width', `${bounds.width}px`);

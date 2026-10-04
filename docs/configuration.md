@@ -77,7 +77,7 @@ Options that control how the content is rendered to the canvas.
 
 | Option Name | Default | Description | Example |
 | ----------- | :-----: | ----------- | ------- |
-| foreignObjectRendering | `false` | Whether to use ForeignObject rendering if the browser supports it | `true` |
+| foreignObjectRendering | `false` | **Experimental.** Use the SVG foreignObject pipeline instead of the default Canvas 2D renderer. Bypasses html2canvas-pro's own CSS rendering work and cannot abort mid-render; only prefer it for legacy Safari workarounds | `true` |
 | ignoreElements | `(element) => false` | Predicate function which removes the matching elements from the render | `(el) => el.classList.contains('no-capture')` |
 | iframeContainer | `null` | Custom parent node for the temporary iframe container. Useful for Shadow DOM scenarios. If not provided, will auto-detect Shadow Root or use `document.body` | `document.querySelector('#my-shadow-host').shadowRoot` |
 | onclone | `null` | Callback function which is called when the Document has been cloned for rendering, can be used to modify the contents that will be rendered without affecting the original source document | `(doc) => doc.querySelector('.date').textContent = new Date().toISOString()` |
@@ -104,7 +104,7 @@ If you wish to exclude certain `Element`s from getting rendered, you can add a `
 | Option Name | Default | Description | Example |
 | ----------- | :-----: | ----------- | ------- |
 | cspNonce | `null` | Content-Security-Policy nonce for inline styles | `"abc123"` |
-| normalizeDom | `true` | Normalize the cloned DOM before capture (disable animations, reset transforms). Set to `false` to preserve the original DOM state | `false` |
+| normalizeDom | `true` | Normalize the cloned DOM before capture (disable animations, replace active transforms with identity values while measuring). Set to `false` to preserve the original DOM state | `false` |
 | skipValidation | `false` | Skip the built-in input validation (not recommended) | `true` |
 | enablePerformanceMonitoring | `false` | Enable performance metrics collection and log a timing summary. Defaults to the `logging` option value when not specified | `true` |
 | signal | `null` | `AbortSignal` to cancel an in-progress render | `new AbortController().signal` |
@@ -230,6 +230,8 @@ html2canvas(element, {
 ## Shadow DOM Support
 
 The `iframeContainer` option allows you to specify where the temporary iframe should be created. This is particularly useful when rendering elements inside Shadow DOM, as styles defined within the Shadow Root need to be accessible to the cloned content.
+
+Constructable stylesheets are cloned as well: `adoptedStyleSheets` attached to a Shadow Root (Lit, React and other frameworks inject component styles this way) or to the document are serialized into a `<style>` element inside the clone, so captures no longer depend on the sheets being part of the node tree.
 
 ### Automatic Detection
 

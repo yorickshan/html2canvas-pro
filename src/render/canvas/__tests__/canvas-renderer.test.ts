@@ -20,15 +20,18 @@ describe('CanvasRenderer', () => {
                 canvas.width = 400;
                 canvas.height = 300;
             }
-            const renderer = new CanvasRenderer({ logger: { debug: vi.fn() } } as unknown as Context, {
-                backgroundColor: null,
-                canvas,
-                width: 400,
-                height: 300,
-                x: 0,
-                y: 0,
-                scale: 1
-            });
+            const renderer = new CanvasRenderer(
+                { logger: { debug: vi.fn() }, resourceDocument: document } as unknown as Context,
+                {
+                    backgroundColor: null,
+                    canvas,
+                    width: 400,
+                    height: 300,
+                    x: 0,
+                    y: 0,
+                    scale: 1
+                }
+            );
             await expect(renderer.render({} as ElementContainer)).rejects.toThrow('Render failed');
             expect(renderer.canvas.width).toBe(supplied ? 400 : 0);
             expect(renderer.canvas.height).toBe(supplied ? 300 : 0);
@@ -43,7 +46,8 @@ describe('CanvasRenderer', () => {
         const context = {
             logger: {
                 debug: vi.fn()
-            }
+            },
+            resourceDocument: document
         } as unknown as Context;
         const renderer = new CanvasRenderer(context, {
             backgroundColor: null,

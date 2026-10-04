@@ -1,4 +1,4 @@
-import { ElementContainer } from '../element-container';
+import { ElementContainer, ElementContainerOptions } from '../element-container';
 import { BORDER_STYLE } from '../../css/property-descriptors/border-style';
 import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
 import { BACKGROUND_ORIGIN } from '../../css/property-descriptors/background-origin';
@@ -58,8 +58,8 @@ export class InputElementContainer extends ElementContainer {
     readonly value: string;
     readonly isPlaceholder: boolean;
 
-    constructor(context: Context, input: HTMLInputElement) {
-        super(context, input);
+    constructor(context: Context, input: HTMLInputElement, options: ElementContainerOptions = {}) {
+        super(context, input, options);
         this.type = input.type.toLowerCase();
         this.checked = input.checked;
         this.value = getInputValue(input);

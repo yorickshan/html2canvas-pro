@@ -102,7 +102,7 @@ export class CanvasRenderer {
     ) {
         this.context = context;
         this.options = options;
-        this.canvas = options.canvas ? options.canvas : document.createElement('canvas');
+        this.canvas = options.canvas ? options.canvas : context.resourceDocument.createElement('canvas');
         const ctx = this.canvas.getContext('2d');
         if (!ctx) {
             if (!options.canvas) releaseSurface(this.canvas);
@@ -346,7 +346,7 @@ export class CanvasRenderer {
         if (!ctx) {
             return;
         }
-        const maskCanvas = document.createElement('canvas');
+        const maskCanvas = this.context.resourceDocument.createElement('canvas');
         maskCanvas.width = surface.width;
         maskCanvas.height = surface.height;
         const maskCtx = maskCanvas.getContext('2d');
@@ -403,7 +403,7 @@ export class CanvasRenderer {
         let refCanvas: HTMLCanvasElement | undefined;
         let maskCanvas: HTMLCanvasElement | undefined;
         try {
-            refCanvas = document.createElement('canvas');
+            refCanvas = this.context.resourceDocument.createElement('canvas');
             refCanvas.width = w;
             refCanvas.height = h;
             const ctx = refCanvas.getContext('2d');
@@ -432,7 +432,7 @@ export class CanvasRenderer {
                 // size (w×h here is already device scale). Painting it at CSS
                 // dimensions would only cover the top-left fraction of the
                 // reflection, and destination-in would erase the rest.
-                maskCanvas = document.createElement('canvas');
+                maskCanvas = this.context.resourceDocument.createElement('canvas');
                 maskCanvas.width = w;
                 maskCanvas.height = h;
                 const mctx = maskCanvas.getContext('2d');
@@ -676,7 +676,7 @@ export class CanvasRenderer {
         let source: HTMLCanvasElement | undefined;
         let filtered: HTMLCanvasElement | undefined;
         try {
-            source = document.createElement('canvas');
+            source = this.context.resourceDocument.createElement('canvas');
             source.width = width;
             source.height = height;
             const ctx = source.getContext('2d');
@@ -1044,7 +1044,7 @@ export class CanvasRenderer {
         let source: HTMLCanvasElement | undefined;
         let filtered: HTMLCanvasElement | undefined;
         try {
-            source = document.createElement('canvas');
+            source = this.context.resourceDocument.createElement('canvas');
             source.width = width;
             source.height = height;
             const srcCtx = source.getContext('2d');

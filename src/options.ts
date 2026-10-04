@@ -19,6 +19,14 @@ export type Options = CloneOptions &
         foreignObjectRendering: boolean;
         /** Whether to remove the cloned iframe after rendering. @default true */
         removeContainer?: boolean;
+        /**
+         * Normalize the cloned DOM before parsing: disable CSS animations and
+         * replace active transforms with identity values so element bounds are
+         * measured in layout space. Set to `false` to keep animation/transform
+         * state intact during capture.
+         * @default true
+         */
+        normalizeDom?: boolean;
         /** CSP nonce for inline style elements. */
         cspNonce?: string;
         /** Custom input validator. */

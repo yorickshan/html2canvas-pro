@@ -12,6 +12,10 @@ export type ContextOptions = {
 } & ResourceOptions;
 
 export class Context {
+    // Declared before the instance fields that read it: ES2022 define
+    // semantics flag use-before-initialization otherwise.
+    private static instanceCount = 1;
+
     private readonly instanceName = `#${Context.instanceCount++}`;
     readonly logger: Logger;
     readonly cache: Cache;
@@ -19,7 +23,6 @@ export class Context {
     readonly config: Html2CanvasConfig;
     readonly onError?: (error: Error) => void;
 
-    private static instanceCount = 1;
     private _windowBounds: Bounds;
 
     constructor(options: ContextOptions, windowBounds: Bounds, config: Html2CanvasConfig) {
@@ -34,6 +37,21 @@ export class Context {
     /** Viewport bounds in page coordinates; added to client rects during bounds parsing. */
     get windowBounds(): Bounds {
         return this._windowBounds;
+    }
+
+    /**
+     * Document used to allocate offscreen resources (offscreen canvases,
+     * images, measurement elements). Prefers the configured window's document
+     * so resources live in the captured realm; falls back to the global
+     * document, which keeps mock environments without a window document
+     * working.
+     */
+    get resourceDocument(): Document {
+        const windowDocument = (this.config.window as { document?: Document }).document;
+        if (windowDocument) {
+            return windowDocument;
+        }
+        return typeof document !== 'undefined' ? document : (undefined as unknown as Document);
     }
 
     /**

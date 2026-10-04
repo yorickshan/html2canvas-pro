@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { InputElementContainer } from '../replaced-elements/input-element-container';
 import { ImageElementContainer } from '../replaced-elements/image-element-container';
 import { CanvasElementContainer } from '../replaced-elements/canvas-element-container';
+import { IFrameElementContainer } from '../replaced-elements/iframe-element-container';
 import { Context } from '../../core/context';
 import { Html2CanvasConfig } from '../../config';
 import { BACKGROUND_CLIP } from '../../css/property-descriptors/background-clip';
@@ -132,5 +133,68 @@ describe('CanvasElementContainer', () => {
         const container = new CanvasElementContainer(context, canvas);
         expect(container.intrinsicWidth).toBe(640);
         expect(container.intrinsicHeight).toBe(480);
+    });
+});
+
+describe('IFrameElementContainer', () => {
+    const createContext = (): {
+        context: Context;
+        onError: ReturnType<typeof vi.fn>;
+        warn: ReturnType<typeof vi.fn>;
+    } => {
+        const context = createRealContext();
+        const onError = vi.fn();
+        const warn = vi.fn();
+        (context as unknown as { onError: (e: Error) => void }).onError = onError;
+        (context as unknown as { logger: unknown }).logger = { warn, error: vi.fn(), info: vi.fn(), debug: vi.fn() };
+        return { context, onError, warn };
+    };
+
+    it('reports cross-origin iframe access failures via onError instead of failing silently', () => {
+        const { context, onError, warn } = createContext();
+        const iframe = document.createElement('iframe');
+        iframe.src = 'https://cross-origin.example/frame';
+        Object.defineProperty(iframe, 'contentWindow', {
+            get() {
+                throw new DOMException(
+                    'Blocked a frame with origin from accessing a cross-origin frame.',
+                    'SecurityError'
+                );
+            }
+        });
+
+        const container = new IFrameElementContainer(context, iframe);
+
+        expect(onError).toHaveBeenCalledTimes(1);
+        expect(onError.mock.calls[0][0]).toBeInstanceOf(Error);
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(String(warn.mock.calls[0][0])).toContain('https://cross-origin.example/frame');
+        expect(container.tree).toBeUndefined();
+    });
+
+    it('reports same-origin access failures on the content document', () => {
+        const { context, onError } = createContext();
+        const iframe = document.createElement('iframe');
+        Object.defineProperty(iframe, 'contentWindow', {
+            get: () => ({
+                get document(): Document {
+                    throw new Error('document access denied');
+                }
+            })
+        });
+
+        const container = new IFrameElementContainer(context, iframe);
+
+        expect(onError).toHaveBeenCalledTimes(1);
+        expect((onError.mock.calls[0][0] as Error).message).toBe('document access denied');
+        expect(container.tree).toBeUndefined();
+    });
+
+    it('stays silent when the iframe has no content window yet', () => {
+        const { context, onError } = createContext();
+        const iframe = document.createElement('iframe');
+
+        expect(() => new IFrameElementContainer(context, iframe)).not.toThrow();
+        expect(onError).not.toHaveBeenCalled();
     });
 });

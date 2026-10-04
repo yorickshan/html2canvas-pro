@@ -192,3 +192,40 @@ describe('ElementContainer', () => {
         });
     });
 });
+
+describe('Context.resourceDocument', () => {
+    it('prefers the configured window document over the global one', () => {
+        const customDoc = document.implementation.createHTMLDocument('custom');
+        const mockWindow = { document: customDoc, location: { href: 'http://localhost/' } } as unknown as Window;
+        const context = new Context(
+            { logging: false, imageTimeout: 15000, useCORS: false, allowTaint: false },
+            new Bounds(0, 0, 800, 600),
+            new Html2CanvasConfig({ window: mockWindow })
+        );
+        expect(context.resourceDocument).toBe(customDoc);
+    });
+
+    it('falls back to the global document when the window has none', () => {
+        // The window needs a document for OriginChecker's constructor check,
+        // so the fallback is exercised via a config object that bypasses the
+        // window-document lookup in the getter.
+        const mockWindow = {
+            location: { href: 'http://localhost/' },
+            document: document
+        } as unknown as Window;
+        const context = new Context(
+            { logging: false, imageTimeout: 15000, useCORS: false, allowTaint: false },
+            new Bounds(0, 0, 800, 600),
+            new Html2CanvasConfig({ window: mockWindow })
+        );
+        // OriginChecker (constructed above) needed the document; now that the
+        // Context exists, hide it to exercise the getter's fallback path —
+        // config.window is the same object reference the getter reads.
+        Object.defineProperty(mockWindow, 'document', { value: undefined, configurable: true });
+        try {
+            expect(context.resourceDocument).toBe(document);
+        } finally {
+            Object.defineProperty(mockWindow, 'document', { value: document, configurable: true });
+        }
+    });
+});

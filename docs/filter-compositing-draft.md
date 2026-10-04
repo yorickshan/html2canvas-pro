@@ -5,6 +5,10 @@ an interactive demo and a separate test-only prototype. It does not change the
 public API. PR #239 remains Draft; the original 2.4.3 release does not include
 these changes.
 
+> **Historical report.** This is the original design note for the filter-surface compositing
+> work (PR #239 era). The design has since landed and evolved; the note is retained as a
+> design record, including the [native WebKit discrepancy policy](#native-webkit-discrepancy).
+
 For current user-facing behavior, see [CSS filters and layer opacity](./filter-support.md).
 For the native backend, validation and measured remaining performance limits,
 see [the production fast-path report](./filter-native-fastpath.md). Historical

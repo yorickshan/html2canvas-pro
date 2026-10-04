@@ -2,6 +2,9 @@
 
 The expensive native macOS WKWebView pixel probe is diagnostic and is no longer part of the regular PR CI or the NPM publication dependency chain. This changes scheduling and release gating, not rendering code or pixel thresholds.
 
+> **Historical report.** Frozen as written when the WKWebView probe was retired from the PR gate;
+> it documents the CI policy decisions of that point in time and is not updated going forward.
+
 ## What runs when
 
 | Workflow / checks | Pull request to main | Push to main | Push of a v-prefixed tag | Manual run |

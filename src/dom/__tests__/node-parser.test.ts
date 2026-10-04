@@ -97,3 +97,46 @@ describe('parseTree with slotted shadow DOM content (issue #226)', () => {
         expect(collectTexts(parsed)).toContain('plain text');
     });
 });
+
+describe('parseTree normalizeDom option', () => {
+    const makeTransformed = (): HTMLElement => {
+        const el = document.createElement('div');
+        el.style.transform = 'matrix(2, 0, 0, 2, 0, 0)';
+        document.body.appendChild(el);
+        return el;
+    };
+
+    it('neutralizes transforms by default and restores them on restoreTree', () => {
+        const el = makeTransformed();
+        try {
+            const container = parseTree(context, el);
+            expect(el.style.transform).toBe('translate(0, 0)');
+            container.restoreTree();
+            expect(el.style.transform).toBe('matrix(2, 0, 0, 2, 0, 0)');
+        } finally {
+            el.remove();
+        }
+    });
+
+    it('keeps the transform state when normalizeDom is false', () => {
+        const el = makeTransformed();
+        try {
+            parseTree(context, el, { normalizeDom: false });
+            expect(el.style.transform).toBe('matrix(2, 0, 0, 2, 0, 0)');
+        } finally {
+            el.remove();
+        }
+    });
+
+    it('threads the option into replaced-element containers (img)', () => {
+        const el = document.createElement('img');
+        el.style.transform = 'matrix(2, 0, 0, 2, 0, 0)';
+        document.body.appendChild(el);
+        try {
+            parseTree(context, el, { normalizeDom: false });
+            expect(el.style.transform).toBe('matrix(2, 0, 0, 2, 0, 0)');
+        } finally {
+            el.remove();
+        }
+    });
+});

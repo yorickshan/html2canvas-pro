@@ -1,4 +1,4 @@
-import { ElementContainer } from '../element-container';
+import { ElementContainer, ElementContainerOptions } from '../element-container';
 import { parseColor, type Color } from '../../css/types/color';
 import { TRANSPARENT_COLOR } from '../../css/types/color';
 import { isTransparent } from '../../css/types/color-utilities';
@@ -15,33 +15,33 @@ export class IFrameElementContainer extends ElementContainer {
     backgroundColor: Color;
     private parseTreeFn?: ParseTreeFunction;
 
-    constructor(context: Context, iframe: HTMLIFrameElement, parseTreeFn?: ParseTreeFunction) {
-        super(context, iframe);
+    constructor(
+        context: Context,
+        iframe: HTMLIFrameElement,
+        parseTreeFn?: ParseTreeFunction,
+        options: ElementContainerOptions = {}
+    ) {
+        super(context, iframe, options);
         this.src = iframe.src;
         this.width = parseInt(iframe.width, 10) || 0;
         this.height = parseInt(iframe.height, 10) || 0;
         this.backgroundColor = this.styles.backgroundColor;
         this.parseTreeFn = parseTreeFn;
         try {
-            if (
-                iframe.contentWindow &&
-                iframe.contentWindow.document &&
-                iframe.contentWindow.document.documentElement &&
-                this.parseTreeFn
-            ) {
-                this.tree = this.parseTreeFn(context, iframe.contentWindow.document.documentElement);
+            const contentWindow = iframe.contentWindow;
+            const contentDocument = contentWindow?.document;
+            if (contentWindow && contentDocument && contentDocument.documentElement && this.parseTreeFn) {
+                this.tree = this.parseTreeFn(context, contentDocument.documentElement);
 
                 // http://www.w3.org/TR/css3-background/#special-backgrounds
-                const documentBackgroundColor = iframe.contentWindow.document.documentElement
+                const documentBackgroundColor = parseColor(
+                    context,
+                    contentWindow.getComputedStyle(contentDocument.documentElement).backgroundColor as string
+                );
+                const bodyBackgroundColor = contentDocument.body
                     ? parseColor(
                           context,
-                          getComputedStyle(iframe.contentWindow.document.documentElement).backgroundColor as string
-                      )
-                    : TRANSPARENT_COLOR;
-                const bodyBackgroundColor = iframe.contentWindow.document.body
-                    ? parseColor(
-                          context,
-                          getComputedStyle(iframe.contentWindow.document.body).backgroundColor as string
+                          contentWindow.getComputedStyle(contentDocument.body).backgroundColor as string
                       )
                     : TRANSPARENT_COLOR;
 
@@ -51,6 +51,16 @@ export class IFrameElementContainer extends ElementContainer {
                         : bodyBackgroundColor
                     : documentBackgroundColor;
             }
-        } catch (e) {}
+        } catch (e) {
+            // Cross-origin frames (and same-origin access failures) cannot be
+            // parsed; capture continues with the iframe's painted box only.
+            // Report instead of failing silently — a blank region is otherwise
+            // indistinguishable from a genuinely empty frame.
+            const error = e instanceof Error ? e : new Error(String(e));
+            this.context.logger.warn(
+                `Unable to render iframe content${this.src ? ` from ${this.src}` : ''}: ${error.message}`
+            );
+            this.context.onError?.(error);
+        }
     }
 }
