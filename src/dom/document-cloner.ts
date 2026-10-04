@@ -349,7 +349,21 @@ export class DocumentCloner {
                 if (before) {
                     clone.insertBefore(before, clone.firstChild);
                 }
+            }
 
+            if (isCustomElement(node)) {
+                copyStyles = true;
+            }
+
+            if (!isVideoElement(node)) {
+                this.cloneChildNodes(node, clone, copyStyles);
+            }
+
+            // ::after content must follow the element's children (CSS
+            // generated-content order). Resolving it before the children were
+            // cloned put it between ::before and the content, which also
+            // desynchronised the shared open-quote/close-quote depth.
+            if (checkPseudoElements) {
                 const styleAfter = window.getComputedStyle(node, ':after');
                 const after = this.pseudoContents.resolvePseudoContent(
                     node,
@@ -360,14 +374,6 @@ export class DocumentCloner {
                 if (after) {
                     clone.appendChild(after);
                 }
-            }
-
-            if (isCustomElement(node)) {
-                copyStyles = true;
-            }
-
-            if (!isVideoElement(node)) {
-                this.cloneChildNodes(node, clone, copyStyles);
             }
 
             this.counters.pop(counters);
