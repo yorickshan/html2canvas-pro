@@ -43,7 +43,9 @@ const formatMs = (ms: number): string => {
 
 const logResult = (r: BenchmarkResult): void => {
     const perOp = r.duration / r.iterations;
-    console.log(`  ${r.name.padEnd(40)} ${formatMs(perOp).padStart(10)}/op  (${r.ops.toLocaleString()} ops/s, ${r.iterations} iters)`);
+    console.log(
+        `  ${r.name.padEnd(40)} ${formatMs(perOp).padStart(10)}/op  (${r.ops.toLocaleString()} ops/s, ${r.iterations} iters)`
+    );
 };
 
 // ---------------------------------------------------------------------------
@@ -141,7 +143,9 @@ const createMockDeclaration = (overrides: Record<string, string> = {}): CSSStyle
         getPropertyValue: (prop: string) => merged[prop] ?? '',
         getPropertyPriority: () => '',
         item: (i: number) => keys[i] ?? '',
-        get length() { return keys.length; },
+        get length() {
+            return keys.length;
+        },
         display: merged.display,
         cssFloat: merged.cssFloat,
         textDecorationColor: merged.textDecorationColor,
@@ -174,9 +178,15 @@ console.log('================================\n');
 
     const ITERATIONS = 1000;
     let result: CSSParsedDeclaration | undefined;
-    logResult(run('  cold (no cache)', () => {
-        result = new CSSParsedDeclaration(context, decl);
-    }, ITERATIONS));
+    logResult(
+        run(
+            '  cold (no cache)',
+            () => {
+                result = new CSSParsedDeclaration(context, decl);
+            },
+            ITERATIONS
+        )
+    );
 
     // Keep reference to prevent optimization
     void result;
@@ -189,9 +199,15 @@ console.log('================================\n');
     const decl = createMockDeclaration({ display: 'none' });
 
     const ITERATIONS = 5000;
-    logResult(run('  display:none element', () => {
-        new CSSParsedDeclaration(context, decl);
-    }, ITERATIONS));
+    logResult(
+        run(
+            '  display:none element',
+            () => {
+                new CSSParsedDeclaration(context, decl);
+            },
+            ITERATIONS
+        )
+    );
 }
 
 // Benchmark 3: Property with complex values
@@ -205,9 +221,15 @@ console.log('================================\n');
     });
 
     const ITERATIONS = 1000;
-    logResult(run('  complex values', () => {
-        new CSSParsedDeclaration(context, complex);
-    }, ITERATIONS));
+    logResult(
+        run(
+            '  complex values',
+            () => {
+                new CSSParsedDeclaration(context, complex);
+            },
+            ITERATIONS
+        )
+    );
 }
 
 // Benchmark 4: Parse cache hit rate (repeated identical declarations)
@@ -219,9 +241,15 @@ console.log('================================\n');
     new CSSParsedDeclaration(context, decl);
 
     const ITERATIONS = 10000;
-    logResult(run('  cached (same declaration)', () => {
-        new CSSParsedDeclaration(context, decl);
-    }, ITERATIONS));
+    logResult(
+        run(
+            '  cached (same declaration)',
+            () => {
+                new CSSParsedDeclaration(context, decl);
+            },
+            ITERATIONS
+        )
+    );
 }
 
 // Benchmark 5: Mix of different elements (simulates real page)
@@ -246,10 +274,16 @@ console.log('================================\n');
 
     const ITERATIONS = 5000;
     let idx = 0;
-    logResult(run('  mixed 5 element types', () => {
-        new CSSParsedDeclaration(context, elementTypes[idx % elementTypes.length]);
-        idx++;
-    }, ITERATIONS));
+    logResult(
+        run(
+            '  mixed 5 element types',
+            () => {
+                new CSSParsedDeclaration(context, elementTypes[idx % elementTypes.length]);
+                idx++;
+            },
+            ITERATIONS
+        )
+    );
 }
 
 console.log('\nDone.\n');

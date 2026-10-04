@@ -43,20 +43,18 @@ const testList = files.map((filename: string) => `/${slash(relative('../', filen
 
 // Generate plain JavaScript without type annotations
 const outputExtension = outputPath.endsWith('.ts') ? '.ts' : '.js';
-const exportStatements = outputExtension === '.ts' 
-    ? [
-        `export const testList: string[] = ${JSON.stringify(testList, null, 4)};`,
-        `export const ignoredTests: {[key: string]: string[]} = ${JSON.stringify(ignoredTests, null, 4)};`
-      ]
-    : [
-        `export const testList = ${JSON.stringify(testList, null, 4)};`,
-        `export const ignoredTests = ${JSON.stringify(ignoredTests, null, 4)};`
-      ];
+const exportStatements =
+    outputExtension === '.ts'
+        ? [
+              `export const testList: string[] = ${JSON.stringify(testList, null, 4)};`,
+              `export const ignoredTests: {[key: string]: string[]} = ${JSON.stringify(ignoredTests, null, 4)};`
+          ]
+        : [
+              `export const testList = ${JSON.stringify(testList, null, 4)};`,
+              `export const ignoredTests = ${JSON.stringify(ignoredTests, null, 4)};`
+          ];
 
-writeFileSync(
-    outputPath,
-    exportStatements.join('\n')
-);
+writeFileSync(outputPath, exportStatements.join('\n'));
 
 // Generate .d.ts file for .js output
 if (outputExtension === '.js') {

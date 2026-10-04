@@ -115,21 +115,27 @@ try {
                     assert.equal(canvas.seededMatchesBlur, true, `${label}: prior blur pixels must survive`);
                 } else {
                     assert.notEqual(canvas.freshFilter, 'none', `${label}: valid filter must be accepted`);
-                    assert.notEqual(canvas.seededFilter, canvas.seedFilter, `${label}: valid filter must replace prior blur`);
+                    assert.notEqual(
+                        canvas.seededFilter,
+                        canvas.seedFilter,
+                        `${label}: valid filter must replace prior blur`
+                    );
                     if (expected.noEffect !== undefined) {
                         assert.equal(canvas.freshMatchesNone, expected.noEffect, `${label}: fresh-context pixels`);
                         assert.equal(canvas.seededMatchesNone, expected.noEffect, `${label}: seeded-context pixels`);
                     }
                 }
             }
-            console.log(JSON.stringify({
-                engine: name,
-                version: browser.version(),
-                cssCases: report.rows.length,
-                canvasCases: report.supportsCanvasFilter ? report.rows.length : 0,
-                canvasStatus: report.supportsCanvasFilter ? 'passed' : 'unsupported; native Canvas checks skipped',
-                status: 'passed'
-            }));
+            console.log(
+                JSON.stringify({
+                    engine: name,
+                    version: browser.version(),
+                    cssCases: report.rows.length,
+                    canvasCases: report.supportsCanvasFilter ? report.rows.length : 0,
+                    canvasStatus: report.supportsCanvasFilter ? 'passed' : 'unsupported; native Canvas checks skipped',
+                    status: 'passed'
+                })
+            );
             await page.close();
         } finally {
             await browser.close();

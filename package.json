@@ -109,7 +109,7 @@
     "build:create-reftest-list": "tsx scripts/create-reftest-list.ts tests/reftests/ignore.txt build/reftests.js",
     "release": "sh scripts/version-upgrade.sh",
     "format": "prettier --write \"{src,tests,scripts}/**/*.ts\"",
-    "lint": "eslint src/**/*.ts --max-warnings 0",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.ts\" \"scripts/**/*.mjs\" --max-warnings 0",
     "test": "pnpm lint && pnpm unittest && pnpm karma",
     "unittest": "vitest run",
     "unittest:coverage": "vitest run --coverage",
