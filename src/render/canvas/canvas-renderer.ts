@@ -967,15 +967,42 @@ export class CanvasRenderer {
             ctx.restore();
             return canvas;
         }
-        if (source.type === CSSImageType.CONIC_GRADIENT) {
+        if (source.type === CSSImageType.CONIC_GRADIENT || source.type === CSSImageType.REPEATING_CONIC_GRADIENT) {
             const gradientImage = source as CSSConicGradientImage;
             // Canvas conic gradients measure angles from the positive x-axis
             // clockwise; CSS conic gradients start at the 12 o'clock position.
             const cx = getAbsoluteValue(at(gradientImage.position, 0), width);
             const cy = getAbsoluteValue(at(gradientImage.position, 1), height);
             const gradient = ctx.createConicGradient(gradientImage.angle - Math.PI / 2, cx, cy);
-            processColorStops(gradientImage.stops, Math.max(width, height)).forEach((colorStop) => {
-                gradient.addColorStop(Math.min(1, Math.max(0, colorStop.stop)), asString(colorStop.color));
+            let stops: Array<{ stop: number; color: string }>;
+            if (source.type === CSSImageType.REPEATING_CONIC_GRADIENT) {
+                // Stack the one-cycle stop list periodically across the full
+                // sweep; the band covering the end extends flat to 1.
+                const processed = processColorStops(gradientImage.stops, 1);
+                const first = at(processed, 0);
+                const last = at(processed, processed.length - 1);
+                const period = Math.max(last.stop - first.stop, 0.01);
+                stops = [];
+                const cycles = Math.ceil(1 / period);
+                for (let k = 0; k < cycles; k++) {
+                    for (const s of processed) {
+                        const stop = k * period + (s.stop - first.stop);
+                        if (stop > 1) break;
+                        stops.push({ stop, color: asString(s.color) });
+                    }
+                }
+                const lastIncluded = at(stops, stops.length - 1);
+                if (lastIncluded && lastIncluded.stop < 1) {
+                    stops.push({ stop: 1, color: lastIncluded.color });
+                }
+            } else {
+                stops = processColorStops(gradientImage.stops, Math.max(width, height)).map((colorStop) => ({
+                    stop: colorStop.stop,
+                    color: asString(colorStop.color)
+                }));
+            }
+            stops.forEach((s) => {
+                gradient.addColorStop(Math.min(1, Math.max(0, s.stop)), s.color);
             });
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, width, height);

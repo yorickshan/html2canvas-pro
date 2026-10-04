@@ -16,6 +16,7 @@ Below is a list of all the supported CSS properties and values.
        - radial-gradient()
        - repeating-radial-gradient()
        - conic-gradient()
+       - repeating-conic-gradient()
    - background-origin
    - background-position
    - background-repeat
@@ -137,7 +138,7 @@ Below is a list of all the supported CSS properties and values.
 - **`border-image-width` / `border-image-outset`** — the border-image geometry family is complete
 - **`mask-image` support** — alpha masks with `mask-position` / `mask-size` / `mask-repeat`, composited on a dedicated surface (see [Mask support](#mask-support))
 - **`backdrop-filter: blur()`** — frosted-glass captures via backdrop capture and the filter surface pipeline (see [Backdrop-filter support](#backdrop-filter-support))
-- **`conic-gradient()` and `repeating-radial-gradient()`** — completing the gradient family
+- **`conic-gradient()`, `repeating-conic-gradient()` and `repeating-radial-gradient()`** — completing the gradient family
 - **`clip-path: rect()` / `xywh()`** — the newer basic shape functions
 - **`accent-color`, `outline`, `-webkit-text-fill-color`, `isolation`** — form control colours, focus rings, gradient-text fill overrides, blend scoping
 - **box-shadow fidelity** — correct blur/border-radius scaling, inset shadow masking, and shadows preserved through transformed ancestors ([2.4.4](https://github.com/yorickshan/html2canvas-pro/blob/main/CHANGELOG.md), [2.4.5](https://github.com/yorickshan/html2canvas-pro/blob/main/CHANGELOG.md))

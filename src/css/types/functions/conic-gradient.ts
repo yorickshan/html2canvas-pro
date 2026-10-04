@@ -79,3 +79,16 @@ export const conicGradient = (context: Context, tokens: CSSValue[]): CSSConicGra
         stops
     };
 };
+
+/**
+ * repeating-conic-gradient shares the conic-gradient grammar exactly; only
+ * the image type differs, which switches the renderer to periodic stops
+ * stacked across the full sweep.
+ */
+export const repeatingConicGradient = (context: Context, tokens: CSSValue[]): CSSConicGradientImage => {
+    const gradient = conicGradient(context, tokens);
+    return {
+        ...gradient,
+        type: CSSImageType.REPEATING_CONIC_GRADIENT
+    };
+};

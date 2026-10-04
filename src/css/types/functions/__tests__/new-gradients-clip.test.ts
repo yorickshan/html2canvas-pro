@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { conicGradient } from '../conic-gradient';
+// Import the image descriptor module first: it owns the SUPPORTED_IMAGE_FUNCTIONS
+// table, and a function module imported ahead of it would re-enter it circularly
+// mid-initialisation, leaving the conic table entries undefined in this graph.
+import { CSSImageType, image } from '../../image';
+import { conicGradient, repeatingConicGradient } from '../conic-gradient';
 import { repeatingRadialGradient } from '../repeating-radial-gradient';
 import { radialGradient } from '../radial-gradient';
-import { CSSImageType } from '../../image';
 import { clipPath } from '../../../property-descriptors/clip-path';
 import { CLIP_PATH_TYPE } from '../../../property-descriptors/clip-path';
 import { Context } from '../../../../core/context';
@@ -51,6 +54,26 @@ describe('repeating-radial-gradient', () => {
         expect(repeating.stops).toEqual(plain.stops);
         expect(repeating.shape).toEqual(plain.shape);
         expect(repeating.size).toEqual(plain.size);
+    });
+});
+
+describe('repeating-conic-gradient', () => {
+    it('shares the conic grammar with a repeating image type', () => {
+        const gradient = repeatingConicGradient(
+            context,
+            Parser.parseValues('from 45deg at 60% 40%, #e74c3c, #f1c40f 20%')
+        );
+        expect(gradient.type).toBe(CSSImageType.REPEATING_CONIC_GRADIENT);
+        expect(gradient.angle).toBeCloseTo(Math.PI / 4, 5);
+        expect(gradient.stops).toHaveLength(2);
+    });
+
+    it('is registered as a supported image function (no longer throws)', () => {
+        const gradient = image.parse(
+            context,
+            Parser.parseValues('repeating-conic-gradient(#e74c3c 0 10%, #f1c40f 0 20%)')[0]
+        );
+        expect(gradient.type).toBe(CSSImageType.REPEATING_CONIC_GRADIENT);
     });
 });
 

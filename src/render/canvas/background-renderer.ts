@@ -22,6 +22,7 @@ import {
     isConicGradient,
     isLinearGradient,
     isRadialGradient,
+    isRepeatingConicGradient,
     isRepeatingLinearGradient,
     isRepeatingRadialGradient
 } from '../../css/types/image';
@@ -106,6 +107,8 @@ export class BackgroundRenderer {
                 this.renderRepeatingRadialGradient(container, backgroundImage, index);
             } else if (isConicGradient(backgroundImage)) {
                 this.renderConicGradient(container, backgroundImage, index);
+            } else if (isRepeatingConicGradient(backgroundImage)) {
+                this.renderRepeatingConicGradient(container, backgroundImage, index);
             }
 
             if (layerCount > 0) {
@@ -459,6 +462,76 @@ export class BackgroundRenderer {
         const stops = processColorStops(backgroundImage.stops, 1);
         stops.forEach((s) => {
             gradient.addColorStop(Math.min(1, Math.max(0, s.stop)), asString(s.color));
+        });
+
+        this.path(path);
+        this.ctx.save();
+        this.ctx.clip();
+        this.ctx.fillStyle = gradient;
+        this.ctx.fill();
+        this.ctx.restore();
+    }
+
+    /**
+     * Render a repeating conic gradient background.
+     *
+     * Canvas conic gradient stops span the full 2π sweep as [0, 1], so the
+     * one-cycle stop list is stacked k·period + s for k = 0..cycles-1 over the
+     * whole sweep — the same periodic-stop stacking the repeating linear and
+     * radial renderers use along their gradient lines.
+     */
+    private renderRepeatingConicGradient(
+        container: ElementContainer,
+        backgroundImage: CSSConicGradientImage,
+        index: number
+    ): void {
+        const [path, left, top, width, height] = calculateBackgroundRendering(container, index, [null, null, null]);
+        const position = backgroundImage.position.length === 0 ? [FIFTY_PERCENT] : backgroundImage.position;
+        const cx = left + getAbsoluteValue(at(position, 0), width);
+        const cy = top + getAbsoluteValue(at(position, position.length - 1), height);
+
+        const processedStops = processColorStops(backgroundImage.stops, 1);
+        const firstStop = at(processedStops, 0);
+        const lastStop = at(processedStops, processedStops.length - 1);
+        const period = Math.max(lastStop.stop - firstStop.stop, 0.01);
+
+        // A degenerate period (all stops clamped to one point) repeats
+        // nothing — CSS renders the last colour across the whole area.
+        if (lastStop.stop - firstStop.stop < 1e-6) {
+            const gradient = this.ctx.createConicGradient(backgroundImage.angle - Math.PI / 2, cx, cy);
+            gradient.addColorStop(0, asString(lastStop.color));
+            gradient.addColorStop(1, asString(lastStop.color));
+            this.path(path);
+            this.ctx.save();
+            this.ctx.clip();
+            this.ctx.fillStyle = gradient;
+            this.ctx.fill();
+            this.ctx.restore();
+            return;
+        }
+
+        const stops: Array<{ stop: number; color: string }> = [];
+        const cycles = Math.ceil(1 / period);
+        for (let k = 0; k < cycles; k++) {
+            for (const s of processedStops) {
+                const stop = k * period + (s.stop - firstStop.stop);
+                if (stop > 1) break;
+                stops.push({ stop, color: asString(s.color) });
+            }
+        }
+        // The band covering the sweep end extends flat to 1 (its next stop is
+        // beyond the sweep), so pad with that band's colour, matching CSS
+        // repeating behaviour at the sweep boundary.
+        const lastIncluded = at(stops, stops.length - 1);
+        if (lastIncluded && lastIncluded.stop < 1) {
+            stops.push({ stop: 1, color: lastIncluded.color });
+        }
+
+        // Canvas conic gradients start at 3 o'clock; CSS `from 0deg` starts at
+        // 12 o'clock (verified against Chrome), so shift by -90°.
+        const gradient = this.ctx.createConicGradient(backgroundImage.angle - Math.PI / 2, cx, cy);
+        stops.forEach((s) => {
+            gradient.addColorStop(Math.min(1, Math.max(0, s.stop)), s.color);
         });
 
         this.path(path);
