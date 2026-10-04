@@ -62,7 +62,7 @@ const selectBrowser = (requested: string): BrowserSelection => {
         case 'webkit':
             return { engine: webkit, platformName: 'Safari' };
         default:
-            throw new Error(`Unknown browser "${requested}". Supported: chrome, firefox, webkit (default: chrome)`);
+            throw new Error(`Unknown browser "${requested}". Supported: chromium, firefox, webkit (default: chromium)`);
     }
 };
 
@@ -109,7 +109,21 @@ const main = async (): Promise<void> => {
     const corsServer = corsApp.listen(8081);
     await new Promise<void>((onListening) => staticServer.once('listening', onListening));
 
-    const browser = await engine.launch({ headless: true });
+    let browser: Awaited<ReturnType<typeof engine.launch>>;
+    try {
+        browser = await engine.launch({ headless: true });
+    } catch (error) {
+        // Distinguish "browser binary missing" from a real launch failure —
+        // CI and local runs both hit this when `playwright install` was not
+        // run for the requested engine after a Playwright upgrade.
+        if (error instanceof Error && /Executable doesn't exist/.test(error.message)) {
+            throw new Error(
+                `Playwright browser for "${browserArg}" is not installed. Run: pnpm exec playwright install ${browserArg}`,
+                { cause: error }
+            );
+        }
+        throw error;
+    }
     const context = await browser.newContext({ viewport: { width: 800, height: 600 } });
     const originUrl = 'http://localhost:8080';
     const runnerUrl = 'http://localhost:8000';

@@ -120,7 +120,7 @@ jobs:
                     - os: ubuntu-latest
                       name: Linux Chrome Stable
                       targetBrowser: Chrome_Stable
-                      playwrightBrowser: chrome
+                      playwrightBrowser: chromium
                     - os: macos-latest
                       name: OSX Safari Stable
                       targetBrowser: Safari_Stable
