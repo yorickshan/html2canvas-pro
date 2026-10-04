@@ -1,10 +1,10 @@
 import { copyFileSync, existsSync } from 'fs';
 
-const required = ['build/testrunner.js', 'dist/html2canvas-pro.js'];
+const required = ['build/reftests.js', 'dist/html2canvas-pro.js'];
 
 for (const file of required) {
     if (!existsSync(file)) {
-        console.error(`Missing ${file}. Run "npm run build" before "npm run karma".`);
+        console.error(`Missing ${file}. Run "npm run build" before "npm run reftests".`);
         process.exit(1);
     }
 }

@@ -9,7 +9,14 @@ const banner = `/*!
  * Released under ${pkg.license} License
  */`;
 
-const umdFooter = 'if (typeof window !== "undefined" && window.html2canvas && window.html2canvas.default) { window.html2canvas = window.html2canvas.default; }';
+// Keep the named exports reachable after collapsing the default export onto
+// window.html2canvas — the bare function is what <script> consumers expect,
+// but named exports (Validator, createDefaultValidator, …) are part of the
+// public API surface in every other bundle format.
+const umdFooter =
+    'if (typeof window !== "undefined" && window.html2canvas && window.html2canvas.default) { ' +
+    'window.html2canvasExports = window.html2canvas; ' +
+    'window.html2canvas = window.html2canvas.default; }';
 
 const baseInput = {
     input: 'src/index.ts',

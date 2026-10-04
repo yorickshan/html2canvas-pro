@@ -116,14 +116,15 @@ jobs:
                     - os: ubuntu-latest
                       name: Linux Firefox Stable
                       targetBrowser: Firefox_Stable
-                      xvfb: true
+                      playwrightBrowser: firefox
                     - os: ubuntu-latest
                       name: Linux Chrome Stable
                       targetBrowser: Chrome_Stable
-                      xvfb: true
+                      playwrightBrowser: chrome
                     - os: macos-latest
                       name: OSX Safari Stable
                       targetBrowser: Safari_Stable
+                      playwrightBrowser: webkit
         runs-on: ${{ matrix.config.os }}
         name: ${{ matrix.config.name }}
         env:
@@ -148,20 +149,15 @@ jobs:
               with:
                   name: build
                   path: build
-            - name: Ensure karma prerequisites
-              run: pnpm prekarma
+            - name: Ensure browser test prerequisites
+              run: pnpm prebrowser
             - name: xcode selection
               if: ${{ matrix.config.xcode != '' }}
               run: sudo xcode-select -s "${{ matrix.config.xcode }}"
+            - name: Install Playwright browser
+              run: pnpm exec playwright install --with-deps ${{ matrix.config.playwrightBrowser }}
             - name: Run browser tests
-              if: ${{ matrix.config.xvfb != true }}
-              run: pnpm karma
-            - name: Start Xvfb
-              if: ${{ matrix.config.xvfb == true }}
-              run: Xvfb :99 &
-            - name: Run browser tests
-              if: ${{ matrix.config.xvfb == true }}
-              run: DISPLAY=:99 pnpm karma
+              run: pnpm reftests:pw -- --browser=${{ matrix.config.playwrightBrowser }}
             - name: Upload screenshots
               uses: actions/upload-artifact@v6
               with:

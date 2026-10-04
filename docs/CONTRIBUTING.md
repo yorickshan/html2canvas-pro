@@ -108,8 +108,8 @@ Update `docs/features.md` to list the newly supported property.
 corepack pnpm unittest             # Vitest unit tests (single run)
 corepack pnpm watch:unittest       # Vitest in watch mode
 corepack pnpm unittest:coverage    # Vitest with V8 coverage
-corepack pnpm test                 # lint + unit tests + browser (Karma) tests
-corepack pnpm karma                # Browser tests only (needs Chrome; prereqs are checked automatically)
+corepack pnpm test                 # lint + unit tests + browser reftests (Playwright)
+corepack pnpm reftests             # Browser reftests only — `-- --browser=firefox|webkit` to switch (prereqs checked automatically)
 corepack pnpm reftests-diff        # Screenshot reftest diffing (Vitest config)
 corepack pnpm bench:css-parse      # CSS parse micro-benchmark
 ```
