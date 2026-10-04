@@ -1,10 +1,10 @@
 /**
  * Runtime feature detection.
  *
- * Only checks that still gate real behaviour on supported engines are kept:
- * range-bounds measurement (iOS 13 quirk), SVG drawing, CORS plumbing and
- * Intl.Segmenter. Dead IE-era probes (word-breaking, foreignObject support,
- * response typing) were removed with their always-true/dead consumers.
+ * Only checks that still gate real behaviour are kept: range-bounds
+ * measurement (iOS 13 quirk), SVG drawing and CORS plumbing. Dead probes
+ * (IE-era CORS/response-type assumptions aside) were removed as their
+ * consumers disappeared; Intl.Segmenter is now used unconditionally.
  */
 
 const testRangeBounds = (document: Document) => {
@@ -118,15 +118,6 @@ export const FEATURES = {
         'use strict';
         const value = 'withCredentials' in new XMLHttpRequest();
         Object.defineProperty(FEATURES, 'SUPPORT_CORS_XHR', { value });
-        return value;
-    },
-    get SUPPORT_NATIVE_TEXT_SEGMENTATION(): boolean {
-        'use strict';
-
-        // Intl.Segmenter is TC39 Stage 4 but not yet in TS lib types
-
-        const value = !!(typeof Intl !== 'undefined' && (Intl as unknown as { Segmenter: unknown }).Segmenter);
-        Object.defineProperty(FEATURES, 'SUPPORT_NATIVE_TEXT_SEGMENTATION', { value });
         return value;
     }
 };

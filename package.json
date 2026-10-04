@@ -124,10 +124,7 @@
     "docs:api": "typedoc",
     "docs:api:watch": "typedoc --watch"
   },
-  "dependencies": {
-    "css-line-break": "^2.1.0",
-    "text-segmentation": "^1.0.3"
-  },
+  "dependencies": {},
   "lint-staged": {
     "{src,tests}/**/*.ts": [
       "prettier --write",

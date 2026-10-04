@@ -1,6 +1,5 @@
 import { LIST_STYLE_TYPE } from '../../property-descriptors/list-style-type';
 import { at } from '../../../core/util';
-import { fromCodePoint } from 'css-line-break';
 import { contains } from '../../../core/bitwise';
 import { CSSParsedCounterDeclaration } from '../../index';
 
@@ -261,7 +260,7 @@ const createCounterStyleFromRange = (
     return (
         (value < 0 ? '-' : '') +
         (createCounterStyleWithSymbolResolver(Math.abs(value), codePointRangeLength, isNumeric, (codePoint) =>
-            fromCodePoint(Math.floor(codePoint % codePointRangeLength) + codePointRangeStart)
+            String.fromCodePoint(Math.floor(codePoint % codePointRangeLength) + codePointRangeStart)
         ) +
             suffix)
     );

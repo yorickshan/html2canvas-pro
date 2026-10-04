@@ -21,10 +21,6 @@ describe('FEATURES', () => {
     it('has boolean SUPPORT_CORS_XHR', () => {
         expect(typeof FEATURES.SUPPORT_CORS_XHR).toBe('boolean');
     });
-
-    it('has boolean SUPPORT_NATIVE_TEXT_SEGMENTATION', () => {
-        expect(typeof FEATURES.SUPPORT_NATIVE_TEXT_SEGMENTATION).toBe('boolean');
-    });
 });
 
 describe('createForeignObjectSVG', () => {
@@ -62,8 +58,7 @@ const FEATURE_KEYS = [
     'SUPPORT_SVG_DRAWING',
     'SUPPORT_CORS_IMAGES',
     'SUPPORT_RESPONSE_TYPE',
-    'SUPPORT_CORS_XHR',
-    'SUPPORT_NATIVE_TEXT_SEGMENTATION'
+    'SUPPORT_CORS_XHR'
 ] as const;
 
 type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -216,24 +211,6 @@ describe('FEATURES detection paths', () => {
         it('SUPPORT_CORS_XHR is true when withCredentials is supported', () => {
             restoreFeature('SUPPORT_CORS_XHR');
             expect(FEATURES.SUPPORT_CORS_XHR).toBe(true);
-        });
-    });
-
-    describe('SUPPORT_NATIVE_TEXT_SEGMENTATION', () => {
-        it('is true when Intl.Segmenter exists', () => {
-            restoreFeature('SUPPORT_NATIVE_TEXT_SEGMENTATION');
-            expect(FEATURES.SUPPORT_NATIVE_TEXT_SEGMENTATION).toBe(true);
-        });
-
-        it('is false when Intl.Segmenter is missing', () => {
-            const segmenter = (Intl as any).Segmenter;
-            delete (Intl as any).Segmenter;
-            try {
-                restoreFeature('SUPPORT_NATIVE_TEXT_SEGMENTATION');
-                expect(FEATURES.SUPPORT_NATIVE_TEXT_SEGMENTATION).toBe(false);
-            } finally {
-                (Intl as any).Segmenter = segmenter;
-            }
         });
     });
 });

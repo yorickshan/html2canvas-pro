@@ -112,7 +112,6 @@ export {
     Z
 };
 
-import { fromCodePoint } from 'css-line-break';
 import { at } from '../../core/util';
 
 const isDigit = (codePoint: number) => codePoint >= ZERO && codePoint <= 0x0039;
@@ -206,7 +205,7 @@ const stringToNumber = (codePoints: number[]): number => {
         c++;
     }
 
-    const int = integers.length ? parseInt(fromCodePoint(...integers), 10) : 0;
+    const int = integers.length ? parseInt(String.fromCodePoint(...integers), 10) : 0;
 
     if (codePoints[c] === FULL_STOP) {
         c++;
@@ -219,7 +218,7 @@ const stringToNumber = (codePoints: number[]): number => {
     }
 
     const fracd = fraction.length;
-    const frac = fracd ? parseInt(fromCodePoint(...fraction), 10) : 0;
+    const frac = fracd ? parseInt(String.fromCodePoint(...fraction), 10) : 0;
 
     if (codePoints[c] === E || codePoints[c] === e) {
         c++;
@@ -241,7 +240,7 @@ const stringToNumber = (codePoints: number[]): number => {
         c++;
     }
 
-    const exp = exponent.length ? parseInt(fromCodePoint(...exponent), 10) : 0;
+    const exp = exponent.length ? parseInt(String.fromCodePoint(...exponent), 10) : 0;
 
     return sign * (int + frac * Math.pow(10, -fracd)) * Math.pow(10, expsign * exp);
 };
