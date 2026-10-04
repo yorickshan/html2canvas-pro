@@ -153,6 +153,8 @@ The package exports `html2canvas` (default), plus the following named exports:
 | `Validator` / `createDefaultValidator` | Input validation (URLs, proxy allow-list, element checks) |
 | `PerformanceMonitor` | Phase-level timing metrics |
 | `Options` | The full options type |
+| `ConfigOptions` | Per-call runtime config type (CSP nonce, shared cache) |
+| `ValidationResult` | Result type returned by the `Validator` API |
 
 Full type definitions ship with the package — your editor's IntelliSense covers every option. An HTML API reference can be generated locally with `corepack pnpm docs:api` (TypeDoc).
 

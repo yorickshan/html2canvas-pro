@@ -2,7 +2,7 @@
 
 Below is a list of all the supported CSS properties and values.
 
-> **CSS filters and layer opacity:** PR #239 adds a limited surface-compositing path; this is not a claim about the published 2.4.3 release. The filter functions listed below are broader than that new path. See [CSS filters and layer opacity](./filter-support.md) for supported combinations, subtree restrictions, and the difference between SVG backend fallback and returning to the previous renderer.
+> **CSS filters and layer opacity:** the surface-compositing path (shipped in 2.4.4 and included in current releases) is deliberately limited in scope. The filter functions listed below are broader than that path. See [CSS filters and layer opacity](./filter-support.md) for supported combinations, subtree restrictions, and the difference between SVG backend fallback and returning to the previous renderer.
 
  - accent-color (**Checkbox/radio fill** — checked state of `<input>` elements; `auto` falls back to the built-in colour)
  - background
@@ -130,16 +130,20 @@ Below is a list of all the supported CSS properties and values.
  - z-index
  - zoom
 
-## What's new in v2.4.x
+## What's new in v2.5
 
+- **`background-clip: text`** — gradient (and colour) backgrounds clipped to the glyphs, rendered on a device-pixel surface with text-shadow and `-webkit-text-stroke` interaction (see [background-clip: text support](#background-clip-text-support))
+- **`mask-image` support** — alpha masks with `mask-position` / `mask-size` / `mask-repeat`, composited on a dedicated surface (see [Mask support](#mask-support))
+- **`backdrop-filter: blur()`** — frosted-glass captures via backdrop capture and the filter surface pipeline (see [Backdrop-filter support](#backdrop-filter-support))
+- **`conic-gradient()`, `repeating-radial-gradient()` and `repeating-conic-gradient()`** — completing the gradient family
+- **`clip-path: rect()` / `xywh()`** — the newer basic shape functions
 - **`text-emphasis`** — CJK emphasis marks (`filled`/`open` dot, circle, double-circle, triangle, sesame, or a custom string) in any colour, above or below the text
 - **`-webkit-box-reflect`** — mirrored copies below/above/left/right with offset and gradient mask
 - **`image-set()`** — the DPR-appropriate candidate is selected from the computed value
 - **`border-image-width` / `border-image-outset`** — the border-image geometry family is complete
-- **`mask-image` support** — alpha masks with `mask-position` / `mask-size` / `mask-repeat`, composited on a dedicated surface (see [Mask support](#mask-support))
-- **`backdrop-filter: blur()`** — frosted-glass captures via backdrop capture and the filter surface pipeline (see [Backdrop-filter support](#backdrop-filter-support))
-- **`conic-gradient()`, `repeating-conic-gradient()` and `repeating-radial-gradient()`** — completing the gradient family
-- **`clip-path: rect()` / `xywh()`** — the newer basic shape functions
+
+## What's new in v2.4.x
+
 - **`accent-color`, `outline`, `-webkit-text-fill-color`, `isolation`** — form control colours, focus rings, gradient-text fill overrides, blend scoping
 - **box-shadow fidelity** — correct blur/border-radius scaling, inset shadow masking, and shadows preserved through transformed ancestors ([2.4.4](https://github.com/yorickshan/html2canvas-pro/blob/main/CHANGELOG.md), [2.4.5](https://github.com/yorickshan/html2canvas-pro/blob/main/CHANGELOG.md))
 - **filter surface compositing** — eligible layers composite `blur()`/`drop-shadow()` on a dedicated surface before layer `opacity` is applied; native canvas fast path with verified SVG fallback ([scope & limits](./filter-support.md))

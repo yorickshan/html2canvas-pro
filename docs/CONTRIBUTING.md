@@ -125,7 +125,7 @@ Tests are colocated with source in `__tests__/` directories:
 
 ## Code Style
 
-- TypeScript strict mode (noUncheckedIndexedAccess excluded)
+- TypeScript strict mode (`noUncheckedIndexedAccess` enabled — use the `at()` helpers from `src/core/util` for indexing that the grammar already guarantees)
 - No `any` in production code (use proper types or `unknown` with narrowing)
 - Prefer `const enum` for enum values that appear at runtime
 - Use `import type` for type-only imports to avoid circular dependencies

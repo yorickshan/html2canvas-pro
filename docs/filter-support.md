@@ -1,6 +1,6 @@
 # CSS filters and layer opacity
 
-This page describes the limited surface-compositing implementation in PR #239. It is not a claim that the published 2.4.3 release already has these fixes, or that every CSS filter chain matches the browser compositor. The public `html2canvas(element, options)` API is unchanged.
+This page describes the limited surface-compositing implementation (introduced in PR #239 and shipped in the 2.4.4 release; it is included in current releases). It is not a claim that every CSS filter chain matches the browser compositor. The public `html2canvas(element, options)` API is unchanged.
 
 ## Supported combinations
 

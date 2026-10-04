@@ -67,7 +67,7 @@ into a typed internal representation.
 
 #### CSSParsedDeclaration
 
-`CSSParsedDeclaration` (`css/index.ts`) is the central registry class (~86 typed fields).
+`CSSParsedDeclaration` (`css/index.ts`) is the central registry class (~105 typed fields).
 It maps CSS property names to their descriptors via a `standardProps` array and lazily
 parses each property on construction.
 
@@ -114,7 +114,10 @@ rasterised through the same surface path: `mask-renderer.ts` paints the mask
 layers into an alpha surface which is applied to the element surface with
 `destination-in` before compositing. `backdrop-filter` captures the region
 already painted beneath the element's border box from the main canvas, runs it
-through the filter surface pipeline, and composites it back.
+through the filter surface pipeline, and composites it back. `background-clip:
+text` uses `text-clip-renderer.ts`: the background is painted to a device-pixel
+offscreen surface and clipped to a glyph mask built from the same text layout
+the main renderer uses, then composited 1:1 onto the main canvas.
 
 #### Filter & opacity surface compositing
 
@@ -137,8 +140,8 @@ surface. Unsupported chains or subtrees stay on the classic per-draw path.
 Handles:
 - Solid background colors
 - URL-based background images (with resize + pattern creation)
-- Linear and radial gradients (rendered via offscreen canvases + `createPattern`)
-- Repeating linear gradients
+- Linear, radial and conic gradients (rendered via offscreen canvases + `createPattern`)
+- Repeating variants of all three gradient types
 - Background blend modes (via `globalCompositeOperation`)
 
 **Pattern cache**: Instance-level LRU cache (max 50) for `CanvasPattern` objects,
@@ -169,7 +172,8 @@ via `paint-order`. `font-utils.ts` measures baselines; text decoration lines
 Helper functions extracted from `CanvasRenderer`:
 - `renderReplacedElements` — `<img>`, `<canvas>`, `<svg>`, `<iframe>`
 - `renderFormElements` — checkboxes, radio buttons, text inputs
-- `renderListMarker` — `list-style-image` / `list-style-type` markers
+- `renderListMarker` — geometric markers for `disc` / `circle` / `square` plus
+  `list-style-image` images (contained in the 1em marker box) and `list-style-type` markers
 
 #### Effects (`effects-renderer.ts`)
 
@@ -204,15 +208,20 @@ the first key (oldest entry).
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `canvas-renderer.ts` | ~800 | Main canvas renderer orchestration |
-| `document-cloner.ts` | ~790 | DOM cloning (slot logic extracted) |
-| `text-renderer.ts` | ~590 | Text run painting (CJK, writing modes, stroke) |
-| `css/index.ts` | ~500 | `CSSParsedDeclaration` registry |
-| `background-renderer.ts` | ~440 | Background rendering + pattern cache |
-| `stacking-context.ts` | ~415 | Stacking context tree + effects |
-| `content-renderer.ts` | ~370 | Replaced/form/list-item rendering |
-| `filter-surface.ts` | ~280 | Filter/opacity surface compositing |
-| `effects.ts` | ~275 | Effect type system |
+| `canvas-renderer.ts` | ~1100 | Main canvas renderer orchestration |
+| `text-renderer.ts` | ~720 | Text run painting (CJK, writing modes, stroke) |
+| `background-renderer.ts` | ~630 | Background rendering + all gradient types + pattern cache |
+| `stacking-context.ts` | ~470 | Stacking context tree + effects |
+| `content-renderer.ts` | ~420 | Replaced/form/list-item rendering |
+| `document-cloner.ts` | ~410 | DOM cloning (slot, pseudo-element and iframe-mount logic extracted) |
+| `bound-curves.ts` | ~390 | Border-radius curves per box edge |
+| `css/index.ts` | ~350 | `CSSParsedDeclaration` registry |
+| `text-clip-renderer.ts` | ~320 | `background-clip: text` device-pixel glyph-mask surfaces |
+| `filter-surface.ts` | ~310 | Filter/opacity surface compositing |
+| `border-image-renderer.ts` | ~280 | 9-slice border-image rendering |
+| `iframe-mount.ts` | ~280 | Temporary iframe creation and mounting (incl. Shadow DOM) |
+| `effects.ts` | ~280 | Effect type system |
+| `mask-renderer.ts` | ~230 | `mask-image` alpha-surface rasterization |
 | `border-renderer.ts` | ~225 | Border rendering |
 | `box-shadow-painter.ts` | ~220 | Box shadow painting |
 | `slot-cloner.ts` | ~205 | Shadow DOM / Slot cloning |

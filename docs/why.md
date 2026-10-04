@@ -10,7 +10,11 @@ html2canvas-pro has several advantages over the original html2canvas, including:
 - support color function `oklch()`
 
 ## Layout & Rendering
-- **`clip-path` support** — `inset()`, `circle()`, `ellipse()`, `polygon()`, `path()`
+- **`clip-path` support** — `inset()`, `rect()`, `xywh()`, `circle()`, `ellipse()`, `polygon()`, `path()`
+- **`mask-image` support** — alpha masks with position / size / repeat, composited on a dedicated surface
+- **`backdrop-filter: blur()`** — frosted-glass captures (see [Backdrop-filter support](./features#backdrop-filter-support))
+- **`background-clip: text`** — gradient text rendered on a device-pixel surface, sharp at any `devicePixelRatio`
+- **Complete gradient family** — `linear-gradient()`, `radial-gradient()`, `conic-gradient()` and all `repeating-*` variants
 - **`object-fit` support** for `<img/>`
 - **`writing-mode` support** — horizontal-tb, vertical-rl, vertical-lr
 - **Image smoothing control** — CSS `image-rendering` property + `imageSmoothing`/`imageSmoothingQuality` options
@@ -27,7 +31,7 @@ html2canvas-pro has several advantages over the original html2canvas, including:
 ## Developer Experience
 - **Security validation** — Built-in `Validator` API for XSS/SSRF protection
 - **Performance monitoring** — Built-in `PerformanceMonitor` API for metrics collection
-- **Error & cancellation hooks** — `onError` callback and `AbortSignal` cancellation
+- **Error, progress & cancellation hooks** — `onError` callback, `onProgress` pipeline milestones and `AbortSignal` cancellation
 - **TypeScript** — First-class type definitions included
 - **Vitest** — Modern test runner for faster testing
 
