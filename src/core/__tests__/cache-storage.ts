@@ -346,10 +346,34 @@ describe('cache-storage', () => {
         it('should return immediately from preloadAll when nothing was collected', async () => {
             const { cache } = createMockContext('http://example.com', { proxy: null });
             cache.startDefer();
-            const debug = vi.spyOn(cache.context.logger, 'debug');
+            const debug = vi.spyOn((cache as unknown as { context: Context }).context.logger, 'debug');
             await cache.preloadAll();
             expect(debug).not.toHaveBeenCalled();
             deepStrictEqual(images.length, 0);
+        });
+
+        it('keeps eviction suspended while another shared-cache defer window is open', async () => {
+            const { cache } = createMockContext('http://example.com', { proxy: null, maxCacheSize: 1 });
+            // Two overlapping render windows sharing one cache (config.cache):
+            // the first preloadAll must not resume eviction for the second.
+            cache.startDefer();
+            await cache.addImage('http://example.com/a.jpg');
+            cache.startDefer();
+            await cache.addImage('http://example.com/b.jpg');
+
+            await cache.preloadAll(); // first window finishes
+            deepStrictEqual(cache.size(), 2);
+
+            // Eviction is still suspended: normal-mode adds must not evict.
+            await cache.addImage('http://example.com/c.jpg');
+            deepStrictEqual(cache.size(), 3);
+
+            // Once the last window closes, the LRU bound applies again:
+            // one entry is evicted per add over the cap.
+            await cache.preloadAll();
+            await cache.addImage('http://example.com/d.jpg');
+            deepStrictEqual(cache.size(), 3);
+            expect(cache.match('http://example.com/a.jpg')).toBeUndefined();
         });
 
         it('should cap the concurrency between 1 and 100', async () => {
@@ -358,14 +382,14 @@ describe('cache-storage', () => {
             for (const name of ['a.jpg', 'b.jpg', 'c.jpg']) {
                 await cache.addImage(`http://example.com/${name}`);
             }
-            const debug = vi.spyOn(cache.context.logger, 'debug');
+            const debug = vi.spyOn((cache as unknown as { context: Context }).context.logger, 'debug');
             await cache.preloadAll(500);
             expect(debug).toHaveBeenCalledWith('Preloading 3 image(s) with concurrency 100');
 
             const { cache: cache2 } = createMockContext('http://example.com', { proxy: null });
             cache2.startDefer();
             await cache2.addImage('http://example.com/a.jpg');
-            const debug2 = vi.spyOn(cache2.context.logger, 'debug');
+            const debug2 = vi.spyOn((cache2 as unknown as { context: Context }).context.logger, 'debug');
             await cache2.preloadAll(0);
             expect(debug2).toHaveBeenCalledWith('Preloading 1 image(s) with concurrency 1');
         });
@@ -548,7 +572,7 @@ describe('cache-storage', () => {
                 await sleep(5);
             }
             deepStrictEqual(images.length, 1);
-            expect(images[0]?.src.startsWith('data:image/png;base64,') ?? false).toBe(true);
+            expect((images[0]?.src ?? '').startsWith('data:image/png;base64,')).toBe(true);
         });
 
         it('should reject the cache entry when the proxy responds with a non-200 status', async () => {

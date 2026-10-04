@@ -34,8 +34,16 @@ export class Cache {
      * window, and match() never reloads, so an LRU eviction there would
      * silently drop images from the output on pages with more unique images
      * than maxSize.
+     *
+     * A counter (not a flag) keeps nested/overlapping defer windows — e.g.
+     * two renders sharing one cache via `config.cache` — suspended until the
+     * last one finishes preloading.
      */
-    private _evictionEnabled = true;
+    private _evictionSuspendCount = 0;
+
+    private get _evictionEnabled(): boolean {
+        return this._evictionSuspendCount === 0;
+    }
 
     constructor(
         private readonly context: Context,
@@ -62,7 +70,7 @@ export class Cache {
      */
     startDefer(): void {
         this._deferMode = true;
-        this._evictionEnabled = false;
+        this._evictionSuspendCount++;
     }
 
     /**
@@ -102,7 +110,9 @@ export class Cache {
                 onProgress?.(settled, urls.length);
             }
         } finally {
-            this._evictionEnabled = true;
+            // Nested defer windows keep eviction suspended until the last one
+            // completes; never let a stray resume push the counter negative.
+            this._evictionSuspendCount = Math.max(0, this._evictionSuspendCount - 1);
         }
     }
 
