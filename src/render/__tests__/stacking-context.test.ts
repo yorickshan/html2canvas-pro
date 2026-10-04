@@ -20,128 +20,6 @@ import { OLElementContainer } from '../../dom/elements/ol-element-container';
 import { LIElementContainer } from '../../dom/elements/li-element-container';
 import { createMockContext } from '../__mocks__/canvas';
 
-const createMockContextFor = (): Context => {
-    const mockWin = {
-        location: { href: 'http://example.com' },
-        getComputedStyle: () => ({
-            display: 'block',
-            opacity: '1',
-            visibility: 'visible',
-            overflow: 'visible',
-            position: 'static',
-            float: 'none',
-            zIndex: 'auto',
-            transform: 'none',
-            rotate: 'none',
-            mixBlendMode: 'normal',
-            filter: 'none',
-            zoom: '1',
-            clipPath: 'none',
-            flexDirection: 'row',
-            backgroundColor: 'transparent',
-            color: 'black',
-            fontFamily: 'Arial',
-            fontSize: '16px',
-            fontStyle: 'normal',
-            fontVariant: 'normal',
-            fontWeight: '400',
-            letterSpacing: 'normal',
-            lineHeight: 'normal',
-            lineBreak: 'auto',
-            listStyleType: 'none',
-            listStylePosition: 'outside',
-            listStyleImage: 'none',
-            marginTop: '0px',
-            marginRight: '0px',
-            marginBottom: '0px',
-            marginLeft: '0px',
-            paddingTop: '0px',
-            paddingRight: '0px',
-            paddingBottom: '0px',
-            paddingLeft: '0px',
-            textAlign: 'left',
-            textDecorationLine: 'none',
-            textDecorationStyle: 'solid',
-            textDecorationColor: 'black',
-            textDecorationThickness: '1px',
-            textUnderlineOffset: 'auto',
-            textShadow: 'none',
-            textTransform: 'none',
-            textOverflow: 'clip',
-            wordBreak: 'normal',
-            overflowWrap: 'normal',
-            writingMode: 'horizontal-tb',
-            direction: 'ltr',
-            webkitTextStrokeColor: 'transparent',
-            webkitTextStrokeWidth: '0px',
-            webkitLineClamp: 'none',
-            objectFit: 'fill',
-            objectPosition: '50% 50%',
-            backgroundImage: 'none',
-            backgroundPosition: '0% 0%',
-            backgroundSize: 'auto',
-            backgroundRepeat: 'repeat',
-            backgroundClip: 'border-box',
-            backgroundOrigin: 'padding-box',
-            backgroundBlendMode: 'normal',
-            borderTopColor: 'transparent',
-            borderRightColor: 'transparent',
-            borderBottomColor: 'transparent',
-            borderLeftColor: 'transparent',
-            borderTopStyle: 'none',
-            borderRightStyle: 'none',
-            borderBottomStyle: 'none',
-            borderLeftStyle: 'none',
-            borderTopWidth: '0px',
-            borderRightWidth: '0px',
-            borderBottomWidth: '0px',
-            borderLeftWidth: '0px',
-            borderTopLeftRadius: '0px',
-            borderTopRightRadius: '0px',
-            borderBottomRightRadius: '0px',
-            borderBottomLeftRadius: '0px',
-            boxShadow: 'none',
-            borderImageSource: 'none',
-            borderImageSlice: '100%',
-            borderImageRepeat: 'stretch',
-            boxDecorationBreak: 'slice',
-            animationDuration: '0s',
-            fontVariantLigatures: 'normal',
-            paintOrder: 'fill',
-            imageRendering: 'auto',
-            content: 'none',
-            counterIncrement: 'none',
-            counterReset: 'none',
-            quotes: 'none'
-        }),
-        document: {
-            documentElement: {} as HTMLElement,
-            body: {} as HTMLElement,
-            createElement: () => ({
-                set href(_v: string) {},
-                get href() {
-                    return '';
-                },
-                get protocol() {
-                    return 'http:';
-                },
-                get hostname() {
-                    return 'localhost';
-                },
-                get port() {
-                    return '';
-                }
-            })
-        }
-    } as unknown as Window;
-    const config = new Html2CanvasConfig({ window: mockWin });
-    return new Context(
-        { logging: false, imageTimeout: 1000, useCORS: false, allowTaint: false },
-        new Bounds(0, 0, 800, 600),
-        config
-    );
-};
-
 describe('resolveAxisRadius', () => {
     it('closest-side returns min distance to nearest edge', () => {
         const r = resolveAxisRadius('closest-side', 50, 0, 100, 100);
@@ -195,7 +73,7 @@ describe('buildClipPathEffect', () => {
     const length = (n: number) => ({ type: 0, number: n, flags: 4 });
 
     it('returns null for NONE clip-path', () => {
-        const result = buildClipPathEffect({ type: CLIP_PATH_TYPE.NONE, value: [] }, new Bounds(0, 0, 100, 100));
+        const result = buildClipPathEffect({ type: CLIP_PATH_TYPE.NONE }, new Bounds(0, 0, 100, 100));
         expect(result).toBeNull();
     });
 
@@ -628,12 +506,12 @@ describe('getEffects', () => {
         rootEl.appendChild(midEl);
         const container = buildContainer(
             () => rootEl,
-            (el) => (el === leafEl ? styles.leaf : el === midEl ? styles.mid : styles.root)
+            (el): StyleOverrides | undefined => (el === leafEl ? styles.leaf : el === midEl ? styles.mid : styles.root)
         );
         expect(container.elements).toHaveLength(1);
         const midContainer = container.elements[0] as ElementContainer;
         expect(midContainer.elements).toHaveLength(1);
-        const leafContainer = midContainer.elements[0];
+        const leafContainer = midContainer.elements[0] as ElementContainer;
         assignLayout(container);
         const rootPaint = buildPaintTree(container);
         const midPaint = rootPaint.container.elements[0] ? new ElementPaint(midContainer, rootPaint) : null;
@@ -700,6 +578,26 @@ describe('getEffects', () => {
         expect(asRoot[0]?.type).toBe(0 /* EffectType.TRANSFORM */);
     });
 
+    it('a paint that is its own surface root keeps its overflow clip inside the surface', () => {
+        // The surface root's overflow clip must survive into the composited
+        // surface: it clips the root's own direct content (text nodes) while
+        // the surface is painted, and cannot be re-applied afterwards
+        // without losing the border-radius part of the clip path.
+        const { leafPaint } = buildChain({
+            leaf: { overflow: 'hidden' }
+        });
+        const asRoot = leafPaint.getEffects(EffectTarget.CONTENT, leafPaint);
+        expect(asRoot.filter((e) => e.type === 1 /* EffectType.CLIP */)).toHaveLength(1);
+        const asRootBg = leafPaint.getEffects(EffectTarget.BACKGROUND_BORDERS, leafPaint);
+        expect(asRootBg.filter((e) => e.type === 1)).toHaveLength(1);
+        // Descendants keep exactly one reconstructed padding-box clip.
+        const { leafPaint: midChild, midPaint } = buildChain({
+            mid: { overflow: 'hidden' }
+        });
+        const leafEffects = midChild.getEffects(EffectTarget.CONTENT, midPaint);
+        expect(leafEffects.filter((e) => e.type === 1)).toHaveLength(1);
+    });
+
     it('filters the collected effects by target', () => {
         const { leafPaint } = buildChain({ root: { overflow: 'hidden' } });
         const content = leafPaint.getEffects(EffectTarget.CONTENT, undefined);
@@ -729,7 +627,7 @@ describe('parseStackingContexts – tree structure', () => {
 
         const container = buildContainer(
             () => rootEl,
-            (el) => {
+            (el): StyleOverrides | undefined => {
                 if (el === els.a) return { position: 'absolute', zIndex: '-3' };
                 if (el === els.b) return { position: 'absolute', zIndex: '-1' };
                 if (el === els.c) return { position: 'absolute', zIndex: '-2' };
@@ -781,7 +679,7 @@ describe('parseStackingContexts – tree structure', () => {
 
         const container = buildContainer(
             () => rootEl,
-            (el) => {
+            (el): StyleOverrides | undefined => {
                 if (el === floatEl) return { cssFloat: 'left' };
                 if (el === inlineEl) return { display: 'inline' };
                 return undefined;

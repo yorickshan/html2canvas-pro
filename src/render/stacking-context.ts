@@ -157,14 +157,16 @@ export class ElementPaint {
     private computeEffects(target: EffectTarget, surfaceRoot?: ElementPaint): IElementEffect[] {
         let inFlow = [POSITION.ABSOLUTE, POSITION.FIXED].indexOf(this.container.styles.position) === -1;
         let parent = this === surfaceRoot ? null : this.parent;
+        // The surface root owns its filter/opacity/blend (applied when the
+        // surface is composited onto the backdrop). Its overflow clip,
+        // however, must stay in the surface: it clips the root's own direct
+        // content while the surface is painted, and cannot be reconstructed
+        // afterwards without losing the border-radius part of the path.
         const sourceEffects = (paint: ElementPaint) =>
             paint.effects.filter(
                 (effect) =>
                     paint !== surfaceRoot ||
-                    (!isFilterEffect(effect) &&
-                        !isOpacityEffect(effect) &&
-                        !isBlendEffect(effect) &&
-                        !isClipEffect(effect))
+                    (!isFilterEffect(effect) && !isOpacityEffect(effect) && !isBlendEffect(effect))
             );
         const effects = sourceEffects(this);
         while (parent) {
