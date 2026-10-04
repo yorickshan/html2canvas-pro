@@ -150,7 +150,10 @@ export class CanvasRenderer {
 
         this.borderImageRenderer = new BorderImageRenderer(this.ctx);
 
-        this.effectsRenderer = new EffectsRenderer({ ctx: this.ctx }, { path: (paths) => this.path(paths) });
+        this.effectsRenderer = new EffectsRenderer(
+            { ctx: this.ctx, scale: options.scale },
+            { path: (paths) => this.path(paths) }
+        );
 
         this.textRenderer = new TextRenderer({
             ctx: this.ctx,
@@ -293,9 +296,11 @@ export class CanvasRenderer {
             this.effectsRenderer.applyEffects(effects);
             if (hasBlend) {
                 // The isolated surface already contains the element's full
-                // paint (background + content); blend it with the backdrop as
-                // one group via the element's mix-blend-mode. save/restore
-                // keeps the composite operation from leaking into later paints.
+                // paint (background + content), including its opacity —
+                // renderFilterSurface bakes it even for empty filter chains.
+                // Blend it with the backdrop as one group via the element's
+                // mix-blend-mode. save/restore keeps the composite operation
+                // from leaking into later paints.
                 this.ctx.save();
                 this.ctx.globalCompositeOperation = stack.element.container.styles
                     .mixBlendMode as GlobalCompositeOperation;

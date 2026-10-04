@@ -298,7 +298,8 @@ export class TextClipRenderer {
             layer.ctx.shadowColor = asString(textShadow.color);
             layer.ctx.shadowOffsetX = textShadow.offsetX.number * this.scale;
             layer.ctx.shadowOffsetY = textShadow.offsetY.number * this.scale;
-            layer.ctx.shadowBlur = textShadow.blur.number;
+            // Device-space metric like the offsets: scale it alongside them.
+            layer.ctx.shadowBlur = textShadow.blur.number * this.scale;
             layer.ctx.fillStyle = asString(textShadow.color);
             for (const textNode of paint.container.textNodes) {
                 for (const textBound of textNode.textBounds) {

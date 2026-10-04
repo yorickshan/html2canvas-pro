@@ -123,7 +123,7 @@ describe('EffectsRenderer drop-shadow rendering (Issue #223)', () => {
         strictEqual(ctx.shadowOffsetX, 0);
         strictEqual(ctx.shadowOffsetY, 0);
         strictEqual(ctx.shadowBlur, 0);
-        ok(ctx.shadowColor.includes('0, 0, 0, 0') || ctx.shadowColor === '');
+        ok(ctx.shadowColor.includes('0, 0, 0, 0') || String(ctx.shadowColor) === '');
     });
 
     it('should not reset shadow before drawing when re-applying effects', () => {
@@ -177,6 +177,33 @@ describe('EffectsRenderer drop-shadow rendering (Issue #223)', () => {
         strictEqual(ctx.filter, 'none');
         strictEqual(ctx.shadowOffsetX, 0);
         strictEqual(ctx.shadowOffsetY, 0);
+        strictEqual(ctx.shadowBlur, 0);
+    });
+
+    it('should scale shadow metrics and blur() radii by the device scale', () => {
+        // ctx.filter lengths and shadow metrics are applied in device space
+        // (unaffected by the context transform — verified in Chromium), so a
+        // scale(2) context must receive doubled values for identical CSS
+        // visual output.
+        const ctx = createMockContext();
+        const renderer = new EffectsRenderer({ ctx, scale: 2 }, createPathCallback());
+
+        renderer.applyEffects([new FilterEffect('blur(5px) drop-shadow(10px 10px 2px red)')]);
+
+        strictEqual(ctx.shadowOffsetX, 20, 'shadow offsetX should be 10 CSS px x scale 2');
+        strictEqual(ctx.shadowOffsetY, 20, 'shadow offsetY should be 10 CSS px x scale 2');
+        strictEqual(ctx.shadowBlur, 4, 'shadow blur should be 2 CSS px x scale 2');
+        strictEqual(ctx.filter, 'blur(10px)', 'ctx.filter blur radius should be 5 CSS px x scale 2');
+    });
+
+    it('should leave filter strings untouched at scale 1', () => {
+        const ctx = createMockContext();
+        const renderer = new EffectsRenderer({ ctx }, createPathCallback());
+
+        renderer.applyEffects([new FilterEffect('blur(5px) grayscale(50%)')]);
+
+        strictEqual(ctx.filter, 'blur(5px) grayscale(50%)');
+        strictEqual(ctx.shadowOffsetX, 0);
         strictEqual(ctx.shadowBlur, 0);
     });
 });

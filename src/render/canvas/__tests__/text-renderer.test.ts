@@ -563,3 +563,117 @@ describe('renderTextNode', () => {
         strictEqual(fillCalls[0]?.y, 66, 'should fallback to fontSize.number (66)');
     });
 });
+
+describe('TextRenderer text-shadow scaling', () => {
+    type ShadowProp = 'blur' | 'offsetX' | 'offsetY';
+    interface ShadowSet {
+        prop: ShadowProp;
+        value: number;
+    }
+
+    const buildBaseCtx = () =>
+        ({
+            fillStyle: '',
+            font: '',
+            textBaseline: 'alphabetic' as CanvasTextBaseline,
+            direction: 'ltr' as CanvasDirection,
+            textAlign: 'left' as CanvasTextAlign,
+            fillText() {},
+            measureText() {
+                return { width: 30, actualBoundingBoxAscent: 14 };
+            },
+            strokeStyle: '',
+            lineWidth: 0,
+            lineJoin: 'miter' as CanvasLineJoin,
+            strokeText() {},
+            shadowColor: '',
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowBlur: 0,
+            save() {},
+            restore() {}
+        }) as unknown as CanvasRenderingContext2D;
+
+    const buildShadowStyles = () =>
+        ({
+            fontFamily: ['Arial'],
+            fontSize: { number: 16, unit: 'px' },
+            fontStyle: 'normal',
+            fontVariant: [],
+            fontWeight: 'normal',
+            color: { r: 0, g: 0, b: 0, a: 1 },
+            letterSpacing: 0,
+            webkitTextStrokeWidth: 0,
+            textShadow: [
+                {
+                    color: { r: 0, g: 0, b: 0, a: 1 },
+                    offsetX: { number: 2 },
+                    offsetY: { number: 3 },
+                    blur: { number: 4 }
+                }
+            ],
+            textDecorationLine: [],
+            paintOrder: [0],
+            direction: 0,
+            writingMode: WRITING_MODE.HORIZONTAL_TB,
+            display: 0,
+            webkitLineClamp: 0,
+            textOverflow: 0,
+            overflowX: 0,
+            overflowY: 0
+        }) as unknown as Parameters<TextRenderer['renderTextNode']>[1];
+
+    const buildTextContainer = () =>
+        ({
+            textBounds: [new TextBounds('gj', new Bounds(10, 50, 100, 25))],
+            parse: () => {}
+        }) as unknown as Parameters<TextRenderer['renderTextNode']>[0];
+
+    /** renderTextFillWithShadows resets the metrics after drawing, so the
+     *  assertions inspect the recorded assignment sequence. */
+    const recordShadowSets = (ctx: CanvasRenderingContext2D): ShadowSet[] => {
+        const sets: ShadowSet[] = [];
+        const record = (prop: ShadowProp) => ({
+            set: (v: number) => {
+                sets.push({ prop, value: v });
+            },
+            get: () => 0
+        });
+        Object.defineProperty(ctx, 'shadowBlur', record('blur'));
+        Object.defineProperty(ctx, 'shadowOffsetX', record('offsetX'));
+        Object.defineProperty(ctx, 'shadowOffsetY', record('offsetY'));
+        return sets;
+    };
+
+    // The trailing reset writes 0; keep only real shadow assignments.
+    const valuesOf = (sets: ShadowSet[], prop: ShadowProp): number[] =>
+        sets.filter((s) => s.prop === prop && s.value !== 0).map((s) => s.value);
+
+    it('scales text-shadow blur and offsets by the device scale', async () => {
+        const ctx = buildBaseCtx();
+        const sets = recordShadowSets(ctx);
+        const renderer = new TextRenderer({ ctx, options: { scale: 2 } });
+        renderer.createFontStyle = () => ['16px Arial', 'Arial', '16px'];
+
+        await renderer.renderTextNode(buildTextContainer(), buildShadowStyles());
+
+        // Canvas shadow metrics live in device space, so both the offsets
+        // and the blur must be multiplied by the context scale.
+        deepStrictEqual(valuesOf(sets, 'offsetX'), [4]);
+        deepStrictEqual(valuesOf(sets, 'offsetY'), [6]);
+        deepStrictEqual(valuesOf(sets, 'blur'), [8]);
+    });
+
+    it('keeps shadow metrics unscaled at scale 1', async () => {
+        const ctx = buildBaseCtx();
+        const sets = recordShadowSets(ctx);
+        const renderer = new TextRenderer({ ctx, options: { scale: 1 } });
+        renderer.createFontStyle = () => ['16px Arial', 'Arial', '16px'];
+
+        await renderer.renderTextNode(buildTextContainer(), buildShadowStyles());
+
+        deepStrictEqual(valuesOf(sets, 'offsetX'), [2]);
+        deepStrictEqual(valuesOf(sets, 'offsetY'), [3]);
+        deepStrictEqual(valuesOf(sets, 'blur'), [4]);
+    });
+});

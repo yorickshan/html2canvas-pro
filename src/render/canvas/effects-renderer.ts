@@ -1,4 +1,15 @@
 /**
+ * Scale `blur(<n>px)` radii in a ctx.filter string by the device-pixel
+ * ratio. Other filter functions (brightness, saturate, …) take
+ * unitless values and are unaffected.
+ */
+const BLUR_PX_RE = /blur\((\d+(?:\.\d+)?)px\)/gi;
+const scaleFilterBlur = (filter: string, scale: number): string =>
+    scale === 1
+        ? filter
+        : filter.replace(BLUR_PX_RE, (_match, value: string) => `blur(${parseFloat(value) * scale}px)`);
+
+/**
  * Effects Renderer
  *
  * Handles rendering effects including:
@@ -27,6 +38,13 @@ import { at } from '../../core/util';
  */
 export interface EffectsRendererDependencies {
     ctx: CanvasRenderingContext2D;
+    /**
+     * Device-pixel ratio of the bound context. Canvas shadow metrics
+     * (offset/blur) live in device space, unaffected by the context
+     * transform, so drop-shadow() blur must be scaled like the offsets.
+     * Defaults to 1.
+     */
+    scale?: number;
 }
 
 /**
@@ -70,6 +88,7 @@ export interface EffectsPathCallback {
 export class EffectsRenderer {
     private readonly ctx: CanvasRenderingContext2D;
     private readonly pathCallback: EffectsPathCallback;
+    private readonly scale: number;
     private readonly activeEffects: IElementEffect[] = [];
     /** Whether a canvas state save was performed for the current batch. */
     private didSave = false;
@@ -81,6 +100,7 @@ export class EffectsRenderer {
     constructor(deps: EffectsRendererDependencies, pathCallback: EffectsPathCallback) {
         this.ctx = deps.ctx;
         this.pathCallback = pathCallback;
+        this.scale = deps.scale ?? 1;
     }
 
     /**
@@ -152,13 +172,16 @@ export class EffectsRenderer {
             this.ctx.globalCompositeOperation = effect.compositeOperation;
         } else if (isFilterEffect(effect)) {
             // drop-shadow() is rendered via ctx.shadow* to avoid canvas
-            // taint; remaining filters go through ctx.filter.
-            this.ctx.filter = effect.safeFilterString || 'none';
+            // taint; remaining filters go through ctx.filter. Filter
+            // lengths are applied in device space (unaffected by the
+            // context transform — verified in Chromium), so blur radii
+            // must be scaled like the shadow metrics below.
+            this.ctx.filter = scaleFilterBlur(effect.safeFilterString, this.scale) || 'none';
 
             if (effect.shadow) {
-                this.ctx.shadowOffsetX = effect.shadow.offsetX;
-                this.ctx.shadowOffsetY = effect.shadow.offsetY;
-                this.ctx.shadowBlur = effect.shadow.blur;
+                this.ctx.shadowOffsetX = effect.shadow.offsetX * this.scale;
+                this.ctx.shadowOffsetY = effect.shadow.offsetY * this.scale;
+                this.ctx.shadowBlur = effect.shadow.blur * this.scale;
                 this.ctx.shadowColor = effect.shadow.color;
             }
         }

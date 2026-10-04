@@ -345,7 +345,10 @@ export class TextRenderer {
                     this.ctx.shadowColor = asString(textShadow.color);
                     this.ctx.shadowOffsetX = textShadow.offsetX.number * this.options.scale;
                     this.ctx.shadowOffsetY = textShadow.offsetY.number * this.options.scale;
-                    this.ctx.shadowBlur = textShadow.blur.number;
+                    // Canvas shadow metrics live in device space (unaffected
+                    // by the context transform), so blur scales like the
+                    // offsets above.
+                    this.ctx.shadowBlur = textShadow.blur.number * this.options.scale;
 
                     this.renderTextWithLetterSpacing(text, styles.letterSpacing, baseline, styles.writingMode);
                 });
