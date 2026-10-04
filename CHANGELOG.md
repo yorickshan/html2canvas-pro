@@ -1,3 +1,28 @@
+## [2.5.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.5.0...v2.5.1) (2026-10-04)
+
+### Features
+
+* **css:** support repeating-conic-gradient ([11662a0](https://github.com/yorickshan/html2canvas-pro/commit/11662a0559637eafa489c1d817b49a001ce2ebd2))
+* **render:** device-pixel text-clip surfaces with stroke and shadow support ([cc779b0](https://github.com/yorickshan/html2canvas-pro/commit/cc779b0ce52fdd85df84806b2843bc7ec6ad30b9))
+
+### Bug Fixes
+
+* **cache:** suspend LRU eviction per nested defer window ([0310530](https://github.com/yorickshan/html2canvas-pro/commit/03105308e3ddefc7ddb3cbac45faaec7927622d1))
+* **cache:** suspend LRU eviction while a render preloads its images ([4934544](https://github.com/yorickshan/html2canvas-pro/commit/4934544b2c98f95b4ecda0426240072a90d2d645))
+* **clone:** append ::after pseudo content after element children ([c150c75](https://github.com/yorickshan/html2canvas-pro/commit/c150c75057e7e65d186ea32051e975fff8ee6206))
+* **clone:** clamp quote depth for unbalanced close-quotes ([875bbc2](https://github.com/yorickshan/html2canvas-pro/commit/875bbc27c660f8a21ba21e4009d4eb611faaf7d1))
+* **css:** correct zoom coordinate space and isolated blend groups ([b4a3e03](https://github.com/yorickshan/html2canvas-pro/commit/b4a3e034b819a00a32eb20b5a82ab59bb3cd1444))
+* **css:** skip unsupported image functions in list-style-image ([6285ecb](https://github.com/yorickshan/html2canvas-pro/commit/6285ecb45eec71f3c96f22151a1e741e25842b9c))
+* **karma:** skip Firefox launcher with a warning when Firefox is missing ([980934a](https://github.com/yorickshan/html2canvas-pro/commit/980934adb0e6d40311ecc7a4f39dc60a85cc4986))
+* **render:** contain list-style images in the 1em marker box ([31c40e8](https://github.com/yorickshan/html2canvas-pro/commit/31c40e8ddb045f841820d503eab8571e5aa7c5e6))
+* **render:** correct coordinate math in mask, repeating and radial gradients ([36e3ff7](https://github.com/yorickshan/html2canvas-pro/commit/36e3ff74561b55119772ea2772cc15f913375009))
+* **render:** draw list markers as geometric shapes and input accent blue ([116d2a4](https://github.com/yorickshan/html2canvas-pro/commit/116d2a4d45d3af3bdbc872964de821be42b589ec)), references [#2a2a2a](https://github.com/yorickshan/html2canvas-pro/issues/2a2a2a) [#0075ff](https://github.com/yorickshan/html2canvas-pro/issues/0075ff)
+* **render:** keep the surface-root overflow clip inside composited surfaces ([00371f0](https://github.com/yorickshan/html2canvas-pro/commit/00371f032087b3ad62c21eada013fa2d281b534f))
+* **render:** scale canvas shadow and filter metrics to device space ([7e42bff](https://github.com/yorickshan/html2canvas-pro/commit/7e42bfff34d2a1cbd7399d4d309f46be19e47dfc))
+* **render:** use browser default accent blue for auto accent-color ([d0778d8](https://github.com/yorickshan/html2canvas-pro/commit/d0778d8208f290ec7f34040c44d9fed299998220)), references [#2a2a2a](https://github.com/yorickshan/html2canvas-pro/issues/2a2a2a) [#0075ff](https://github.com/yorickshan/html2canvas-pro/issues/0075ff)
+* **server:** separate static file serving paths to prevent 404 errors ([8a652b7](https://github.com/yorickshan/html2canvas-pro/commit/8a652b76f821b213a07c0d31d54aeb2029f7f67f))
+* **text:** apply -webkit-line-clamp to flow-root containers ([dfbf14f](https://github.com/yorickshan/html2canvas-pro/commit/dfbf14f74f77bb27a3b19a8699059a444ac58ffc))
+
 ## [2.5.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.4.5...v2.5.0) (2026-09-30)
 
 ### Features
