@@ -308,7 +308,29 @@ export async function renderListMarker(
             const url = (img as CSSURLImage).url;
             try {
                 const image = await context.cache.match(url);
-                ctx.drawImage(image!, container.bounds.left - (image!.width + 10), container.bounds.top);
+                // Browsers contain the image inside a 1em marker box and
+                // centre it on the first line's midline — matching the
+                // geometric markers below.
+                const fontSize = getAbsoluteValue(styles.fontSize, 0);
+                const naturalWidth = (image as HTMLImageElement)?.naturalWidth || image!.width;
+                const naturalHeight = (image as HTMLImageElement)?.naturalHeight || image!.height;
+                if (naturalWidth <= 0 || naturalHeight <= 0) {
+                    return;
+                }
+                const markerScale = Math.min(fontSize / naturalWidth, fontSize / naturalHeight);
+                const markerWidth = naturalWidth * markerScale;
+                const markerHeight = naturalHeight * markerScale;
+                const markerCenterY =
+                    container.bounds.top +
+                    getAbsoluteValue(container.styles.paddingTop, container.bounds.width) +
+                    computeLineHeight(styles.lineHeight, styles.fontSize.number) / 2;
+                ctx.drawImage(
+                    image!,
+                    container.bounds.left - (markerWidth + 10),
+                    markerCenterY - markerHeight / 2,
+                    markerWidth,
+                    markerHeight
+                );
             } catch (e) {
                 context.logger.error(`Error loading list-style-image ${url}`);
                 context.onError?.(e instanceof Error ? e : new Error(String(e)));
