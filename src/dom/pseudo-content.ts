@@ -146,11 +146,20 @@ export class PseudoContentResolver {
                             document.createTextNode(getQuote(declaration.quotes, this.quoteDepth++, true))
                         );
                         break;
-                    case 'close-quote':
-                        anonymousReplacedElement.appendChild(
-                            document.createTextNode(getQuote(declaration.quotes, --this.quoteDepth, false))
-                        );
+                    case 'close-quote': {
+                        // Per CSS, close-quote at depth 0 renders nothing and
+                        // must not drive the depth negative: an unbalanced
+                        // close-quote would otherwise shift every later quote
+                        // level by one.
+                        const hasOpenQuote = this.quoteDepth > 0;
+                        this.quoteDepth = Math.max(0, this.quoteDepth - 1);
+                        if (hasOpenQuote) {
+                            anonymousReplacedElement.appendChild(
+                                document.createTextNode(getQuote(declaration.quotes, this.quoteDepth, false))
+                            );
+                        }
                         break;
+                    }
                     default:
                         // safari doesn't parse string tokens correctly because of lack of quotes
                         anonymousReplacedElement.appendChild(document.createTextNode(token.value));

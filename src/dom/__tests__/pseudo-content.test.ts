@@ -148,6 +148,29 @@ describe('PseudoContentResolver', () => {
                 .textContent
         ).toBe('b');
     });
+
+    it('keeps the depth at zero for unbalanced close-quotes', () => {
+        const resolver = createResolver();
+        const clone = document.createElement('div');
+        const openStyle = () => makeStyle('open-quote', { quotes: '"a" "b" "c" "d"' });
+        const closeStyle = () => makeStyle('close-quote', { quotes: '"a" "b" "c" "d"' });
+        // Per CSS, close-quote at depth 0 renders nothing …
+        const strayClose = resolver.resolvePseudoContent(
+            document.createElement('div'),
+            clone,
+            closeStyle(),
+            PseudoElementType.AFTER
+        );
+        expect(strayClose!.textContent ?? '').toBe('');
+        // … and must not shift the next open-quote level away from the first pair.
+        const nextOpen = resolver.resolvePseudoContent(
+            document.createElement('div'),
+            clone,
+            openStyle(),
+            PseudoElementType.BEFORE
+        );
+        expect(nextOpen!.textContent).toBe('a');
+    });
 });
 
 describe('createPseudoHideStyles', () => {
