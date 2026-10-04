@@ -116,7 +116,10 @@ const imagesReady = (document: HTMLDocument): Promise<unknown[]> => {
     return Promise.all([].slice.call(document.images, 0).map(imageReady));
 };
 
-const iframeLoader = (iframe: HTMLIFrameElement): Promise<HTMLIFrameElement> => {
+const iframeLoader = (
+    iframe: HTMLIFrameElement,
+    logger?: { warn: (msg: string) => void }
+): Promise<HTMLIFrameElement> => {
     return new Promise((resolve, reject) => {
         const cloneWindow = iframe.contentWindow;
 
@@ -137,7 +140,13 @@ const iframeLoader = (iframe: HTMLIFrameElement): Promise<HTMLIFrameElement> => 
                     resolve(iframe);
                 } else if (attempts >= MAX_POLL_ATTEMPTS) {
                     clearInterval(interval);
-                    resolve(iframe); // resolve anyway to avoid hanging
+                    // Resolve anyway to avoid hanging, but say so: a timeout
+                    // here means the clone may be an empty document and the
+                    // capture will come out blank.
+                    logger?.warn(
+                        'Cloned iframe did not become ready within 30 seconds; continuing with a possibly incomplete document'
+                    );
+                    resolve(iframe);
                 }
             }, 50);
         };
@@ -219,7 +228,7 @@ export const mountCloneInIFrame = (
      if window url is about:blank, we can assign the url to current by writing onto the document
      */
 
-    const iframeLoad = iframeLoader(iframe).then(async () => {
+    const iframeLoad = iframeLoader(iframe, context.logger).then(async () => {
         mount.scrolledElements.forEach(restoreNodeScroll);
         if (cloneWindow) {
             cloneWindow.scrollTo(windowSize.left, windowSize.top);

@@ -34,6 +34,7 @@ import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering'
 import { BACKGROUND_REPEAT } from '../../css/property-descriptors/background-repeat';
 import { createCanvasPath } from './canvas-path';
 import { LRUMap } from '../../core/lru-map';
+import { PATTERN_CACHE_MAX } from '../../core/constants';
 
 /**
  * Dependencies required for BackgroundRenderer
@@ -66,7 +67,7 @@ export class BackgroundRenderer {
      * shared across different render passes. This cache lives for the
      * duration of one html2canvas() call.
      */
-    private readonly patternCache = new LRUMap<string, CanvasPattern>(50);
+    private readonly patternCache = new LRUMap<string, CanvasPattern>(PATTERN_CACHE_MAX);
 
     constructor(deps: BackgroundRendererDependencies) {
         this.ctx = deps.ctx;

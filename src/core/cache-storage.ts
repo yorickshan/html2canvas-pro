@@ -1,5 +1,6 @@
 import { FEATURES } from './features';
 import { Context } from './context';
+import { DEFAULT_IMAGE_CACHE_SIZE, MAX_IMAGE_CACHE_SIZE } from './constants';
 
 export interface ResourceOptions {
     imageTimeout: number;
@@ -50,13 +51,13 @@ export class Cache {
         private readonly _options: ResourceOptions
     ) {
         // Default cache size: 100 items
-        this.maxSize = _options.maxCacheSize ?? 100;
+        this.maxSize = _options.maxCacheSize ?? DEFAULT_IMAGE_CACHE_SIZE;
 
         if (this.maxSize < 1) {
             throw new Error('Cache maxSize must be at least 1');
         }
 
-        if (this.maxSize > 10000) {
+        if (this.maxSize > MAX_IMAGE_CACHE_SIZE) {
             this.context.logger.warn(
                 `Cache maxSize ${this.maxSize} is very large and may cause memory issues. ` +
                     `Consider using a smaller value (recommended: 100-1000).`
