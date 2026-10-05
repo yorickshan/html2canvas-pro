@@ -10,6 +10,8 @@
 
 import { Bounds } from '../css/layout/bounds';
 import { Context } from '../core/context';
+import { CLONE_READY_TIMEOUT_MS, IFRAME_LOAD_WATCHDOG_MS, IFRAME_READY_POLL_MS } from '../core/constants';
+import { throwIfAborted } from '../core/abort-helper';
 import { IGNORE_ATTRIBUTE } from './slot-cloner';
 
 export interface CloneMountOptions {
@@ -25,6 +27,11 @@ export interface CloneMountOptions {
     onclone?: (document: Document, element: HTMLElement) => void;
     /** Mount the iframe inside a shadow root instead of <body>. */
     container?: HTMLElement | ShadowRoot;
+    /**
+     * Aborting rejects the mount (iframe poll, font/image waits) with an
+     * AbortError instead of waiting out the readiness windows.
+     */
+    signal?: AbortSignal;
 }
 
 /**
@@ -118,7 +125,8 @@ const imagesReady = (document: HTMLDocument): Promise<unknown[]> => {
 
 const iframeLoader = (
     iframe: HTMLIFrameElement,
-    logger?: { warn: (msg: string) => void }
+    logger?: { warn: (msg: string) => void },
+    signal?: AbortSignal
 ): Promise<HTMLIFrameElement> => {
     return new Promise((resolve, reject) => {
         const cloneWindow = iframe.contentWindow;
@@ -128,28 +136,60 @@ const iframeLoader = (
         }
 
         const documentClone = cloneWindow.document;
+        let interval: ReturnType<typeof setInterval> | undefined;
+
+        // The load event is assigned synchronously right after iframe
+        // creation and always fires for a document.write mount — but a
+        // browser quirk must degrade to an error, not a hung render.
+        const watchdog = setTimeout(() => {
+            if (interval) {
+                clearInterval(interval);
+            }
+            reject(new Error(`Cloned iframe did not fire its load event within ${IFRAME_LOAD_WATCHDOG_MS}ms`));
+        }, IFRAME_LOAD_WATCHDOG_MS);
+
+        const onAbort = (): void => {
+            if (interval) {
+                clearInterval(interval);
+            }
+            clearTimeout(watchdog);
+            reject(new DOMException('The operation was aborted.', 'AbortError'));
+        };
 
         cloneWindow.onload = iframe.onload = () => {
             cloneWindow.onload = iframe.onload = null;
-            const MAX_POLL_ATTEMPTS = 600; // 30 seconds at 50ms intervals
+            const maxAttempts = Math.ceil(CLONE_READY_TIMEOUT_MS / IFRAME_READY_POLL_MS);
             let attempts = 0;
-            const interval = setInterval(() => {
+            interval = setInterval(() => {
                 attempts++;
-                if (documentClone.body.childNodes.length > 0 && documentClone.readyState === 'complete') {
+                if (signal?.aborted) {
+                    onAbort();
+                } else if (documentClone.body.childNodes.length > 0 && documentClone.readyState === 'complete') {
                     clearInterval(interval);
+                    interval = undefined;
+                    clearTimeout(watchdog);
                     resolve(iframe);
-                } else if (attempts >= MAX_POLL_ATTEMPTS) {
+                } else if (attempts >= maxAttempts) {
                     clearInterval(interval);
+                    interval = undefined;
                     // Resolve anyway to avoid hanging, but say so: a timeout
                     // here means the clone may be an empty document and the
                     // capture will come out blank.
                     logger?.warn(
-                        'Cloned iframe did not become ready within 30 seconds; continuing with a possibly incomplete document'
+                        `Cloned iframe did not become ready within ${CLONE_READY_TIMEOUT_MS / 1000} seconds; continuing with a possibly incomplete document`
                     );
                     resolve(iframe);
                 }
-            }, 50);
+            }, IFRAME_READY_POLL_MS);
         };
+
+        if (signal) {
+            if (signal.aborted) {
+                onAbort();
+            } else {
+                signal.addEventListener('abort', onAbort, { once: true });
+            }
+        }
     });
 };
 
@@ -228,7 +268,7 @@ export const mountCloneInIFrame = (
      if window url is about:blank, we can assign the url to current by writing onto the document
      */
 
-    const iframeLoad = iframeLoader(iframe, context.logger).then(async () => {
+    const iframeLoad = iframeLoader(iframe, context.logger, mount.signal).then(async () => {
         mount.scrolledElements.forEach(restoreNodeScroll);
         if (cloneWindow) {
             cloneWindow.scrollTo(windowSize.left, windowSize.top);
@@ -242,12 +282,15 @@ export const mountCloneInIFrame = (
             throw new Error(`Error finding the ${mount.referenceElementName} in the cloned document`);
         }
 
+        throwIfAborted(mount.signal);
         if (documentClone.fonts && documentClone.fonts.ready) {
             await documentClone.fonts.ready;
         }
+        throwIfAborted(mount.signal);
 
         if (/(AppleWebKit)/g.test(navigator.userAgent)) {
             await imagesReady(documentClone);
+            throwIfAborted(mount.signal);
         }
 
         if (typeof onclone === 'function') {

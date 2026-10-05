@@ -1,6 +1,13 @@
 import { FEATURES } from './features';
 import { Context } from './context';
-import { DEFAULT_IMAGE_CACHE_SIZE, MAX_IMAGE_CACHE_SIZE } from './constants';
+import { throwIfAborted } from './abort-helper';
+import {
+    DEFAULT_IMAGE_CACHE_SIZE,
+    DEFAULT_IMAGE_TIMEOUT_MS,
+    INLINE_IMAGE_RESOLVE_DELAY_MS,
+    MAX_IMAGE_CACHE_SIZE,
+    RESOURCE_KEY_LOG_LENGTH
+} from './constants';
 
 export interface ResourceOptions {
     imageTimeout: number;
@@ -79,14 +86,22 @@ export class Cache {
      * an optional concurrency cap to avoid overwhelming the browser's network
      * stack (default: 10 concurrent loads).
      * After this call returns, all images are either loaded (cache hit) or
-     * failed (logged). Subsequent cache.match() calls return immediately.
+     * failed (logged and reported via onError). Subsequent cache.match()
+     * calls return immediately.
      *
      * @param concurrency - Max concurrent image loads (1–100, default 10).
      * @param onProgress - Invoked once before loading and after each settled
      *   batch with (settledCount, totalCount), enabling coarse progress UI.
      *   Not invoked when there is nothing to load.
+     * @param signal - Checked before each batch; aborting rejects the whole
+     *   preload with an AbortError instead of waiting for the remaining
+     *   batches to finish.
      */
-    async preloadAll(concurrency = 10, onProgress?: (loaded: number, total: number) => void): Promise<void> {
+    async preloadAll(
+        concurrency = 10,
+        onProgress?: (loaded: number, total: number) => void,
+        signal?: AbortSignal
+    ): Promise<void> {
         this._deferMode = false;
         const urls = Array.from(this._collectedUrls);
         this._collectedUrls.clear();
@@ -100,13 +115,44 @@ export class Cache {
             this.context.logger.debug(`Preloading ${urls.length} image(s) with concurrency ${limit}`);
 
             // Load in batches to respect the concurrency cap while maximising
-            // parallelism within each batch.
+            // parallelism within each batch. Each batch wait races the abort
+            // signal so an abort takes effect immediately, not after the
+            // current batch's slowest image settles; in-flight loads keep
+            // running but are already reported through the normal error path.
             let settled = 0;
+            const abortPromise = signal
+                ? new Promise<never>((_, reject) => {
+                      const onAbort = (): void => reject(new DOMException('The operation was aborted.', 'AbortError'));
+                      if (signal.aborted) {
+                          onAbort();
+                      } else {
+                          signal.addEventListener('abort', onAbort, { once: true });
+                      }
+                  })
+                : null;
+            // An already-aborted signal exits via throwIfAborted before the
+            // first loop race subscribes to abortPromise; keep a no-op
+            // handler so that rejection is never unhandled.
+            abortPromise?.catch(() => undefined);
             onProgress?.(0, urls.length);
             for (let i = 0; i < urls.length; i += limit) {
+                throwIfAborted(signal);
                 const batch = urls.slice(i, i + limit);
-                const operations = batch.map((url) => this._addImageWithPending(url));
-                await Promise.allSettled(operations);
+                batch.map((url) => this._addImageWithPending(url));
+                // _addImageWithPending stores the real load promise in the
+                // cache synchronously before its queued-start promise
+                // resolves, so awaiting the entries here waits for actual
+                // load completion — the documented contract of preloadAll —
+                // and makes onProgress report loaded (not merely started)
+                // images. Failures are already reported by the load catch.
+                const batchSettled = Promise.allSettled(
+                    batch.map((url) => this._cache.get(url)?.value ?? Promise.resolve())
+                );
+                // Race so an abort takes effect immediately, not after the
+                // current batch's slowest image settles; in-flight loads keep
+                // running but are already reported through the normal error
+                // path.
+                await (abortPromise ? Promise.race([batchSettled, abortPromise]) : batchSettled);
                 settled += batch.length;
                 onProgress?.(settled, urls.length);
             }
@@ -169,18 +215,22 @@ export class Cache {
     }
 
     private async _addImageInternal(src: string): Promise<void> {
-        const timeoutMs = this._options.imageTimeout ?? 15000;
+        const timeoutMs = this._options.imageTimeout ?? DEFAULT_IMAGE_TIMEOUT_MS;
         const imageWithTimeout = this.withTimeout(
             this.loadImage(src),
             timeoutMs,
             `Timed out (${timeoutMs}ms) loading image`
         );
 
-        // Handle errors to prevent unhandled rejections
+        // Handle errors to prevent unhandled rejections. The failure is
+        // reported once, here at load time, via both the logger and the
+        // onError hook; renderer-side catch blocks keep their own log lines
+        // but must not re-report the same resource to onError.
         imageWithTimeout.catch((error) => {
-            this.context.logger.error(
-                `Failed to load image ${src}: ${error instanceof Error ? error.message : 'Unknown error'}`
-            );
+            const reason = error instanceof Error ? error.message : String(error);
+            const message = `Failed to load image ${src.substring(0, RESOURCE_KEY_LOG_LENGTH)}: ${reason}`;
+            this.context.logger.error(message);
+            this.context.onError?.(new Error(message));
         });
 
         // Store the promise with timeout in cache
@@ -288,7 +338,6 @@ export class Cache {
             !isSameOrigin &&
             !isBlobImage(key) &&
             typeof this._options.proxy === 'string' &&
-            FEATURES.SUPPORT_CORS_XHR &&
             !useCORS;
         if (
             !isSameOrigin &&
@@ -306,7 +355,7 @@ export class Cache {
             src = await this.proxy(src);
         }
 
-        this.context.logger.debug(`Added image ${key.substring(0, 256)}`);
+        this.context.logger.debug(`Added image ${key.substring(0, RESOURCE_KEY_LOG_LENGTH)}`);
 
         // Allocate the image in the configured window's realm when available
         // so multi-window captures do not depend on the global constructor.
@@ -329,10 +378,10 @@ export class Cache {
                 if (typeof img.decode === 'function') {
                     img.decode().then(
                         () => resolve(img),
-                        () => reject(new Error(`Failed to decode image ${src.substring(0, 256)}`))
+                        () => reject(new Error(`Failed to decode image ${src.substring(0, RESOURCE_KEY_LOG_LENGTH)}`))
                     );
                 } else {
-                    setTimeout(() => resolve(img), 500);
+                    setTimeout(() => resolve(img), INLINE_IMAGE_RESOLVE_DELAY_MS);
                 }
             }
         });
@@ -353,21 +402,16 @@ export class Cache {
             throw new Error('No proxy defined');
         }
 
-        const key = src.substring(0, 256);
+        const key = src.substring(0, RESOURCE_KEY_LOG_LENGTH);
 
         return new Promise((resolve, reject) => {
-            const responseType = FEATURES.SUPPORT_RESPONSE_TYPE ? 'blob' : 'text';
             const xhr = new XMLHttpRequest();
             xhr.onload = () => {
                 if (xhr.status === 200) {
-                    if (responseType === 'text') {
-                        resolve(xhr.response);
-                    } else {
-                        const reader = new FileReader();
-                        reader.addEventListener('load', () => resolve(reader.result as string), false);
-                        reader.addEventListener('error', (e) => reject(e), false);
-                        reader.readAsDataURL(xhr.response);
-                    }
+                    const reader = new FileReader();
+                    reader.addEventListener('load', () => resolve(reader.result as string), false);
+                    reader.addEventListener('error', (e) => reject(e), false);
+                    reader.readAsDataURL(xhr.response as Blob);
                 } else {
                     reject(`Failed to proxy resource ${key} with status code ${xhr.status}`);
                 }
@@ -375,11 +419,10 @@ export class Cache {
 
             xhr.onerror = reject;
             const queryString = proxy.indexOf('?') > -1 ? '&' : '?';
-            xhr.open('GET', `${proxy}${queryString}url=${encodeURIComponent(src)}&responseType=${responseType}`);
-
-            if (responseType !== 'text' && xhr instanceof XMLHttpRequest) {
-                xhr.responseType = responseType;
-            }
+            // The responseType query parameter is part of the proxy server
+            // contract (tests/proxy.cjs and the upstream html2canvas proxy).
+            xhr.open('GET', `${proxy}${queryString}url=${encodeURIComponent(src)}&responseType=blob`);
+            xhr.responseType = 'blob';
 
             if (this._options.imageTimeout) {
                 const timeout = this._options.imageTimeout;

@@ -61,6 +61,7 @@ class ImageMock {
     src?: string;
     crossOrigin?: string;
     onload?: () => void;
+    onerror?: (error?: Error) => void;
     constructor() {
         images.push(this);
     }
@@ -109,9 +110,7 @@ Object.defineProperty(global, 'XMLHttpRequest', {
 const setFeatures = (opts: { [key: string]: boolean } = {}) => {
     const defaults: { [key: string]: boolean } = {
         SUPPORT_SVG_DRAWING: true,
-        SUPPORT_CORS_IMAGES: true,
-        SUPPORT_CORS_XHR: true,
-        SUPPORT_RESPONSE_TYPE: false
+        SUPPORT_CORS_IMAGES: true
     };
 
     Object.keys(defaults).forEach((key) => {
@@ -227,12 +226,15 @@ describe('cache-storage', () => {
             deepStrictEqual(xhr.length, 1);
             deepStrictEqual(
                 xhr[0]?.url,
-                `${proxy}?url=${encodeURIComponent('http://html2canvas.hertzen.com/test.jpg')}&responseType=text`
+                `${proxy}?url=${encodeURIComponent('http://html2canvas.hertzen.com/test.jpg')}&responseType=blob`
             );
-            await xhr[0]?.load(200, '<data response>');
+            await xhr[0]?.load(200, new Blob(['image-bytes'], { type: 'image/png' }) as unknown as string);
 
+            for (let i = 0; i < 20 && images.length === 0; i++) {
+                await sleep(5);
+            }
             deepStrictEqual(images.length, 1);
-            deepStrictEqual(images[0]?.src, '<data response>');
+            expect((images[0]?.src ?? '').startsWith('data:image/png;base64,')).toBe(true);
         });
 
         it('proxy should respect imageTimeout', async () => {
@@ -244,7 +246,7 @@ describe('cache-storage', () => {
             deepStrictEqual(xhr.length, 1);
             deepStrictEqual(
                 xhr[0]?.url,
-                `${proxy}?url=${encodeURIComponent('http://html2canvas.hertzen.com/test.jpg')}&responseType=text`
+                `${proxy}?url=${encodeURIComponent('http://html2canvas.hertzen.com/test.jpg')}&responseType=blob`
             );
             deepStrictEqual(xhr[0]?.timeout, 10);
             if (xhr[0]?.ontimeout) {
@@ -312,6 +314,17 @@ describe('cache-storage', () => {
     });
 
     describe('defer mode', () => {
+        beforeEach(() => {
+            // preloadAll now waits for real load completion (its documented
+            // contract), so give the mock images an auto-settling decode path.
+            (ImageMock.prototype as any).complete = true;
+            (ImageMock.prototype as any).decode = () => Promise.resolve();
+        });
+        afterEach(() => {
+            delete (ImageMock.prototype as any).complete;
+            delete (ImageMock.prototype as any).decode;
+        });
+
         it('should collect URLs without loading and batch load them in preloadAll', async () => {
             const { cache } = createMockContext('http://example.com', { proxy: null });
             cache.startDefer();
@@ -552,12 +565,11 @@ describe('cache-storage', () => {
                 xhr[0]?.url,
                 `http://example.com/proxy?token=abc&url=${encodeURIComponent(
                     'http://html2canvas.hertzen.com/test.jpg'
-                )}&responseType=text`
+                )}&responseType=blob`
             );
         });
 
-        it('should use the blob response type when supported', async () => {
-            setFeatures({ SUPPORT_RESPONSE_TYPE: true });
+        it('should use the blob response type and a FileReader data URL', async () => {
             const { cache } = createMockContext('http://example.com');
             await cache.addImage('http://html2canvas.hertzen.com/test.jpg');
 
@@ -613,6 +625,94 @@ describe('cache-storage', () => {
             const { cache } = createMockContext('http://example.com', { proxy: null });
             await cache.addImage("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'></svg>");
             deepStrictEqual(images.length, 0);
+        });
+    });
+
+    describe('onError hook', () => {
+        it('reports failed image loads to onError exactly once', async () => {
+            const onError = vi.fn();
+            const { cache } = createMockContext('http://example.com', { proxy: null, onError });
+            cache.addImage('http://example.com/broken.jpg');
+            await sleep(0);
+            deepStrictEqual(images.length, 1);
+
+            images[0]?.onerror?.(new Error('load failed'));
+            await sleep(0);
+
+            deepStrictEqual(onError.mock.calls.length, 1);
+            const reported = onError.mock.calls[0]?.[0] as Error;
+            expect(reported.message).toContain('http://example.com/broken.jpg');
+            expect(reported.message).toContain('load failed');
+            // The stored entry still rejects for paint-site consumers.
+            await expect(cache.match('http://example.com/broken.jpg')).rejects.toThrow('load failed');
+        });
+
+        it('reports timed-out image loads to onError', async () => {
+            const onError = vi.fn();
+            const { cache } = createMockContext('http://example.com', {
+                proxy: null,
+                imageTimeout: 5,
+                onError
+            });
+            cache.addImage('http://example.com/slow.jpg');
+            await sleep(30);
+
+            deepStrictEqual(onError.mock.calls.length, 1);
+            expect(String(onError.mock.calls[0]?.[0])).toContain('Timed out');
+            await expect(cache.match('http://example.com/slow.jpg')).rejects.toThrow('Timed out');
+        });
+
+        it('does not call onError for successful loads', async () => {
+            const onError = vi.fn();
+            const { cache } = createMockContext('http://example.com', { proxy: null, onError });
+            const operation = cache.addImage('http://example.com/ok.jpg');
+            await sleep(0);
+            images[0]?.onload?.();
+            await operation;
+
+            deepStrictEqual(onError.mock.calls.length, 0);
+            expect(await cache.match('http://example.com/ok.jpg')).toBeDefined();
+        });
+
+        it('reports proxy failures to onError', async () => {
+            const onError = vi.fn();
+            const { cache } = createMockContext('http://example.com', { onError });
+            await cache.addImage('http://html2canvas.hertzen.com/test.jpg');
+            await sleep(0);
+            await xhr[0]?.load(500, 'server error');
+            await sleep(0);
+
+            deepStrictEqual(onError.mock.calls.length, 1);
+            expect(String(onError.mock.calls[0]?.[0])).toContain('Failed to proxy resource');
+        });
+    });
+
+    describe('preloadAll abort', () => {
+        it('rejects immediately when the signal is already aborted', async () => {
+            const { cache } = createMockContext('http://example.com', { proxy: null });
+            cache.startDefer();
+            await cache.addImage('http://example.com/a.jpg');
+
+            const controller = new AbortController();
+            controller.abort();
+            await expect(cache.preloadAll(10, undefined, controller.signal)).rejects.toThrow();
+            deepStrictEqual(images.length, 0);
+        });
+
+        it('stops between batches when aborted mid-preload', async () => {
+            const { cache } = createMockContext('http://example.com', { proxy: null });
+            cache.startDefer();
+            for (const name of ['a.jpg', 'b.jpg']) {
+                await cache.addImage(`http://example.com/${name}`);
+            }
+
+            const controller = new AbortController();
+            const loading = cache.preloadAll(1, undefined, controller.signal); // one image per batch
+            await sleep(0); // first batch starts
+            controller.abort();
+            await expect(loading).rejects.toThrow();
+            // Only the first batch's image was started.
+            deepStrictEqual(images.length, 1);
         });
     });
 });

@@ -8,6 +8,19 @@ import { Validator } from './core/validator';
  *
  * Combines clone, window, render, and context configuration into a single
  * options object. All properties are optional.
+ *
+ * The full surface is composed from these interfaces (each documented where
+ * it is declared):
+ * - {@link CloneOptions} — `ignoreElements`, `onclone`, `allowTaint`,
+ *   `iframeContainer` (src/dom/document-cloner.ts)
+ * - {@link WindowOptions} — `scrollX`, `scrollY`, `windowWidth`,
+ *   `windowHeight` (src/dom/document-cloner.ts)
+ * - {@link RenderOptions} — `scale`, `canvas`, `x`, `y`, `width`, `height`
+ *   (src/render/canvas/canvas-renderer.ts)
+ * - {@link ContextOptions} — `logging`, `cache`, `onError`, plus the
+ *   `ResourceOptions` it extends: `imageTimeout`, `useCORS`, `proxy`,
+ *   `customIsSameOrigin`, `maxCacheSize` (src/core/context.ts and
+ *   src/core/cache-storage.ts)
  */
 export type Options = CloneOptions &
     WindowOptions &
@@ -63,6 +76,9 @@ export type Options = CloneOptions &
         /**
          * Called when a resource fails to load (image, font, iframe, etc.).
          * The render continues — this is a notification hook, not an abort.
+         * Image/proxy load failures are reported exactly once, by the
+         * resource cache at load time; iframe content failures are reported
+         * by the iframe container.
          */
         onError?: (error: Error) => void;
         /**

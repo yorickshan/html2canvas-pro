@@ -15,9 +15,17 @@ export interface IPropertyDescriptor {
     type: PropertyDescriptorParsingType;
     initialValue: string;
     prefix: boolean;
-    /** When true, the parse result is never stored in parseCache.
-     *  Set this for descriptors whose parse() has side effects (e.g.,
-     *  calling context.cache.addImage) that must run on every render pass. */
+    /**
+     * When true, the parse result is never stored in parseCache.
+     * Set this for descriptors whose parse() has side effects (e.g.,
+     * calling context.cache.addImage) that must run on every render pass.
+     *
+     * parse() purity contract: for every descriptor without skipCache, parse()
+     * MUST be a pure function of (raw computed string) — its result is
+     * memoised in a process-wide cache shared across renders and contexts.
+     * Any new side effect (resource loading, context capture) requires
+     * skipCache: true, or the effect silently stops running.
+     */
     skipCache?: boolean;
 }
 

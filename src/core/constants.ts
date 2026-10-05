@@ -24,6 +24,19 @@ export const SHADOW_MASK_OFFSET = 10_000;
 /** Polling interval (ms) when waiting for the cloned iframe to become ready. */
 export const IFRAME_READY_POLL_MS = 50;
 
+/**
+ * Total time (ms) to wait for the cloned iframe document to become ready
+ * after its load event. A missed deadline resolves with a warning (the
+ * capture continues with a possibly incomplete document).
+ */
+export const CLONE_READY_TIMEOUT_MS = 30_000;
+
+/**
+ * Hard ceiling (ms) for the cloned iframe's load event itself. If the event
+ * never fires, the mount is rejected instead of hanging forever.
+ */
+export const IFRAME_LOAD_WATCHDOG_MS = 60_000;
+
 /** Deferred resolution delay (ms) for inline XML images that may fail to parse. */
 export const INLINE_IMAGE_RESOLVE_DELAY_MS = 500;
 

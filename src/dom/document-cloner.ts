@@ -49,6 +49,8 @@ export type CloneConfigurations = CloneOptions & {
     inlineImages: boolean;
     copyStyles: boolean;
     cspNonce?: string;
+    /** Aborting rejects the iframe mount instead of waiting out readiness windows. */
+    signal?: AbortSignal;
 };
 
 /**
@@ -156,7 +158,8 @@ export class DocumentCloner {
             referenceElementName: this.referenceElement.nodeName,
             scrolledElements: this.scrolledElements,
             onclone: this.options.onclone,
-            container: this.options.iframeContainer
+            container: this.options.iframeContainer,
+            signal: this.options.signal
         });
     }
 

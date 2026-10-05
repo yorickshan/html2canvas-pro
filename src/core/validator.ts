@@ -12,8 +12,6 @@ export interface ValidationResult {
     valid: boolean;
     error?: string;
     sanitized?: unknown;
-    /** Indicates if runtime validation is recommended (e.g. for proxy URLs against DNS rebinding) */
-    requiresRuntimeCheck?: boolean;
 }
 
 /**
@@ -154,13 +152,10 @@ export class Validator {
                     }
                 }
 
-                // For proxy URLs, mark that runtime validation is recommended
-                // to prevent DNS rebinding attacks
-                return {
-                    valid: true,
-                    sanitized: url,
-                    requiresRuntimeCheck: true
-                };
+                // Static hostname checks are best-effort: a proxy operator must
+                // additionally pin/resolve proxy targets server-side, since
+                // client-side validation cannot defend against DNS rebinding.
+                return { valid: true, sanitized: url };
             }
 
             return { valid: true, sanitized: url };
@@ -511,8 +506,6 @@ export class Validator {
             if (!proxyResult.valid) {
                 errors.push(`Proxy: ${proxyResult.error}`);
             }
-            // Note: Proxy URLs are marked with requiresRuntimeCheck to prevent DNS rebinding
-            // Consider implementing runtime IP validation in production environments
         }
 
         // Validate image timeout
@@ -521,9 +514,7 @@ export class Validator {
             if (!timeoutResult.valid) {
                 errors.push(`Image timeout: ${timeoutResult.error}`);
             }
-        }
-
-        // Validate dimensions
+        } // Validate dimensions
         if (options.width !== undefined || options.height !== undefined) {
             const width = (options.width as number) ?? 800;
             const height = (options.height as number) ?? 600;

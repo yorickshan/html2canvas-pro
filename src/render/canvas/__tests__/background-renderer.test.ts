@@ -329,8 +329,9 @@ describe('BackgroundRenderer', () => {
                 container({ backgroundImage: [urlImage('http://localhost/missing.png')] })
             );
             expect(loggerError).toHaveBeenCalledWith('Error loading background-image http://localhost/missing.png');
-            expect(onError).toHaveBeenCalledTimes(1);
-            expect((onError.mock.calls[0]?.[0] as Error)?.message).toBe('network down');
+            // Load failures are reported to onError exactly once, by the
+            // resource cache at load time; the paint site only logs.
+            expect(onError).not.toHaveBeenCalled();
             expect(ctx.createPattern).not.toHaveBeenCalled();
             expect(ctx.fill).not.toHaveBeenCalled();
         });

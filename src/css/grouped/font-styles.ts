@@ -2,6 +2,10 @@ import type { CSSParsedDeclaration } from '../index';
 
 /**
  * Read-only grouped accessor for font/text-related CSS properties.
+ *
+ * Convenience accessors only — the render pipeline reads the top-level
+ * parsed fields directly. Some underlying properties are parsed but not
+ * rendered; see docs/features.md "Known unsupported CSS features".
  */
 export class FontStyles {
     constructor(private readonly styles: CSSParsedDeclaration) {}

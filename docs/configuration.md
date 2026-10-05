@@ -119,8 +119,10 @@ const controller = new AbortController();
 
 html2canvas(element, {
     onError: (error) => {
-        // A resource (image, font, …) failed to load.
-        // The render continues — this is a notification hook, not an abort.
+        // A resource (image, font, …) failed to load. Image and proxy
+        // failures are reported exactly once, by the resource cache at
+        // load time. The render continues — this is a notification hook,
+        // not an abort.
         console.warn('Resource failed:', error);
     },
     signal: controller.signal
@@ -128,7 +130,9 @@ html2canvas(element, {
     document.body.appendChild(canvas);
 });
 
-// Cancel the in-progress capture; the promise rejects with an `AbortError`:
+// Cancel the in-progress capture; the promise rejects with an `AbortError`.
+// Aborting is honoured while cloning (iframe readiness) and while preloading
+// images, not only between pipeline phases.
 controller.abort();
 ```
 

@@ -2,9 +2,10 @@
  * Runtime feature detection.
  *
  * Only checks that still gate real behaviour are kept: range-bounds
- * measurement (iOS 13 quirk), SVG drawing and CORS plumbing. Dead probes
- * (IE-era CORS/response-type assumptions aside) were removed as their
- * consumers disappeared; Intl.Segmenter is now used unconditionally.
+ * measurement (iOS 13 quirk), SVG drawing and CORS image support.
+ * Dead probes (IE-era CORS XHR / XHR response-type checks) were removed —
+ * every supported browser exposes `crossOrigin`, `responseType` and
+ * `withCredentials`; Intl.Segmenter is used unconditionally.
  */
 
 const testRangeBounds = (document: Document) => {
@@ -32,8 +33,6 @@ const testRangeBounds = (document: Document) => {
 };
 
 const testCORS = (): boolean => typeof new Image().crossOrigin !== 'undefined';
-
-const testResponseType = (): boolean => typeof new XMLHttpRequest().responseType === 'string';
 
 const testSVG = (document: Document): boolean => {
     const img = new Image();
@@ -106,18 +105,6 @@ export const FEATURES = {
         'use strict';
         const value = testCORS();
         Object.defineProperty(FEATURES, 'SUPPORT_CORS_IMAGES', { value });
-        return value;
-    },
-    get SUPPORT_RESPONSE_TYPE(): boolean {
-        'use strict';
-        const value = testResponseType();
-        Object.defineProperty(FEATURES, 'SUPPORT_RESPONSE_TYPE', { value });
-        return value;
-    },
-    get SUPPORT_CORS_XHR(): boolean {
-        'use strict';
-        const value = 'withCredentials' in new XMLHttpRequest();
-        Object.defineProperty(FEATURES, 'SUPPORT_CORS_XHR', { value });
         return value;
     }
 };

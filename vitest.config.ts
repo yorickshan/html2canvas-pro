@@ -5,8 +5,8 @@ import { defineConfig } from 'vitest/config';
  *
  * Unit tests (jsdom) cannot exercise canvas painting, so the browser-only
  * render orchestrators sit far below the layers they drag down. Those files
- * are gated by the karma reftest suite (115 HTML reftests in a real browser,
- * run in CI on a browser matrix) instead of by unit coverage.
+ * are gated by the Playwright reftest suite (115 HTML reftests in real
+ * browsers, run in CI on a browser matrix) instead of by unit coverage.
  *
  * Layer gates measure each subtree's aggregate at its real unit-testable
  * level (~1.5–2pp headroom), so pure-logic modules are no longer implicitly

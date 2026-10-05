@@ -13,14 +13,6 @@ describe('FEATURES', () => {
     it('has boolean SUPPORT_CORS_IMAGES', () => {
         expect(typeof FEATURES.SUPPORT_CORS_IMAGES).toBe('boolean');
     });
-
-    it('has boolean SUPPORT_RESPONSE_TYPE', () => {
-        expect(typeof FEATURES.SUPPORT_RESPONSE_TYPE).toBe('boolean');
-    });
-
-    it('has boolean SUPPORT_CORS_XHR', () => {
-        expect(typeof FEATURES.SUPPORT_CORS_XHR).toBe('boolean');
-    });
 });
 
 describe('createForeignObjectSVG', () => {
@@ -53,13 +45,7 @@ describe('loadSerializedSVG', () => {
 // test runs) to allow re-running each detection under different mocks.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const FEATURE_KEYS = [
-    'SUPPORT_RANGE_BOUNDS',
-    'SUPPORT_SVG_DRAWING',
-    'SUPPORT_CORS_IMAGES',
-    'SUPPORT_RESPONSE_TYPE',
-    'SUPPORT_CORS_XHR'
-] as const;
+const FEATURE_KEYS = ['SUPPORT_RANGE_BOUNDS', 'SUPPORT_SVG_DRAWING', 'SUPPORT_CORS_IMAGES'] as const;
 
 type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -175,7 +161,7 @@ describe('FEATURES detection paths', () => {
         });
     });
 
-    describe('CORS and XHR response type detection', () => {
+    describe('CORS detection', () => {
         it('SUPPORT_CORS_IMAGES is true for real Image elements exposing crossOrigin', () => {
             restoreFeature('SUPPORT_CORS_IMAGES');
             expect(FEATURES.SUPPORT_CORS_IMAGES).toBe(true);
@@ -190,27 +176,6 @@ describe('FEATURES detection paths', () => {
             } finally {
                 vi.unstubAllGlobals();
             }
-        });
-
-        it('SUPPORT_RESPONSE_TYPE is true for real XMLHttpRequest', () => {
-            restoreFeature('SUPPORT_RESPONSE_TYPE');
-            expect(FEATURES.SUPPORT_RESPONSE_TYPE).toBe(true);
-        });
-
-        it('SUPPORT_RESPONSE_TYPE is false when responseType is missing', () => {
-            class BareXHR {}
-            vi.stubGlobal('XMLHttpRequest', BareXHR);
-            try {
-                restoreFeature('SUPPORT_RESPONSE_TYPE');
-                expect(FEATURES.SUPPORT_RESPONSE_TYPE).toBe(false);
-            } finally {
-                vi.unstubAllGlobals();
-            }
-        });
-
-        it('SUPPORT_CORS_XHR is true when withCredentials is supported', () => {
-            restoreFeature('SUPPORT_CORS_XHR');
-            expect(FEATURES.SUPPORT_CORS_XHR).toBe(true);
         });
     });
 });

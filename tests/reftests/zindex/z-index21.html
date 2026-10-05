@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>negative z-index siblings paint most negative first; z-index test #21</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="../../test.js"></script>
+    <style type="text/css">
+    .outer {
+        background-color:cyan;
+        width:220px;
+        height:220px;
+        z-index:0;
+        position:relative;
+    }
+
+    /* Tree order matters: the more negative sibling comes first, which used
+       to be painted last (inverted insertion index). Browsers paint -2 below
+       -1, so the green box covers the red box where they overlap. */
+    .back {
+        background-color:red;
+        width:120px;
+        height:120px;
+        z-index:-2;
+        position:absolute;
+        top:0;left:0;
+    }
+
+    .front {
+        background-color:green;
+        width:120px;
+        height:120px;
+        z-index:-1;
+        position:absolute;
+        top:40px;left:40px;
+    }
+    body {
+        font-family: Arial;
+        margin: 8px;
+    }
+    </style></head>
+
+  <body>
+    <div class="outer">outer
+      <div class="back"></div>
+      <div class="front"></div>
+  </div>
+  </body>
+</html>

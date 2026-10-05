@@ -95,7 +95,8 @@ export const assembleCloneOptions = (
     iframeContainer: opts.iframeContainer,
     inlineImages: foreignObjectRendering,
     copyStyles: foreignObjectRendering,
-    cspNonce: opts.cspNonce ?? config.cspNonce
+    cspNonce: opts.cspNonce ?? config.cspNonce,
+    signal: opts.signal
 });
 
 /** Assemble canvas rendering options. */

@@ -623,23 +623,6 @@ export class CanvasRenderer {
         }
     }
 
-    mask(paths: Path[]): void {
-        this.ctx.beginPath();
-        // Anchor the mask rectangle to (options.x, options.y) instead of (0, 0)
-        // because ctx.translate(-options.x, -options.y) shifts the coordinate system.
-        // Fix for Issue #230: inset box-shadow rendering was inverted for elements
-        // not at document origin due to the mask covering the wrong region.
-        const x = this.options.x;
-        const y = this.options.y;
-        this.ctx.moveTo(x, y);
-        this.ctx.lineTo(x + this.options.width, y);
-        this.ctx.lineTo(x + this.options.width, y + this.options.height);
-        this.ctx.lineTo(x, y + this.options.height);
-        this.ctx.lineTo(x, y);
-        this.formatPath(paths.slice(0).reverse());
-        this.ctx.closePath();
-    }
-
     path(paths: Path[]): void {
         createCanvasPath(this.ctx, paths);
     }

@@ -17,7 +17,7 @@ export default [
             parser: tsparser,
             parserOptions: {
                 project: ['./tsconfig.json', './tests/tsconfig.json'],
-                ecmaVersion: 2018,
+                ecmaVersion: 2022,
                 sourceType: 'module',
             },
         },

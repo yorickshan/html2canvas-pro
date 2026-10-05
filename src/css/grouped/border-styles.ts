@@ -3,6 +3,10 @@ import type { CSSParsedDeclaration } from '../index';
 /**
  * Read-only grouped accessor for border-related CSS properties.
  *
+ * Convenience accessors only — the render pipeline reads the top-level
+ * parsed fields directly. Some underlying properties are parsed but not
+ * rendered; see docs/features.md "Known unsupported CSS features".
+ *
  * Provides structured access: `styles.border.topColor` as an alternative
  * to the flat `styles.borderTopColor`. Both forms remain valid.
  */

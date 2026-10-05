@@ -151,9 +151,6 @@ jobs:
                   path: build
             - name: Ensure browser test prerequisites
               run: pnpm prebrowser
-            - name: xcode selection
-              if: ${{ matrix.config.xcode != '' }}
-              run: sudo xcode-select -s "${{ matrix.config.xcode }}"
             - name: Install Playwright browser
               run: pnpm exec playwright install --with-deps ${{ matrix.config.playwrightBrowser }}
             - name: Run browser tests

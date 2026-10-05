@@ -168,6 +168,30 @@ All previously listed unsupported properties are now implemented:
  - **translate / scale / rotate** — CSS Transforms Level 2 individual transform properties, composed with `transform` in spec order (translate → rotate → scale → transform) around the shared `transform-origin`
  - **color-mix()** — Interpolation in `srgb`, `srgb-linear`, `lab`, `oklab`, `lch`, `oklch`, `hsl`, `xyz`, `xyz-d50`, `xyz-d65` with alpha premultiplication and named hue methods; unsupported forms degrade to transparent. Modern browsers hand html2canvas-pro the already-resolved `color()`/`lab()`/`oklab()` computed value, so captures work there even without this parser
 
+## Known unsupported CSS features
+
+Some properties are parsed (so they appear in the supported list) but have no
+rendering effect, and others are not supported at all. This section keeps the
+honest boundary visible:
+
+- **`background-attachment: fixed` / `local`** — not parsed; backgrounds render
+  as if `scroll`.
+- **3D transforms** — `perspective()`, the `perspective` property and
+  `transform-style: preserve-3d` are not implemented; `matrix3d()` is projected
+  onto its 2D components (the z axis is dropped).
+- **`mask-mode: luminance`**, **`mask-composite`**, **`mask-clip` /
+  `mask-origin`** — alpha masking with the spec-default additive compositing
+  only (see [Mask support](#mask-support)).
+- **`line-break`** — parsed but not applied; line segmentation uses
+  `Intl.Segmenter` defaults.
+- **`box-decoration-break: clone`** — parsed; the clone/slice painting
+  difference is not rendered.
+- **`font-variant-ligatures`** and other OpenType feature selectors — parsed;
+  the Canvas 2D font engine cannot select font features (only `small-caps`
+  via `font-variant`).
+- **`::first-line`, `::first-letter`, `::selection`** — pseudo-element styling
+  beyond `::before` / `::after` is not captured.
+
 ## Additional Features
 
 ### Image Smoothing Control

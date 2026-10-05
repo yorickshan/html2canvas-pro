@@ -137,8 +137,9 @@ export class BackgroundRenderer {
         try {
             image = await this.context.cache.match(url);
         } catch (e) {
+            // Load failures are reported to onError once, by the cache; this
+            // catch adds the usage context to the log only.
             this.context.logger.error(`Error loading background-image ${url}`);
-            this.context.onError?.(e instanceof Error ? e : new Error(String(e)));
         }
 
         if (image) {

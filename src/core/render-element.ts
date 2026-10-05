@@ -189,11 +189,22 @@ export const renderElement = async (
             emitProgress(opts.onProgress, context, ProgressPhase.PARSE, 50);
 
             // Batch-preload all collected images in parallel before rendering,
-            // reporting progress across the 50→60 range.
+            // reporting progress across the 50→60 range. The abort signal
+            // stops the wait as soon as it fires instead of after the
+            // slowest batch's images settle.
             perfMonitor.start('preload');
-            await context.cache.preloadAll(10, (loaded, total) => {
-                emitProgress(opts.onProgress, context, ProgressPhase.PRELOAD, 50 + Math.round((loaded / total) * 10));
-            });
+            await context.cache.preloadAll(
+                10,
+                (loaded, total) => {
+                    emitProgress(
+                        opts.onProgress,
+                        context,
+                        ProgressPhase.PRELOAD,
+                        50 + Math.round((loaded / total) * 10)
+                    );
+                },
+                signal
+            );
             perfMonitor.end('preload');
 
             // Element bounds and text layout were measured during parse; with

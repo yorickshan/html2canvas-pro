@@ -668,9 +668,9 @@ describe('parseStackingContexts – tree structure', () => {
         const root = parseStackingContexts(container);
 
         const negative = root.negativeZIndex.map((stack) => stack.element.container.styles.zIndex.order);
-        // Upstream insertion algorithm: new negative contexts splice at the found
-        // index, which yields most-positive-negative first rather than ascending.
-        expect(negative).toEqual([-1, -2, -3]);
+        // Painting paints negativeZIndex in array order, so it must be sorted
+        // ascending (most negative first) regardless of tree order.
+        expect(negative).toEqual([-3, -2, -1]);
 
         const positive = root.positiveZIndex.map((stack) => stack.element.container.styles.zIndex.order);
         expect(positive).toEqual([1, 5]);
@@ -691,6 +691,36 @@ describe('parseStackingContexts – tree structure', () => {
         expect(dupStack.positiveZIndex).toHaveLength(2);
         expect(dupStack.positiveZIndex[0]?.element.container).toBe(dupContainer.elements[0]);
         expect(dupStack.positiveZIndex[1]?.element.container).toBe(dupContainer.elements[1]);
+    });
+
+    it('sorts negative z-index siblings ascending even when the tree lists the least negative first', () => {
+        // Regression: the old insertion spliced a greater (less negative) order
+        // at the found index instead of after it, inverting the paint order of
+        // multi-negative-sibling trees (e.g. tree order -2, -1 painted -1 first).
+        const els = {
+            a: document.createElement('div'),
+            b: document.createElement('div'),
+            c: document.createElement('div')
+        };
+        const rootEl = document.createElement('div');
+        Object.values(els).forEach((el) => rootEl.appendChild(el));
+
+        const container = buildContainer(
+            () => rootEl,
+            (el): StyleOverrides | undefined => {
+                if (el === els.a) return { position: 'absolute', zIndex: '-2' };
+                if (el === els.b) return { position: 'absolute', zIndex: '-1' };
+                if (el === els.c) return { position: 'absolute', zIndex: '-2' };
+                return undefined;
+            }
+        );
+        assignLayout(container);
+        const root = parseStackingContexts(container);
+
+        expect(root.negativeZIndex.map((stack) => stack.element.container.styles.zIndex.order)).toEqual([-2, -2, -1]);
+        // Equal negative z-index values keep tree order (stability).
+        expect(root.negativeZIndex[0]?.element.container).toBe(container.elements[0]);
+        expect(root.negativeZIndex[1]?.element.container).toBe(container.elements[2]);
     });
 
     it('classifies non-positioned floats, inline level and non-inline level nodes', () => {

@@ -405,8 +405,8 @@ const parseStackTree = (
                     let index = 0;
 
                     parentStack.negativeZIndex.some((current, i) => {
-                        if (order > current.element.container.styles.zIndex.order) {
-                            index = i;
+                        if (order >= current.element.container.styles.zIndex.order) {
+                            index = i + 1;
                             return false;
                         } else if (index > 0) {
                             return true;

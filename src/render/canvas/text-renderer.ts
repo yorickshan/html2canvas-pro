@@ -42,9 +42,6 @@ export interface TextRendererDependencies {
     };
 }
 
-// iOS font fix - see https://github.com/niklasvh/html2canvas/pull/2645
-const iOSBrokenFonts = ['-apple-system', 'system-ui'];
-
 // Tolerance (px) for text-overflow: ellipsis detection. Canvas measureText can
 // report a width a fraction of a pixel wider than the browser's layout box, so
 // text that fits exactly must not be truncated (issue #226).
@@ -69,65 +66,26 @@ const CJK_CHAR_REGEX = /[\u2E80-\u2FFF\u3000-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uA
 export const hasCJKCharacters = (text: string): boolean => CJK_CHAR_REGEX.test(text);
 
 /**
- * Detect iOS version from user agent
- * Returns null if not iOS or version cannot be determined
+ * Chromium-based engines render stroked text with visibly sharper joins when
+ * `miter` is requested, closely matching their own -webkit-text-stroke
+ * output; other engines need `round` joins to avoid glyph spikes. No CSS or
+ * platform API expresses this behavioural difference, so engine detection is
+ * the only reliable signal: `navigator.userAgentData` is Chromium-only, with
+ * the legacy `window.chrome` marker as a fallback for older webviews.
  */
-const getIOSVersion = (): number | null => {
+const isChromiumEngine = (): boolean => {
     if (typeof navigator === 'undefined') {
-        return null;
+        return false;
     }
-
-    const userAgent = navigator.userAgent;
-
-    // Check if it's iOS or iPadOS
-    // iPadOS 13+ may identify as Macintosh, check for touch support
-    const isIOS = /iPhone|iPad|iPod/.test(userAgent);
-    const isIPadOS = /Macintosh/.test(userAgent) && navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
-
-    if (!isIOS && !isIPadOS) {
-        return null;
+    const nav = navigator as Navigator & { userAgentData?: unknown };
+    if (nav.userAgentData !== undefined) {
+        return true;
     }
-
-    // Extract version number from various iOS user agent formats:
-    // - "iPhone OS 15_0" or "iPhone OS 15_0_1"
-    // - "CPU OS 15_0 like Mac OS X"
-    // - "CPU iPhone OS 15_0 like Mac OS X"
-    // - "Version/15.0" (for iPadOS)
-    const patterns = [
-        /(?:iPhone|CPU(?:\siPhone)?)\sOS\s(\d+)[\._](\d+)/, // iPhone OS, CPU OS, CPU iPhone OS
-        /Version\/(\d+)\.(\d+)/ // Version/15.0 (iPadOS)
-    ];
-
-    for (const pattern of patterns) {
-        const match = userAgent.match(pattern);
-        if (match && match[1]) {
-            return parseInt(match[1], 10);
-        }
-    }
-
-    return null;
-};
-
-const fixIOSSystemFonts = (fontFamilies: string[]): string[] => {
-    const iosVersion = getIOSVersion();
-
-    // On iOS 15.0 and 15.1, system fonts have rendering issues
-    // Fixed in iOS 17+
-    if (iosVersion !== null && iosVersion >= 15 && iosVersion < 17) {
-        return fontFamilies.map((fontFamily) =>
-            iOSBrokenFonts.indexOf(fontFamily) !== -1
-                ? `-apple-system, "Helvetica Neue", Arial, sans-serif`
-                : fontFamily
-        );
-    }
-
-    return fontFamilies;
-};
-
-const getTextStrokeLineJoin = (): CanvasLineJoin => {
     const currentWindow = typeof window !== 'undefined' ? (window as Window & { chrome?: unknown }) : undefined;
-    return currentWindow?.chrome ? 'miter' : 'round';
+    return currentWindow?.chrome !== undefined;
 };
+
+const getTextStrokeLineJoin = (): CanvasLineJoin => (isChromiumEngine() ? 'miter' : 'round');
 
 /**
  * Text Renderer
@@ -448,7 +406,7 @@ export class TextRenderer {
         const fontVariant = styles.fontVariant
             .filter((variant) => variant === 'normal' || variant === 'small-caps')
             .join('');
-        const fontFamily = fixIOSSystemFonts(styles.fontFamily).join(', ');
+        const fontFamily = styles.fontFamily.join(', ');
         const fontSize = isDimensionToken(styles.fontSize)
             ? `${styles.fontSize.number}${styles.fontSize.unit}`
             : `${styles.fontSize.number}px`;

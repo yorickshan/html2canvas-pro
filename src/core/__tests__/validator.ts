@@ -375,30 +375,17 @@ describe('Validator', () => {
     });
 
     describe('Proxy context behavior', () => {
-        it('should mark valid proxy URLs with requiresRuntimeCheck', () => {
+        it('should accept valid proxy URLs', () => {
             const validator = createDefaultValidator();
             const result = validator.validateUrl('https://8.8.8.8/proxy', 'proxy');
             strictEqual(result.valid, true);
-            strictEqual(result.requiresRuntimeCheck, true);
             strictEqual(result.sanitized, 'https://8.8.8.8/proxy');
-        });
-
-        it('should not mark general/image URLs with requiresRuntimeCheck', () => {
-            const validator = createDefaultValidator();
-            const general = validator.validateUrl('https://example.com/test.jpg');
-            strictEqual(general.valid, true);
-            strictEqual(general.requiresRuntimeCheck, undefined);
-
-            const image = validator.validateUrl('https://example.com/test.jpg', 'image');
-            strictEqual(image.valid, true);
-            strictEqual(image.requiresRuntimeCheck, undefined);
         });
 
         it('should allow localhost proxy when allowLocalhostProxy is set (dev/test)', () => {
             const validator = new Validator({ allowLocalhostProxy: true });
             const result = validator.validateUrl('http://127.0.0.1:9876/proxy', 'proxy');
             strictEqual(result.valid, true);
-            strictEqual(result.requiresRuntimeCheck, true);
         });
 
         it('should skip private IP checks when allowLocalhostProxy is set', () => {
