@@ -85,7 +85,7 @@ const isChromiumEngine = (): boolean => {
     return currentWindow?.chrome !== undefined;
 };
 
-const getTextStrokeLineJoin = (): CanvasLineJoin => (isChromiumEngine() ? 'miter' : 'round');
+export const getTextStrokeLineJoin = (): CanvasLineJoin => (isChromiumEngine() ? 'miter' : 'round');
 
 /**
  * Text Renderer

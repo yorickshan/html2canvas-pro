@@ -428,7 +428,6 @@ resolves them to the standard properties in computed style.
   `mask-composite` operations are not supported.
 - `mask-clip` / `mask-origin` are not parsed; the border box is used as the
   mask positioning area.
-- Repeating gradients render their base cycle at the repeating period.
 - Like `filter`, an unsupported subtree (transformed ancestors, etc.) keeps the
   previous renderer without the mask — check the console for the info log.
 

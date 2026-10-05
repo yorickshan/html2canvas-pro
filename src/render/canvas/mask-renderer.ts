@@ -10,8 +10,11 @@
  * always fills the whole area — a mask surface is about alpha coverage, not
  * about what is visible underneath.
  *
- * Limitations (v1): repeating gradients render their base cycle; mask-mode is
- * alpha-only; layers composite with source-over (≈ the default `add`).
+ * Gradient layers share the rasterisation primitives of the background
+ * renderer (gradient-rasterizer.ts): repeating gradients stack their stop
+ * cycles, and the area beyond a radial gradient's ending shape keeps the
+ * last stop's colour. Limitations (v1): mask-mode is alpha-only; layers
+ * composite with source-over (≈ the spec-default `add`).
  */
 
 import {
@@ -21,7 +24,6 @@ import {
     CSSRadialGradientImage,
     CSSURLImage,
     ICSSImage,
-    isConicGradient,
     isRadialGradient,
     isRepeatingRadialGradient
 } from '../../css/types/image';
@@ -37,6 +39,7 @@ import { BACKGROUND_REPEAT } from '../../css/property-descriptors/background-rep
 import { BACKGROUND_SIZE, BackgroundSizeInfo } from '../../css/property-descriptors/background-size';
 import { asString } from '../../css/types/color-utilities';
 import { at } from '../../core/util';
+import { rasterizeRadialGradient, stackRepeatingStops, toCanvasStops } from './gradient-rasterizer';
 
 /**
  * CSS layer lists cycle: a single mask-size applies to every mask-image
@@ -153,20 +156,19 @@ const paintRadialLayer = (ctx: CanvasRenderingContext2D, layer: CSSRadialGradien
     rx = Math.max(rx, 0.01);
     ry = Math.max(ry, 0.01);
 
-    const offscreen = (ctx.canvas.ownerDocument ?? document).createElement('canvas');
-    offscreen.width = Math.ceil(rx * 2);
-    offscreen.height = Math.ceil(ry * 2);
-    const offCtx = offscreen.getContext('2d');
-    if (!offCtx) return;
-    const gradient = offCtx.createRadialGradient(rx, rx, 0, rx, rx, rx);
-    // processColorStops returns stops normalised to [0, 1].
-    processColorStops(layer.stops, rx * 2).forEach((s) =>
-        gradient.addColorStop(Math.min(1, Math.max(0, s.stop)), asString(s.color))
-    );
-    offCtx.fillStyle = gradient;
-    if (rx !== ry) offCtx.scale(1, ry / rx);
-    offCtx.fillRect(0, 0, rx * 2, ry * 2);
-    ctx.drawImage(offscreen, area.left + cx - rx, area.top + cy - ry, rx * 2, ry * 2);
+    const ownerDocument = ctx.canvas.ownerDocument ?? document;
+    // Shared ellipse rasteriser keeps the stop line length (rx), the
+    // pre-scale fill coverage and the repeating stop stacking in one place.
+    const rasterized = rasterizeRadialGradient(ownerDocument, rx, ry, layer.stops, isRepeatingRadialGradient(layer));
+    if (!rasterized) {
+        return;
+    }
+    // Outside the ending shape the gradient continues with its last colour —
+    // for a mask that means the whole positioning area keeps that alpha, not
+    // just the ellipse's bounding box.
+    ctx.fillStyle = rasterized.lastColor;
+    ctx.fillRect(area.left, area.top, area.width, area.height);
+    ctx.drawImage(rasterized.canvas, area.left + cx - rx, area.top + cy - ry, rx * 2, ry * 2);
 };
 
 /** Draw one gradient layer filling the whole mask area. */
@@ -186,23 +188,40 @@ const paintGradientLayer = (ctx: CanvasRenderingContext2D, layer: ICSSImage, are
         // area-local coordinates; the gradient line must be offset into the
         // same page-coordinate space the fillRect below uses.
         const [lineLength, lx0, lx1, ly0, ly1] = calculateGradientDirection(linear.angle || 0, width, height);
-        gradient = ctx.createLinearGradient(area.left + lx0, area.top + ly0, area.left + lx1, area.top + ly1);
-        processColorStops(linear.stops, lineLength || 1).forEach((s) =>
-            gradient!.addColorStop(Math.min(1, Math.max(0, s.stop)), asString(s.color))
-        );
-    } else if (isConicGradient(layer)) {
+        const processed = processColorStops(linear.stops, lineLength || 1);
+        if (layer.type === CSSImageType.REPEATING_LINEAR_GRADIENT) {
+            const stacked = stackRepeatingStops(processed);
+            if (!stacked) {
+                // Degenerate period: the last colour covers the whole area.
+                ctx.fillStyle = asString(at(processed, processed.length - 1).color);
+                ctx.fillRect(area.left, area.top, width, height);
+                return;
+            }
+            gradient = ctx.createLinearGradient(area.left + lx0, area.top + ly0, area.left + lx1, area.top + ly1);
+            stacked.forEach((s) => gradient!.addColorStop(Math.min(1, Math.max(0, s.stop)), s.color));
+        } else {
+            gradient = ctx.createLinearGradient(area.left + lx0, area.top + ly0, area.left + lx1, area.top + ly1);
+            toCanvasStops(processed).forEach((s) => gradient!.addColorStop(s.stop, s.color));
+        }
+    } else if (layer.type === CSSImageType.CONIC_GRADIENT || layer.type === CSSImageType.REPEATING_CONIC_GRADIENT) {
         const conic = layer as CSSConicGradientImage;
+        const processed = processColorStops(conic.stops, 1);
+        const repeating = layer.type === CSSImageType.REPEATING_CONIC_GRADIENT;
+        if (repeating && !stackRepeatingStops(processed)) {
+            // Degenerate period: the last colour covers the whole area.
+            ctx.fillStyle = asString(at(processed, processed.length - 1).color);
+            ctx.fillRect(area.left, area.top, width, height);
+            return;
+        }
         // Canvas conic starts at 3 o'clock, CSS `from 0deg` at 12 o'clock.
         gradient = ctx.createConicGradient(conic.angle - Math.PI / 2, area.left + width / 2, area.top + height / 2);
-        processColorStops(conic.stops, 1).forEach((s) =>
-            gradient!.addColorStop(Math.min(1, Math.max(0, s.stop)), asString(s.color))
-        );
+        const stops = (repeating ? stackRepeatingStops(processed) : null) ?? toCanvasStops(processed);
+        stops.forEach((s) => gradient!.addColorStop(Math.min(1, Math.max(0, s.stop)), s.color));
     }
 
     if (gradient) {
         ctx.fillStyle = gradient;
         ctx.fillRect(area.left, area.top, width, height);
-    } else {
     }
 };
 

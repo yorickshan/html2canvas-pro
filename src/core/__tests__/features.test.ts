@@ -62,10 +62,6 @@ const restoreFeature = (key: FeatureKey): void => {
     Object.defineProperty(FEATURES, key, originalDescriptors[key]);
 };
 
-const setFeatureValue = (key: FeatureKey, value: unknown): void => {
-    Object.defineProperty(FEATURES, key, { value, configurable: true, writable: true });
-};
-
 describe('FEATURES detection paths', () => {
     afterEach(() => {
         vi.restoreAllMocks();

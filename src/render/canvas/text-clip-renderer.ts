@@ -31,6 +31,8 @@ import { Bounds } from '../../css/layout/bounds';
 import { at } from '../../core/util';
 import { BackgroundRenderer } from './background-renderer';
 import { measureBaseline } from './font-utils';
+import { getTextStrokeLineJoin } from './text-renderer';
+import { releaseSurface } from './filter-surface';
 import { TextShadow } from '../../css/property-descriptors/text-shadow';
 
 export interface TextClipRendererDependencies {
@@ -91,116 +93,129 @@ export class TextClipRenderer {
         if (!offscreen) {
             return;
         }
-        offscreen.ctx.scale(scale, scale);
+        // Every intermediate surface is released once the composite has been
+        // drawn onto the main canvas, matching the filter/box-shadow surface
+        // discipline (canvas backing stores are not free until GC runs).
+        let mask: GlyphLayer | null = null;
+        let composite: GlyphLayer | null = null;
+        let shadowCanvases: HTMLCanvasElement[] | null = null;
+        try {
+            offscreen.ctx.scale(scale, scale);
 
-        const [fontString] = this.createFontStyle(styles);
-        offscreen.ctx.font = fontString ?? '';
-        offscreen.ctx.textBaseline = 'alphabetic';
-        offscreen.ctx.textAlign = 'left';
-        offscreen.ctx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
+            const [fontString] = this.createFontStyle(styles);
+            offscreen.ctx.font = fontString ?? '';
+            offscreen.ctx.textBaseline = 'alphabetic';
+            offscreen.ctx.textAlign = 'left';
+            offscreen.ctx.direction = styles.direction === DIRECTION.RTL ? 'rtl' : 'ltr';
 
-        // Measure baseline from the actual rendered font
-        const baseline = measureBaseline(offscreen.ctx, styles.fontSize.number);
+            // Measure baseline from the actual rendered font
+            const baseline = measureBaseline(offscreen.ctx, styles.fontSize.number);
 
-        const bgRenderer = new BackgroundRenderer({
-            ctx: offscreen.ctx,
-            context: this.context,
-            canvas: offscreen.canvas,
-            // The context is pre-scaled to CSS pixels, so the background
-            // renderer works in the same coordinate space as the main canvas.
-            options: { width, height, scale: 1 }
-        });
+            const bgRenderer = new BackgroundRenderer({
+                ctx: offscreen.ctx,
+                context: this.context,
+                canvas: offscreen.canvas,
+                // The context is pre-scaled to CSS pixels, so the background
+                // renderer works in the same coordinate space as the main canvas.
+                options: { width, height, scale: 1 }
+            });
 
-        if (!isTransparent(styles.backgroundColor)) {
-            offscreen.ctx.fillStyle = asString(styles.backgroundColor);
-            offscreen.ctx.fillRect(0, 0, width, height);
-        }
-
-        // Background images are positioned relative to the element bounds,
-        // so we need the BackgroundRenderer to compute offsets in the same
-        // coordinate space as the main renderer.  We do that by translating
-        // the offscreen context so that the element origin (bounds.left, bounds.top)
-        // falls at (0, 0).
-        offscreen.ctx.save();
-        offscreen.ctx.translate(-bounds.left, -bounds.top);
-        await bgRenderer.renderBackgroundImage(container);
-        offscreen.ctx.restore();
-
-        const drawOptions: GlyphDrawOptions = {
-            bounds,
-            baseline,
-            letterSpacing: styles.letterSpacing,
-            writingMode: styles.writingMode
-        };
-
-        // ── Clip the background to the glyph shapes ──
-        // Glyphs accumulate on a separate mask canvas with normal compositing:
-        // a per-fragment destination-in pass keeps only pixels covered by the
-        // current fragment, so fragments (graphemes with letter-spacing, words
-        // around punctuation) would erase each other. One destination-in pass
-        // against the combined mask keeps the background wherever any glyph
-        // painted. -webkit-text-stroke widens the clip region to the stroke
-        // band, matching how WebKit clips to stroked glyphs.
-        const mask = this.createGlyphLayer(ownerDocument, deviceWidth, deviceHeight, offscreen.ctx);
-        if (!mask) {
-            return;
-        }
-        const hasStroke = !!styles.webkitTextStrokeWidth;
-        if (hasStroke) {
-            mask.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
-            mask.ctx.lineWidth = styles.webkitTextStrokeWidth;
-            mask.ctx.lineJoin = this.getTextStrokeLineJoin();
-        }
-        for (const textNode of container.textNodes) {
-            for (const textBound of textNode.textBounds) {
-                this.drawGlyphs(mask, textBound, drawOptions, (ctx, text, x, y) => {
-                    ctx.fillText(text, x, y);
-                    if (hasStroke) {
-                        ctx.strokeText(text, x, y);
-                    }
-                });
+            if (!isTransparent(styles.backgroundColor)) {
+                offscreen.ctx.fillStyle = asString(styles.backgroundColor);
+                offscreen.ctx.fillRect(0, 0, width, height);
             }
-        }
 
-        // The offscreen context is scaled to CSS pixels, so the device-sized
-        // mask must be drawn at CSS size (width/height) — passing device
-        // dimensions here would double-scale the mask by `scale` and misalign
-        // the clip region whenever scale ≠ 1.
-        offscreen.ctx.globalCompositeOperation = 'destination-in';
-        offscreen.ctx.drawImage(mask.canvas, 0, 0, width, height);
+            // Background images are positioned relative to the element bounds,
+            // so we need the BackgroundRenderer to compute offsets in the same
+            // coordinate space as the main renderer.  We do that by translating
+            // the offscreen context so that the element origin (bounds.left, bounds.top)
+            // falls at (0, 0).
+            offscreen.ctx.save();
+            offscreen.ctx.translate(-bounds.left, -bounds.top);
+            await bgRenderer.renderBackgroundImage(container);
+            offscreen.ctx.restore();
 
-        // ── Composite to the main canvas ──
-        // Text shadows paint beneath the clipped background in browsers, so
-        // they are rendered on their own canvases and layered under it. Each
-        // shadow gets its own canvas: canvas shadow properties cast from
-        // whatever is already drawn, so reusing one canvas would make every
-        // previously drawn glyph (and its silhouette) cast again. Layers are
-        // stacked in browser order — the last shadow declared sits deepest.
-        // The main context is scaled to CSS pixels — drawImage at CSS size
-        // maps the device-pixel surfaces onto the backing store 1:1.
-        const shadowCanvases = this.renderShadowSilhouettes(
-            paint,
-            ownerDocument,
-            deviceWidth,
-            deviceHeight,
-            offscreen.ctx,
-            styles,
-            drawOptions
-        );
+            const drawOptions: GlyphDrawOptions = {
+                bounds,
+                baseline,
+                letterSpacing: styles.letterSpacing,
+                writingMode: styles.writingMode
+            };
 
-        if (shadowCanvases) {
-            const composite = this.createLayer(ownerDocument, deviceWidth, deviceHeight);
-            if (!composite) {
+            // ── Clip the background to the glyph shapes ──
+            // Glyphs accumulate on a separate mask canvas with normal compositing:
+            // a per-fragment destination-in pass keeps only pixels covered by the
+            // current fragment, so fragments (graphemes with letter-spacing, words
+            // around punctuation) would erase each other. One destination-in pass
+            // against the combined mask keeps the background wherever any glyph
+            // painted. -webkit-text-stroke widens the clip region to the stroke
+            // band, matching how WebKit clips to stroked glyphs.
+            mask = this.createGlyphLayer(ownerDocument, deviceWidth, deviceHeight, offscreen.ctx);
+            if (!mask) {
                 return;
             }
-            // composite layer has no transform applied — device-pixel drawImage 1:1.
-            for (const shadowCanvas of shadowCanvases) {
-                composite.ctx.drawImage(shadowCanvas, 0, 0);
+            const hasStroke = !!styles.webkitTextStrokeWidth;
+            if (hasStroke) {
+                mask.ctx.strokeStyle = asString(styles.webkitTextStrokeColor);
+                mask.ctx.lineWidth = styles.webkitTextStrokeWidth;
+                mask.ctx.lineJoin = getTextStrokeLineJoin();
             }
-            composite.ctx.drawImage(offscreen.canvas, 0, 0);
-            this.ctx.drawImage(composite.canvas, bounds.left, bounds.top, bounds.width, bounds.height);
-        } else {
-            this.ctx.drawImage(offscreen.canvas, bounds.left, bounds.top, bounds.width, bounds.height);
+            for (const textNode of container.textNodes) {
+                for (const textBound of textNode.textBounds) {
+                    this.drawGlyphs(mask, textBound, drawOptions, (ctx, text, x, y) => {
+                        ctx.fillText(text, x, y);
+                        if (hasStroke) {
+                            ctx.strokeText(text, x, y);
+                        }
+                    });
+                }
+            }
+
+            // The offscreen context is scaled to CSS pixels, so the device-sized
+            // mask must be drawn at CSS size (width/height) — passing device
+            // dimensions here would double-scale the mask by `scale` and misalign
+            // the clip region whenever scale ≠ 1.
+            offscreen.ctx.globalCompositeOperation = 'destination-in';
+            offscreen.ctx.drawImage(mask.canvas, 0, 0, width, height);
+
+            // ── Composite to the main canvas ──
+            // Text shadows paint beneath the clipped background in browsers, so
+            // they are rendered on their own canvases and layered under it. Each
+            // shadow gets its own canvas: canvas shadow properties cast from
+            // whatever is already drawn, so reusing one canvas would make every
+            // previously drawn glyph (and its silhouette) cast again. Layers are
+            // stacked in browser order — the last shadow declared sits deepest.
+            // The main context is scaled to CSS pixels — drawImage at CSS size
+            // maps the device-pixel surfaces onto the backing store 1:1.
+            shadowCanvases = this.renderShadowSilhouettes(
+                paint,
+                ownerDocument,
+                deviceWidth,
+                deviceHeight,
+                offscreen.ctx,
+                styles,
+                drawOptions
+            );
+
+            if (shadowCanvases) {
+                composite = this.createLayer(ownerDocument, deviceWidth, deviceHeight);
+                if (!composite) {
+                    return;
+                }
+                // composite layer has no transform applied — device-pixel drawImage 1:1.
+                for (const shadowCanvas of shadowCanvases) {
+                    composite.ctx.drawImage(shadowCanvas, 0, 0);
+                }
+                composite.ctx.drawImage(offscreen.canvas, 0, 0);
+                this.ctx.drawImage(composite.canvas, bounds.left, bounds.top, bounds.width, bounds.height);
+            } else {
+                this.ctx.drawImage(offscreen.canvas, bounds.left, bounds.top, bounds.width, bounds.height);
+            }
+        } finally {
+            releaseSurface(offscreen.canvas);
+            if (mask) releaseSurface(mask.canvas);
+            if (composite) releaseSurface(composite.canvas);
+            if (shadowCanvases) shadowCanvases.forEach(releaseSurface);
         }
     }
 
@@ -312,10 +327,5 @@ export class TextClipRenderer {
         }
 
         return canvases.length ? canvases : null;
-    }
-
-    private getTextStrokeLineJoin(): CanvasLineJoin {
-        const currentWindow = typeof window !== 'undefined' ? (window as Window & { chrome?: unknown }) : undefined;
-        return currentWindow?.chrome ? 'miter' : 'round';
     }
 }

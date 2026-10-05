@@ -33,6 +33,7 @@ import { asString } from '../../css/types/color-utilities';
 import { IMAGE_RENDERING } from '../../css/property-descriptors/image-rendering';
 import { BACKGROUND_REPEAT } from '../../css/property-descriptors/background-repeat';
 import { createCanvasPath } from './canvas-path';
+import { rasterizeRadialGradient, stackRepeatingStops } from './gradient-rasterizer';
 import { LRUMap } from '../../core/lru-map';
 import { PATTERN_CACHE_MAX } from '../../core/constants';
 
@@ -210,36 +211,18 @@ export class BackgroundRenderer {
         // angled gradients (a 45° stripe needs irrational tile sizes), which
         // made every tile seam drift and the stripes alias.
         const processedStops = processColorStops(backgroundImage.stops, lineLength || 1);
-        const lastStop = at(processedStops, processedStops.length - 1);
-        const firstStop = at(processedStops, 0);
-        const period = Math.max(lastStop.stop - firstStop.stop, 0.01);
-
-        // A degenerate period (all stops clamped to one point) repeats
-        // nothing — CSS renders the last colour across the whole area.
-        if (lastStop.stop - firstStop.stop < 1e-6) {
-            const gradient = this.ctx.createLinearGradient(gx0, gy0, gx1, gy1);
-            gradient.addColorStop(0, asString(lastStop.color));
-            gradient.addColorStop(1, asString(lastStop.color));
-            this.path(path);
-            this.ctx.fillStyle = gradient;
-            this.ctx.fill();
-            return;
-        }
-
-        const stops: Array<{ stop: number; color: string }> = [];
-        const cycles = Math.ceil(1 / period);
-        for (let k = 0; k < cycles; k++) {
-            for (const s of processedStops) {
-                const stop = k * period + (s.stop - firstStop.stop);
-                if (stop > 1) break;
-                stops.push({ stop, color: asString(s.color) });
-            }
-        }
-        // Continue with the last colour out to the ending shape.
-        stops.push({ stop: 1, color: asString(lastStop.color) });
+        const stacked = stackRepeatingStops(processedStops);
 
         const gradient = this.ctx.createLinearGradient(gx0, gy0, gx1, gy1);
-        stops.forEach((s) => gradient.addColorStop(Math.min(1, Math.max(0, s.stop)), s.color));
+        if (!stacked) {
+            // A degenerate period (all stops clamped to one point) repeats
+            // nothing — CSS renders the last colour across the whole area.
+            const lastColor = asString(at(processedStops, processedStops.length - 1).color);
+            gradient.addColorStop(0, lastColor);
+            gradient.addColorStop(1, lastColor);
+        } else {
+            stacked.forEach((s) => gradient.addColorStop(Math.min(1, Math.max(0, s.stop)), s.color));
+        }
 
         this.path(path);
         this.ctx.fillStyle = gradient;
@@ -313,51 +296,36 @@ export class BackgroundRenderer {
             // Cache key for radial gradient: position + radii + colour stops
             const cacheKey = `rg|${Math.round(x)}x${Math.round(y)}|${Math.round(rx)}x${Math.round(ry)}|${JSON.stringify(backgroundImage.stops)}`;
 
-            // The ellipse is rasterised as a circle of radius rx that is scaled vertically by
-            // ry / rx, so the offscreen canvas must be the ellipse's full bounding box
-            // (2rx × 2ry). Sizing it as a max(rx, ry) square stretched the gradient past the
-            // canvas edge whenever ry > rx, clipping the ellipse before its last stop and
-            // leaving a hard horizontal seam on tall elements.
-            // The stop line length is rx (the canvas gradient radius), NOT the
-            // diameter: absolute-px stops like `#ff6b6b 0 14px` must land at
-            // 14px from the centre. Normalising against the diameter halved
-            // every absolute-px stop.
-            const stops = processColorStops(backgroundImage.stops, rx);
-            const lastStop = stops[stops.length - 1];
+            // Outside the ending shape a radial gradient continues with its
+            // last colour stop; resolve it up front so the underlay paints on
+            // cache hits too.
+            const processed = processColorStops(backgroundImage.stops, rx);
+            const lastColor = asString(at(processed, processed.length - 1).color);
 
             let pattern = this.patternCache.get(cacheKey);
+
             if (!pattern) {
                 const ownerDocument = this.canvas.ownerDocument ?? document;
-                const offscreen = ownerDocument.createElement('canvas');
-                offscreen.width = Math.ceil(rx * 2);
-                offscreen.height = Math.ceil(ry * 2);
-                const offCtx = offscreen.getContext('2d');
-                if (offCtx) {
-                    const gradient = offCtx.createRadialGradient(rx, rx, 0, rx, rx, rx);
-                    stops.forEach((s) => gradient.addColorStop(s.stop, asString(s.color)));
-                    offCtx.fillStyle = gradient;
-                    if (rx !== ry) offCtx.scale(1, ry / rx);
-                    offCtx.fillRect(0, 0, rx * 2, rx * 2);
-                    pattern = this.ctx.createPattern(offscreen, 'no-repeat') as CanvasPattern;
-                    this.patternCache.set(cacheKey, pattern);
+                // The stop line length is rx (the canvas gradient radius), NOT
+                // the diameter — see rasterizeRadialGradient for the invariants.
+                const rasterized = rasterizeRadialGradient(ownerDocument, rx, ry, backgroundImage.stops, false);
+                if (!rasterized) {
+                    return;
                 }
+                pattern = this.ctx.createPattern(rasterized.canvas, 'no-repeat') as CanvasPattern;
+                this.patternCache.set(cacheKey, pattern);
             }
 
-            if (pattern) {
-                this.path(path);
-                this.ctx.save();
-                this.ctx.clip();
-                // Outside the ending shape a radial gradient continues with its last colour
-                // stop, so paint that first and lay the ellipse pattern on top.
-                if (lastStop) {
-                    this.ctx.fillStyle = asString(lastStop.color);
-                    this.ctx.fill();
-                }
-                this.ctx.translate(left + x - rx, top + y - ry);
-                this.ctx.fillStyle = pattern;
-                this.ctx.fillRect(0, 0, rx * 2, ry * 2);
-                this.ctx.restore();
-            }
+            this.path(path);
+            this.ctx.save();
+            this.ctx.clip();
+            // Paint the last colour first and lay the ellipse pattern on top.
+            this.ctx.fillStyle = lastColor;
+            this.ctx.fill();
+            this.ctx.translate(left + x - rx, top + y - ry);
+            this.ctx.fillStyle = pattern;
+            this.ctx.fillRect(0, 0, rx * 2, ry * 2);
+            this.ctx.restore();
         }
     }
 
@@ -389,42 +357,18 @@ export class BackgroundRenderer {
             return;
         }
 
-        // processColorStops normalises against rx (the canvas gradient
-        // radius), so a normalised stop maps 1:1 onto canvas gradient stops.
-        const processed = processColorStops(backgroundImage.stops, rx);
-        const firstStop = at(processed, 0);
-        const lastStop = at(processed, processed.length - 1);
-        const period = Math.max(lastStop.stop - firstStop.stop, 0.01);
-
-        const stops: Array<{ stop: number; color: string }> = [];
-        const rings = Math.ceil(1 / period);
-        for (let k = 0; k < rings; k++) {
-            for (const s of processed) {
-                const stop = k * period + (s.stop - firstStop.stop);
-                if (stop > 1) break;
-                stops.push({ stop, color: asString(s.color) });
-            }
-        }
-        // Continue with the last colour out to the ending shape.
-        stops.push({ stop: 1, color: asString(lastStop.color) });
-
-        const cacheKey = `rrg|${Math.round(x)}x${Math.round(y)}|${Math.round(rx)}x${Math.round(ry)}|${stops.length}|${JSON.stringify(backgroundImage.stops)}`;
+        const cacheKey = `rrg|${Math.round(x)}x${Math.round(y)}|${Math.round(rx)}x${Math.round(ry)}|${JSON.stringify(backgroundImage.stops)}`;
         let pattern = this.patternCache.get(cacheKey);
         if (!pattern) {
             const ownerDocument = this.canvas.ownerDocument ?? document;
-            const offscreen = ownerDocument.createElement('canvas');
-            offscreen.width = Math.ceil(rx * 2);
-            offscreen.height = Math.ceil(ry * 2);
-            const offCtx = offscreen.getContext('2d');
-            if (offCtx) {
-                const gradient = offCtx.createRadialGradient(rx, rx, 0, rx, rx, rx);
-                stops.forEach((s) => gradient.addColorStop(s.stop, s.color));
-                offCtx.fillStyle = gradient;
-                if (rx !== ry) offCtx.scale(1, ry / rx);
-                offCtx.fillRect(0, 0, rx * 2, ry * 2);
-                pattern = this.ctx.createPattern(offscreen, 'no-repeat') as CanvasPattern;
-                this.patternCache.set(cacheKey, pattern);
+            // Shared ellipse rasteriser: stacking + the rx stop line length
+            // and pre-scale fill coverage invariants live in one place.
+            const rasterized = rasterizeRadialGradient(ownerDocument, rx, ry, backgroundImage.stops, true);
+            if (!rasterized) {
+                return;
             }
+            pattern = this.ctx.createPattern(rasterized.canvas, 'no-repeat') as CanvasPattern;
+            this.patternCache.set(cacheKey, pattern);
         }
 
         if (pattern) {

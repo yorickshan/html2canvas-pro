@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { paintMaskLayers, type MaskLayerStyles } from '../mask-renderer';
 import { BACKGROUND_REPEAT } from '../../../css/property-descriptors/background-repeat';
-import { CSSImageType, type CSSURLImage, type CSSLinearGradientImage } from '../../../css/types/image';
+import {
+    CSSImageType,
+    type CSSURLImage,
+    type CSSLinearGradientImage,
+    type CSSRadialGradientImage
+} from '../../../css/types/image';
 import { FIFTY_PERCENT, ZERO_LENGTH } from '../../../css/types/length-percentage';
 
 const ctx = () => {
@@ -94,5 +99,53 @@ describe('paintMaskLayers', () => {
         );
         // 50% of leftover space (300-100)/2 = 100
         expect(c.drawImage).toHaveBeenCalledWith(img, 100, 0, 100, 100);
+    });
+
+    it('paints the last colour underlay before the ellipse for radial masks', async () => {
+        // Outside the ending shape a radial gradient continues with its last
+        // colour, so the whole positioning area keeps that alpha.
+        const rasterizedCanvases: Array<{ width: number; height: number }> = [];
+        const ownerDocument = {
+            createElement: (): HTMLCanvasElement => {
+                const canvas = {
+                    width: 0,
+                    height: 0,
+                    getContext: () => ({
+                        createRadialGradient: () => ({ addColorStop: () => undefined }),
+                        scale: () => undefined,
+                        fillRect: () => undefined,
+                        fillStyle: ''
+                    })
+                };
+                rasterizedCanvases.push(canvas);
+                return canvas as unknown as HTMLCanvasElement;
+            }
+        };
+        const c = ctx() as CanvasRenderingContext2D & { canvas: { ownerDocument: unknown } };
+        c.canvas = { ownerDocument };
+        await paintMaskLayers(
+            c,
+            [
+                {
+                    type: CSSImageType.RADIAL_GRADIENT,
+                    shape: 0 /* CIRCLE */,
+                    size: 0 /* CLOSEST_SIDE */,
+                    position: [],
+                    stops: [
+                        { color: 0x000000ff, stop: { type: 16, number: 0, flags: 4 } },
+                        { color: 0xffffffff, stop: null }
+                    ]
+                } as unknown as CSSRadialGradientImage
+            ],
+            styles(),
+            { left: 0, top: 0, width: 200, height: 100 },
+            async () => undefined
+        );
+        // CLOSEST_SIDE circle at the area centre: rx = ry = 50.
+        // Underlay first across the whole area in the last colour…
+        expect(c.fillStyle).toBe('rgb(255,255,255)');
+        expect(c.fillRect).toHaveBeenCalledWith(0, 0, 200, 100);
+        // …then the ellipse canvas drawn at its 2rx × 2ry box around the centre.
+        expect(c.drawImage).toHaveBeenCalledWith(rasterizedCanvases[0], 50, 0, 100, 100);
     });
 });

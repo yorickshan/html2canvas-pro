@@ -151,16 +151,30 @@ export class Tokenizer {
     }
 
     private _value: number[];
+    /**
+     * Read cursor into `_value`. Consumption advances the cursor instead of
+     * shifting the array — `Array.shift()` per code point makes tokenising a
+     * long value O(n²) (a 200 KB inline data-URI background alone would cost
+     * billions of operations, and background-image values are never parse-
+     * cached). `write()` compacts already-consumed prefix bytes.
+     */
+    private _cursor: number;
 
     constructor() {
         this._value = [];
+        this._cursor = 0;
     }
 
     private _reset(): void {
         this._value = [];
+        this._cursor = 0;
     }
 
     write(chunk: string): void {
+        if (this._cursor > 0) {
+            this._value = this._value.slice(this._cursor);
+            this._cursor = 0;
+        }
         this._value = this._value.concat([...chunk].map((char) => char.codePointAt(0) as number));
     }
 
@@ -359,21 +373,27 @@ export class Tokenizer {
     }
 
     private consumeCodePoint(): number {
-        const value = this._value.shift();
+        const value = this._value[this._cursor];
 
-        return typeof value === 'undefined' ? -1 : value;
+        if (value === undefined) {
+            return -1;
+        }
+        this._cursor++;
+        return value;
     }
 
     private reconsumeCodePoint(codePoint: number) {
-        this._value.unshift(codePoint);
+        // Reconsuming always rewinds the code point that was just consumed;
+        // the defensive splice covers hypothetical out-of-order callers.
+        if (this._cursor > 0 && this._value[this._cursor - 1] === codePoint) {
+            this._cursor--;
+        } else {
+            this._value.splice(this._cursor, 0, codePoint);
+        }
     }
 
     private peekCodePoint(delta: number): number {
-        if (delta >= this._value.length) {
-            return -1;
-        }
-
-        const codePoint = this._value[delta];
+        const codePoint = this._value[this._cursor + delta];
         return codePoint !== undefined ? codePoint : -1;
     }
 
@@ -511,12 +531,16 @@ export class Tokenizer {
     private consumeStringSlice(count: number): string {
         const SLICE_STACK_SIZE = 50000;
         let value = '';
-        while (count > 0) {
-            const amount = Math.min(SLICE_STACK_SIZE, count);
-            value += String.fromCodePoint(...this._value.splice(0, amount));
-            count -= amount;
+        const end = this._cursor + count;
+        let from = this._cursor;
+        while (from < end) {
+            const to = Math.min(end, from + SLICE_STACK_SIZE);
+            value += String.fromCodePoint(...this._value.slice(from, to));
+            from = to;
         }
-        this._value.shift();
+        // Drop the terminator (the closing quote, or the backslash when the
+        // caller continues with consumeEscapedCodePoint).
+        this._cursor = end + 1;
 
         return value;
     }
@@ -526,24 +550,24 @@ export class Tokenizer {
         let i = 0;
 
         do {
-            const codePoint = this._value[i];
+            const codePoint = this._value[this._cursor + i];
             if (codePoint === EOF || codePoint === undefined || codePoint === endingCodePoint) {
                 value += this.consumeStringSlice(i);
                 return { type: TokenType.STRING_TOKEN, value };
             }
 
             if (codePoint === LINE_FEED) {
-                this._value.splice(0, i);
+                this._cursor += i;
                 return BAD_STRING_TOKEN;
             }
 
             if (codePoint === REVERSE_SOLIDUS) {
-                const next = this._value[i + 1];
+                const next = this._value[this._cursor + i + 1];
                 if (next !== EOF && next !== undefined) {
                     if (next === LINE_FEED) {
                         value += this.consumeStringSlice(i);
                         i = -1;
-                        this._value.shift();
+                        this._cursor++;
                     } else if (isValidEscape(codePoint, next)) {
                         value += this.consumeStringSlice(i);
                         value += String.fromCodePoint(this.consumeEscapedCodePoint());

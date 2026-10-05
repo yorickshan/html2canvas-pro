@@ -16,7 +16,8 @@ import {
     ICSSImage
 } from '../../css/types/image';
 import { calculateGradientDirection, calculateRadius, processColorStops } from '../../css/types/functions/gradient';
-import { getAbsoluteValue } from '../../css/types/length-percentage';
+import { getAbsoluteValue, FIFTY_PERCENT } from '../../css/types/length-percentage';
+import { rasterizeRadialGradient, stackRepeatingStops, toCanvasStops } from './gradient-rasterizer';
 import { at } from '../../core/util';
 import { getBackgroundValueForIndex } from '../background';
 import { contentBox } from '../box-sizing';
@@ -924,35 +925,55 @@ export class CanvasRenderer {
         if (source.type === CSSImageType.LINEAR_GRADIENT || source.type === CSSImageType.REPEATING_LINEAR_GRADIENT) {
             const gradientImage = source as CSSLinearGradientImage;
             const [lineLength, x0, y0, x1, y1] = calculateGradientDirection(gradientImage.angle, width, height);
+            const processed = processColorStops(gradientImage.stops, lineLength || width);
+            const repeating = source.type === CSSImageType.REPEATING_LINEAR_GRADIENT;
+            // Repeating gradients stack the one-cycle stop list periodically.
+            const stacked = repeating ? stackRepeatingStops(processed) : null;
             const gradient = ctx.createLinearGradient(x0, y0, x1, y1);
-            processColorStops(gradientImage.stops, lineLength || width).forEach((colorStop) => {
-                gradient.addColorStop(Math.min(1, Math.max(0, colorStop.stop)), asString(colorStop.color));
-            });
+            if (stacked) {
+                stacked.forEach((colorStop) => {
+                    gradient.addColorStop(Math.min(1, Math.max(0, colorStop.stop)), colorStop.color);
+                });
+            } else if (repeating) {
+                // Degenerate period repeats nothing — last colour across the box.
+                const lastColor = asString(at(processed, processed.length - 1).color);
+                gradient.addColorStop(0, lastColor);
+                gradient.addColorStop(1, lastColor);
+            } else {
+                toCanvasStops(processed).forEach((colorStop) => {
+                    gradient.addColorStop(colorStop.stop, colorStop.color);
+                });
+            }
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, width, height);
             return canvas;
         }
         if (source.type === CSSImageType.RADIAL_GRADIENT || source.type === CSSImageType.REPEATING_RADIAL_GRADIENT) {
             const gradientImage = source as CSSRadialGradientImage;
-            const cx = getAbsoluteValue(at(gradientImage.position, 0), width);
-            const cy = getAbsoluteValue(at(gradientImage.position, 1), height);
+            const position = gradientImage.position.length === 0 ? [FIFTY_PERCENT] : gradientImage.position;
+            const cx = getAbsoluteValue(at(position, 0), width);
+            const cy = getAbsoluteValue(at(position, position.length - 1), height);
             const [rx, ry] = calculateRadius(gradientImage, cx, cy, width, height);
             if (rx <= 0 || ry <= 0) {
                 return null;
             }
-            // Elliptical gradients are painted as a circle of the horizontal
-            // radius with the context scaled vertically around the center.
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.scale(1, ry / rx);
-            ctx.translate(-cx, -cy);
-            const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
-            processColorStops(gradientImage.stops, rx).forEach((colorStop) => {
-                gradient.addColorStop(Math.min(1, Math.max(0, colorStop.stop)), asString(colorStop.color));
-            });
-            ctx.fillStyle = gradient;
+            const ownerDocument = this.ctx.canvas.ownerDocument ?? document;
+            const rasterized = rasterizeRadialGradient(
+                ownerDocument,
+                rx,
+                ry,
+                gradientImage.stops,
+                source.type === CSSImageType.REPEATING_RADIAL_GRADIENT
+            );
+            if (!rasterized) {
+                return null;
+            }
+            // Outside the ending shape the gradient continues with its last
+            // colour, so cover the whole border-image box before drawing the
+            // ellipse (drawn at its 2rx × 2ry device box around the centre).
+            ctx.fillStyle = rasterized.lastColor;
             ctx.fillRect(0, 0, width, height);
-            ctx.restore();
+            ctx.drawImage(rasterized.canvas, cx - rx, cy - ry, rx * 2, ry * 2);
             return canvas;
         }
         if (source.type === CSSImageType.CONIC_GRADIENT || source.type === CSSImageType.REPEATING_CONIC_GRADIENT) {

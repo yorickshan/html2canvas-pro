@@ -68,17 +68,43 @@ const createRenderer = () => {
 
 /**
  * The renderer creates one canvas per glyph layer. Returns the intercepted
- * contexts in creation order: [offscreen, mask, ...shadow layers, composite].
+ * contexts in creation order: [offscreen, mask, ...shadow layers, composite],
+ * plus a map snapshotting each canvas's dimensions at drawImage call time —
+ * the renderer releases its intermediate surfaces (width/height zeroed) once
+ * the render completes, so post-render inspection would only see 0.
  */
-const setupMockContexts = (): CanvasRenderingContext2D[] => {
+const setupMockContexts = (): {
+    contexts: CanvasRenderingContext2D[];
+    drawSizes: Map<HTMLCanvasElement, [number, number]>;
+} => {
     const contexts: CanvasRenderingContext2D[] = [];
+    const drawSizes = new Map<HTMLCanvasElement, [number, number]>();
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement) {
         const mock = createMockContext();
+        const original = mock.drawImage as unknown as ReturnType<typeof vi.fn>;
+        mock.drawImage = vi.fn((img: HTMLCanvasElement, ...rest: unknown[]) => {
+            drawSizes.set(img, [img.width, img.height]);
+            return original(img, ...rest);
+        }) as unknown as CanvasRenderingContext2D['drawImage'];
         (mock as { canvas: HTMLCanvasElement }).canvas = this;
         contexts.push(mock);
         return mock;
     });
-    return contexts;
+    return { contexts, drawSizes };
+};
+
+/**
+ * Snapshot canvas dimensions at drawImage call time on a standalone mock
+ * context (the shared map in setupMockContexts only covers layer contexts).
+ */
+const trackDrawSizes = (mock: CanvasRenderingContext2D): Map<HTMLCanvasElement, [number, number]> => {
+    const sizes = new Map<HTMLCanvasElement, [number, number]>();
+    const original = mock.drawImage as unknown as ReturnType<typeof vi.fn>;
+    mock.drawImage = vi.fn((img: HTMLCanvasElement, ...rest: unknown[]) => {
+        sizes.set(img, [img.width, img.height]);
+        return original(img, ...rest);
+    }) as unknown as CanvasRenderingContext2D['drawImage'];
+    return sizes;
 };
 
 describe('TextClipRenderer', () => {
@@ -103,8 +129,9 @@ describe('TextClipRenderer', () => {
         // Regression for https://github.com/yorickshan/html2canvas-pro/issues/243:
         // applying destination-in per fragment kept only the pixels of the
         // current fragment, erasing everything drawn before it.
-        const contexts = setupMockContexts();
+        const { contexts, drawSizes } = setupMockContexts();
         const { renderer, ctx } = createRenderer();
+        const mainDrawSizes = trackDrawSizes(ctx);
 
         await renderer.render(makePaint(200, 50, { fragments: ['also', '-', 'missing'] }));
         expect(contexts.length).toBe(2);
@@ -126,8 +153,7 @@ describe('TextClipRenderer', () => {
         expect(offCtx.drawImage).toHaveBeenCalledTimes(1);
         const [mask, dx, dy, dw, dh] = (offCtx.drawImage as unknown as ReturnType<typeof vi.fn>).mock
             .calls[0] as unknown as [HTMLCanvasElement, number, number, number, number];
-        expect(mask.width).toBe(400);
-        expect(mask.height).toBe(100);
+        expect(drawSizes.get(mask)).toEqual([400, 100]);
         expect([dx, dy, dw, dh]).toEqual([0, 0, 200, 50]);
 
         // Clipped result is composited back onto the main canvas at CSS size
@@ -136,13 +162,12 @@ describe('TextClipRenderer', () => {
         expect(ctx.drawImage).toHaveBeenCalledTimes(1);
         const [comp, left, top, compW, compH] = (ctx.drawImage as unknown as ReturnType<typeof vi.fn>).mock
             .calls[0] as unknown as [HTMLCanvasElement, number, number, number, number];
-        expect(comp.width).toBe(400);
-        expect(comp.height).toBe(100);
+        expect(mainDrawSizes.get(comp)).toEqual([400, 100]);
         expect([left, top, compW, compH]).toEqual([10, 20, 200, 50]);
     });
 
     it('draws letter-spaced fragments to the mask instead of the background canvas', async () => {
-        const contexts = setupMockContexts();
+        const { contexts } = setupMockContexts();
         const { renderer, ctx } = createRenderer();
 
         await renderer.render(makePaint(200, 50, { fragments: ['a', 'b'], styles: { letterSpacing: 2 } }));
@@ -157,7 +182,7 @@ describe('TextClipRenderer', () => {
     });
 
     it('includes the stroke band in the mask when -webkit-text-stroke is set', async () => {
-        const contexts = setupMockContexts();
+        const { contexts } = setupMockContexts();
         const { renderer, ctx } = createRenderer();
 
         await renderer.render(
@@ -180,7 +205,7 @@ describe('TextClipRenderer', () => {
     });
 
     it('paints shadow silhouettes beneath the clipped background', async () => {
-        const contexts = setupMockContexts();
+        const { contexts } = setupMockContexts();
         const { renderer, ctx } = createRenderer();
 
         await renderer.render(
@@ -229,7 +254,7 @@ describe('TextClipRenderer', () => {
     });
 
     it('composites straight onto the main canvas when no shadows are present', async () => {
-        const contexts = setupMockContexts();
+        const { contexts } = setupMockContexts();
         const { renderer, ctx } = createRenderer();
 
         await renderer.render(makePaint(200, 50, { fragments: ['A'] }));
