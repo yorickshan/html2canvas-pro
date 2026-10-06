@@ -16,7 +16,10 @@ export class TextDecorationRenderer {
     constructor(private readonly ctx: CanvasRenderingContext2D) {}
 
     render(bounds: Bounds, styles: CSSParsedDeclaration): void {
-        this.ctx.fillStyle = asString(styles.textDecorationColor || styles.color);
+        // Definedness fallback, not `||`: Color is a number and transparent
+        // is 0x00000000, which `||` would treat as missing and paint the
+        // decoration in the text colour instead of leaving it invisible.
+        this.ctx.fillStyle = asString(styles.textDecorationColor ?? styles.color);
 
         let thickness = 1;
         if (typeof styles.textDecorationThickness === 'number') {

@@ -120,7 +120,11 @@ export class BorderImageRenderer {
         this.drawRegion(image, imgW - sR, imgH - sB, sR, sB, left + width - dR, top + height - dB, dR, dB);
         this.drawRegion(image, 0, imgH - sB, sL, sB, left, top + height - dB, dL, dB);
 
-        // Draw edges
+        // Draw edges. Tiling direction follows the edge identity (top/bottom
+        // tile horizontally, left/right vertically) — the repeat keywords in
+        // the edges array already encode that axis. Deriving the direction
+        // from the destination aspect ratio mis-tiles narrow tall boxes,
+        // whose top/bottom edges are taller than they are wide.
         const edges: Array<{
             sx: number;
             sy: number;
@@ -131,6 +135,7 @@ export class BorderImageRenderer {
             dw: number;
             dh: number;
             repeat: BORDER_IMAGE_REPEAT;
+            horizontal: boolean;
         }> = [
             {
                 sx: sL,
@@ -141,7 +146,8 @@ export class BorderImageRenderer {
                 dy: top,
                 dw: width - dL - dR,
                 dh: dT,
-                repeat: repeat.horizontal
+                repeat: repeat.horizontal,
+                horizontal: true
             },
             {
                 sx: imgW - sR,
@@ -152,7 +158,8 @@ export class BorderImageRenderer {
                 dy: top + dT,
                 dw: dR,
                 dh: height - dT - dB,
-                repeat: repeat.vertical
+                repeat: repeat.vertical,
+                horizontal: false
             },
             {
                 sx: sL,
@@ -163,7 +170,8 @@ export class BorderImageRenderer {
                 dy: top + height - dB,
                 dw: width - dL - dR,
                 dh: dB,
-                repeat: repeat.horizontal
+                repeat: repeat.horizontal,
+                horizontal: true
             },
             {
                 sx: 0,
@@ -174,32 +182,30 @@ export class BorderImageRenderer {
                 dy: top + dT,
                 dw: dL,
                 dh: height - dT - dB,
-                repeat: repeat.vertical
+                repeat: repeat.vertical,
+                horizontal: false
             }
         ];
 
         for (const edge of edges) {
             if (edge.sw <= 0 || edge.sh <= 0 || edge.dw <= 0 || edge.dh <= 0) continue;
-            const isHorizontal = edge.dw >= edge.dh;
 
             if (edge.repeat === BORDER_IMAGE_REPEAT.STRETCH) {
                 this.ctx.drawImage(image, edge.sx, edge.sy, edge.sw, edge.sh, edge.dx, edge.dy, edge.dw, edge.dh);
             } else if (edge.repeat === BORDER_IMAGE_REPEAT.REPEAT || edge.repeat === BORDER_IMAGE_REPEAT.ROUND) {
-                this.drawRepeatedEdge(image, edge, isHorizontal, edge.repeat === BORDER_IMAGE_REPEAT.ROUND);
+                this.drawRepeatedEdge(image, edge, edge.horizontal, edge.repeat === BORDER_IMAGE_REPEAT.ROUND);
             }
         }
 
-        // Draw center if fill is specified
+        // Draw center if fill is specified. border-image-repeat applies to
+        // the center region too, so stretch/tile each axis per its keyword.
         if (slice.fill) {
-            const cx = sL;
-            const cy = sT;
-            const cw = imgW - sL - sR;
-            const ch = imgH - sT - sB;
-            const tcx = left + dL;
-            const tcy = top + dT;
-            const tcw = width - dL - dR;
-            const tch = height - dT - dB;
-            this.drawRegion(image, cx, cy, cw, ch, tcx, tcy, tcw, tch);
+            this.drawCenterRegion(
+                image,
+                { sx: sL, sy: sT, sw: imgW - sL - sR, sh: imgH - sT - sB },
+                { dx: left + dL, dy: top + dT, dw: width - dL - dR, dh: height - dT - dB },
+                repeat
+            );
         }
     }
 
@@ -222,11 +228,11 @@ export class BorderImageRenderer {
     private drawRepeatedEdge(
         image: HTMLImageElement,
         edge: { sx: number; sy: number; sw: number; sh: number; dx: number; dy: number; dw: number; dh: number },
-        isHorizontal: boolean,
+        horizontal: boolean,
         round: boolean
     ): void {
-        const srcLength = isHorizontal ? edge.sw : edge.sh;
-        const tgLength = isHorizontal ? edge.dw : edge.dh;
+        const srcLength = horizontal ? edge.sw : edge.sh;
+        const tgLength = horizontal ? edge.dw : edge.dh;
         if (srcLength <= 0 || tgLength <= 0) return;
 
         let tileSize: number;
@@ -240,6 +246,9 @@ export class BorderImageRenderer {
             tileCount = Math.ceil(tgLength / tileSize);
         }
 
+        // The rect clip below crops the overflowing last tile — drawing it at
+        // full size (not squeezed to the remainder) matches how browsers
+        // render `repeat`.
         this.ctx.save();
         this.ctx.beginPath();
         this.ctx.rect(edge.dx, edge.dy, edge.dw, edge.dh);
@@ -247,11 +256,8 @@ export class BorderImageRenderer {
 
         for (let i = 0; i < tileCount; i++) {
             const offset = i * tileSize;
-            const remaining = tgLength - offset;
-            const clampedSize = Math.min(tileSize, remaining);
-            if (clampedSize <= 0) break;
 
-            if (isHorizontal) {
+            if (horizontal) {
                 this.ctx.drawImage(
                     image,
                     edge.sx,
@@ -260,7 +266,7 @@ export class BorderImageRenderer {
                     edge.sh,
                     edge.dx + offset,
                     edge.dy,
-                    clampedSize,
+                    tileSize,
                     edge.dh
                 );
             } else {
@@ -273,11 +279,61 @@ export class BorderImageRenderer {
                     edge.dx,
                     edge.dy + offset,
                     edge.dw,
-                    clampedSize
+                    tileSize
                 );
             }
         }
 
+        this.ctx.restore();
+    }
+
+    /**
+     * Draw the center region of the border image, tiling each axis per its
+     * border-image-repeat keyword (stretch spans the whole axis, repeat
+     * tiles at source size with the overflow cropped, round scales the tile
+     * to divide the axis evenly).
+     */
+    private drawCenterRegion(
+        image: HTMLImageElement,
+        src: { sx: number; sy: number; sw: number; sh: number },
+        dst: { dx: number; dy: number; dw: number; dh: number },
+        repeat: BorderImageRepeat
+    ): void {
+        if (src.sw <= 0 || src.sh <= 0 || dst.dw <= 0 || dst.dh <= 0) {
+            return;
+        }
+        const axis = (mode: BORDER_IMAGE_REPEAT, srcLen: number, dstLen: number): { size: number; count: number } => {
+            if (mode === BORDER_IMAGE_REPEAT.STRETCH) {
+                return { size: dstLen, count: 1 };
+            }
+            if (mode === BORDER_IMAGE_REPEAT.ROUND) {
+                const count = Math.max(1, Math.round(dstLen / srcLen));
+                return { size: dstLen / count, count };
+            }
+            return { size: srcLen, count: Math.max(1, Math.ceil(dstLen / srcLen)) };
+        };
+        const columns = axis(repeat.horizontal, src.sw, dst.dw);
+        const rows = axis(repeat.vertical, src.sh, dst.dh);
+
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.rect(dst.dx, dst.dy, dst.dw, dst.dh);
+        this.ctx.clip();
+        for (let row = 0; row < rows.count; row++) {
+            for (let column = 0; column < columns.count; column++) {
+                this.ctx.drawImage(
+                    image,
+                    src.sx,
+                    src.sy,
+                    src.sw,
+                    src.sh,
+                    dst.dx + column * columns.size,
+                    dst.dy + row * rows.size,
+                    columns.size,
+                    rows.size
+                );
+            }
+        }
         this.ctx.restore();
     }
 }

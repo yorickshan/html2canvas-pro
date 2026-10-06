@@ -82,4 +82,36 @@ describe('calculateObjectFitRendering', () => {
             dh: 30
         });
     });
+
+    it('should keep the intrinsic size for a small image in a wide box (regression)', () => {
+        // scale-down compares the concrete rendered sizes: contain would
+        // upscale the 10×10 image to 50×50, so `none` (10×10) is smaller and
+        // wins. The old width-only comparison against max(sw, dw) picked
+        // contain and grew the image.
+        deepStrictEqual(calculateObjectFitRendering(10, 10, box, OBJECT_FIT.SCALE_DOWN), {
+            sx: 0,
+            sy: 0,
+            sw: 10,
+            sh: 10,
+            dx: 55,
+            dy: 40,
+            dw: 10,
+            dh: 10
+        });
+    });
+
+    it('should pick contain when its rendered area is the smaller one', () => {
+        // 200×50 in a 100×50 box: contain renders 100×25 (area 2500) versus
+        // none's 100×50 (area 5000).
+        deepStrictEqual(calculateObjectFitRendering(200, 50, box, OBJECT_FIT.SCALE_DOWN), {
+            sx: 0,
+            sy: 0,
+            sw: 200,
+            sh: 50,
+            dx: 10,
+            dy: 32.5,
+            dw: 100,
+            dh: 25
+        });
+    });
 });

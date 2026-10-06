@@ -74,9 +74,16 @@ export const calculateObjectFitRendering = (
             dh = sh;
         }
     } else if (objectFit === OBJECT_FIT.SCALE_DOWN) {
+        // CSS object-fit: scale-down sizes the content as if `none` or
+        // `contain` were specified, whichever yields the smaller concrete
+        // object size. Compare the rendered areas (contain fits inside the
+        // box; none is the intrinsic size clipped to the box); exact ties
+        // keep `none`.
         const containW = imgRatio > boxRatio ? dw : dh * imgRatio;
-        const noneW = sw > dw ? sw : dw;
-        if (containW < noneW) {
+        const containH = imgRatio > boxRatio ? dw / imgRatio : dh;
+        const noneW = Math.min(sw, dw);
+        const noneH = Math.min(sh, dh);
+        if (containW * containH < noneW * noneH) {
             if (imgRatio > boxRatio) {
                 dh = dw / imgRatio;
                 dy += (box.height - dh) * posY;

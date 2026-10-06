@@ -31,6 +31,7 @@ import {
 } from '../../css/property-descriptors/writing-mode';
 import { TextDecorationRenderer } from './text/text-decoration-renderer';
 import { measureBaseline } from './font-utils';
+import { computeLineHeight } from '../../css/property-descriptors/line-height';
 
 /**
  * Dependencies required for TextRenderer
@@ -440,7 +441,7 @@ export class TextRenderer {
         baseline: number,
         containerBounds?: Bounds
     ): boolean {
-        const lineHeight = styles.fontSize.number * 1.5;
+        const lineHeight = computeLineHeight(styles.lineHeight, styles.fontSize.number);
         const lines: TextBounds[][] = [];
         let currentLine: TextBounds[] = [];
         let currentLineTop = at(text.textBounds, 0).bounds.top;
@@ -495,7 +496,7 @@ export class TextRenderer {
         baseline: number,
         containerBounds: Bounds
     ): boolean {
-        const lineHeight = styles.fontSize.number * 1.5;
+        const lineHeight = computeLineHeight(styles.lineHeight, styles.fontSize.number);
         const firstTop = at(text.textBounds, 0).bounds.top;
         const isSingleLine = text.textBounds.every((tb) => Math.abs(tb.bounds.top - firstTop) < lineHeight * 0.5);
         if (!isSingleLine) return false;
