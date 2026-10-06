@@ -143,7 +143,11 @@ export const extractHslComponents = (context: Context, args: CSSValue[]): RGBA4 
         hue = tokens[0],
         saturation = tokens[1],
         lightness = tokens[2],
-        alpha = tokens[3],
+        // hsl() accepts both the legacy comma syntax (alpha at index 3) and
+        // the modern space/slash syntax (alpha at index 4, after the `/`).
+        slash = tokens[3],
+        alpha =
+            slash !== undefined && slash.type === TokenType.DELIM_TOKEN && slash.value === '/' ? tokens[4] : tokens[3],
         h = hue
             ? (hue.type === TokenType.NUMBER_TOKEN ? deg(hue.number) : angle.parse(context, hue)) / (Math.PI * 2)
             : 0,
@@ -159,7 +163,7 @@ export const packHSL = (context: Context, args: CSSValue[]): number => {
     }
     const [h, s, l, a] = extractHslComponents(context, args),
         rgb = hsl2rgb([h, s, l]);
-    return pack(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255, s === 0 ? 1 : a);
+    return pack(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255, a);
 };
 
 export const extractLchComponents = (args: CSSValue[]): RGBA4 => {
@@ -282,8 +286,10 @@ export const hue2rgb = (t1: number, t2: number, hue: number): number => {
 };
 
 export const hsl2rgb = ([h, s, l]: [number, number, number]): [number, number, number] => {
+    // Achromatic: return the 0..1 grey like every other branch — callers
+    // scale by 255. (Returning l*255 here double-scaled the channels.)
     if (s === 0) {
-        return [l * 255, l * 255, l * 255];
+        return [l, l, l];
     }
     const t2 = l <= 0.5 ? l * (s + 1) : l + s - l * s,
         t1 = l * 2 - t2,

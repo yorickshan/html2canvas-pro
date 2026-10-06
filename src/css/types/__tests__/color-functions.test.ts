@@ -38,6 +38,20 @@ describe('color functions', () => {
             }
         });
         it('achromatic keeps alpha 1', () => strictEqual(isTransparent(parse('hsl(120, 0%, 50%)')), false));
+        it('achromatic channels are grey, not corrupted (regression)', () =>
+            // hsl2rgb's achromatic branch used to return the 0..255 domain and
+            // packHSL multiplied by 255 again — the blue channel packed to 0.
+            strictEqual(parse('hsl(120, 0%, 50%)'), pack(127, 127, 127, 1)));
+        it('achromatic comma alpha is honoured (regression)', () =>
+            // The old `s === 0 ? 1 : a` quirk forced achromatic colours opaque.
+            strictEqual(parse('hsl(120, 0%, 50%, 0.5)'), pack(127, 127, 127, 0.5)));
+        it('slash alpha equals comma alpha (regression)', () =>
+            // extractHslComponents read index 3, which is the `/` delimiter in
+            // modern syntax — slash alpha was silently dropped.
+            strictEqual(parse('hsl(120 50% 50% / 0.5)'), parse('hsl(120, 50%, 50%, 0.5)')));
+        it('slash alpha on achromatic colour', () =>
+            strictEqual(parse('hsl(120 0% 50% / 0.5)'), pack(127, 127, 127, 0.5)));
+        it('fully transparent achromatic black', () => strictEqual(parse('hsl(0, 0%, 0%, 0)'), 0));
     });
 
     describe('lab/lch/oklab/oklch', () => {
