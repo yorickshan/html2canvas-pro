@@ -32,7 +32,7 @@ Below is a list of all the supported CSS properties and values.
    - border-radius
    - border-style
    - border-width
- - backdrop-filter (**Limited support** — `blur()` on the already-painted backdrop; see [Backdrop filters](#backdrop-filter-support))
+ - backdrop-filter (**Blurs the already-painted backdrop** — same filter chains as the filter surface path; see [Backdrop filters](#backdrop-filter-support))
  - bottom
  - box-decoration-break (**Parsed only** — no visual effect in single-element rendering)
  - box-shadow
@@ -132,9 +132,10 @@ Below is a list of all the supported CSS properties and values.
 
 ## What's new in v2.5
 
+- **Full standard filter chains** (v2.5.2) — any order and count of `blur()`, `brightness()`, `contrast()`, `grayscale()`, `hue-rotate()`, `invert()`, `opacity()`, `saturate()`, `sepia()` and `drop-shadow()` composited on the filter surface; `backdrop-filter` follows the same chain support (see [CSS filters and layer opacity](./filter-support.md))
 - **`background-clip: text`** — gradient (and colour) backgrounds clipped to the glyphs, rendered on a device-pixel surface with text-shadow and `-webkit-text-stroke` interaction (see [background-clip: text support](#background-clip-text-support))
 - **`mask-image` support** — alpha masks with `mask-position` / `mask-size` / `mask-repeat`, composited on a dedicated surface (see [Mask support](#mask-support))
-- **`backdrop-filter: blur()`** — frosted-glass captures via backdrop capture and the filter surface pipeline (see [Backdrop-filter support](#backdrop-filter-support))
+- **`backdrop-filter`** — frosted-glass captures via backdrop capture and the filter surface pipeline (see [Backdrop-filter support](#backdrop-filter-support))
 - **`conic-gradient()`, `repeating-radial-gradient()` and `repeating-conic-gradient()`** — completing the gradient family
 - **`clip-path: rect()` / `xywh()`** — the newer basic shape functions
 - **`text-emphasis`** — CJK emphasis marks (`filled`/`open` dot, circle, double-circle, triangle, sesame, or a custom string) in any colour, above or below the text
@@ -160,7 +161,7 @@ All previously listed unsupported properties are now implemented:
  - **border-image** — 9-slice border image rendering with stretch/repeat/round
  - **box-decoration-break** — Parsed (`slice` / `clone`); no visual difference in single-element rendering
  - **box-shadow** — Full support including inset shadows
- - **filter** — CSS filter functions: `blur()`, `brightness()`, `contrast()`, `drop-shadow()`, `grayscale()`, `hue-rotate()`, `invert()`, `opacity()`, `saturate()`, `sepia()`. This list does not imply general filter-chain or group-opacity equivalence; see [surface-compositing limits](./filter-support.md).
+ - **filter** — CSS filter functions: `blur()`, `brightness()`, `contrast()`, `drop-shadow()`, `grayscale()`, `hue-rotate()`, `invert()`, `opacity()`, `saturate()`, `sepia()`. Eligible layers composite full ordered chains of these functions on a dedicated surface before layer `opacity` (see [filter support](./filter-support.md) for eligibility and the SVG fallback subset).
  - **font-variant-ligatures** — Parsed; Canvas text rendering is handled by the browser font engine
  - **object-position** — Controls alignment of replaced elements (images, canvas, SVG) within their content box
  - **repeating-linear-gradient()** — Repeating linear gradient backgrounds
@@ -452,7 +453,7 @@ itself.
 
 **Limitations (current scope):**
 
-- `blur()` is supported (the same subset as the [filter surface path](./filter-support.md)); other filter functions are ignored for the backdrop.
+- The backdrop uses the same filter-chain support as the [filter surface path](./filter-support.md): the full standard function set on native canvas backends, with the SVG fallback limited to blur + a single drop-shadow. Unsupported chains render without the backdrop effect.
 - Content painted *after* the element (later siblings) is not part of its
   backdrop — matching how the browsers composite within one stacking context,
   but not their cross-layer behaviour.

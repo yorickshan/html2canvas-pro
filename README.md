@@ -38,7 +38,7 @@ html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/
 - `conic-gradient()`, `repeating-conic-gradient()` and `repeating-radial-gradient()` — complete gradient family
 - `text-emphasis` (CJK emphasis marks), `-webkit-box-reflect`, `image-set()`, `border-image-outset` / `border-image-width`
 - `accent-color`, `outline`, `-webkit-text-fill-color`, `isolation`
-- `filter` compositing for eligible layers — `blur()` / `drop-shadow()` rendered on a dedicated surface with correct layer `opacity` (see [filter support notes](docs/filter-support.md))
+- `filter` chain compositing for eligible layers — the full standard filter function set rendered on a dedicated surface with correct layer `opacity` (see [filter support notes](docs/filter-support.md))
 - Faithful `box-shadow` rendering, including inset shadows, blur scaling, and shadows through transformed ancestors
 - `image-rendering` CSS property plus `imageSmoothing` / `imageSmoothingQuality` options for pixel-perfect output
 - Border image, counters & quotes, `direction`, `line-height`, `transform-origin`, and more — see the full [feature list](docs/features.md)
@@ -187,7 +187,7 @@ The project uses [pnpm](https://pnpm.io) (the version is pinned via the `package
 corepack pnpm install
 corepack pnpm build          # tsc + Rolldown bundles (CJS/ESM/UMD)
 corepack pnpm unittest       # Vitest unit tests
-corepack pnpm test           # lint + unit tests + browser (Karma) tests
+corepack pnpm test           # lint + unit tests + browser reftests (Playwright)
 corepack pnpm docs:dev       # VitePress dev server
 corepack pnpm docs:api       # Generate the TypeDoc API reference
 ```
