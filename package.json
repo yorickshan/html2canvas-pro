@@ -19,7 +19,7 @@
       "default": "./dist/html2canvas-pro.esm.js"
     }
   },
-  "version": "2.5.1",
+  "version": "2.5.2",
   "packageManager": "pnpm@10.34.5",
   "author": {
     "name": "yorickshan",

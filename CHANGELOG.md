@@ -1,3 +1,23 @@
+## [2.5.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.5.1...v2.5.2) (2026-10-07)
+
+### Features
+
+* **render:** composite full standard filter chains; fix radial ([30c8eca](https://github.com/yorickshan/html2canvas-pro/commit/30c8ecac9a4bc6595f8768b22b87c4e9d76ba091))
+
+### Bug Fixes
+
+* **ci:** install the chromium engine for Playwright reftests ([c1d6642](https://github.com/yorickshan/html2canvas-pro/commit/c1d6642bd548233f7842720019d9f01d2d225232))
+* **core:** close global audit findings across stacking, cache and tooling ([70815f7](https://github.com/yorickshan/html2canvas-pro/commit/70815f74df589708ac22b9083c89487052de44bf))
+* **css:** repair the hsl() colour parser ([7926efe](https://github.com/yorickshan/html2canvas-pro/commit/7926efe1902b3f75d12d0ffa982a41696986230d))
+* **dom:** normalize outer <svg> transforms like HTML containers ([07bcfba](https://github.com/yorickshan/html2canvas-pro/commit/07bcfbad38682dcb20c83258a0e650ff4f39f72d)), closes [#244](https://github.com/yorickshan/html2canvas-pro/issues/244), references [#244](https://github.com/yorickshan/html2canvas-pro/issues/244)
+* **render:** close P0-P2 review gaps across pipeline, CSS and tooling ([1bc20fe](https://github.com/yorickshan/html2canvas-pro/commit/1bc20fe95a6d015169bd4e9c532a9719570fb448))
+* **render:** converge gradient rasterisation and de-O(n²) the tokenizer ([994bf11](https://github.com/yorickshan/html2canvas-pro/commit/994bf1145ef6edfeeae0d93604ae5c031b43ce8a))
+* **render:** correct object-fit scale-down, decoration colour, border ([cab6aab](https://github.com/yorickshan/html2canvas-pro/commit/cab6aab2116f75943aff9cddf5b8c9122c8522a2))
+
+### Performance Improvements
+
+* **bench:** add end-to-end render benchmark against upstream 1.4.1 ([15e4705](https://github.com/yorickshan/html2canvas-pro/commit/15e470545da2a15b1c9dd8c0a7ae1e6059ee7db4))
+
 ## [2.5.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.5.0...v2.5.1) (2026-10-04)
 
 ### Features
