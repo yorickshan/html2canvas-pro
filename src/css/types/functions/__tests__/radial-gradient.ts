@@ -56,7 +56,7 @@ describe('functions', () => {
             it('radial-gradient(20px, red, blue)', () =>
                 deepStrictEqual(parse('radial-gradient(20px, red, blue)'), {
                     type: CSSImageType.RADIAL_GRADIENT,
-                    shape: CSSRadialShape.CIRCLE,
+                    shape: CSSRadialShape.ELLIPSE,
                     size: [{ type: TokenType.DIMENSION_TOKEN, number: 20, flags: 4, unit: 'px' }],
                     position: [],
                     stops: [

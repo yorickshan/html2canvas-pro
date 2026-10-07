@@ -81,7 +81,12 @@ describe('native filter surface', () => {
         };
         const result = await helper.renderFilterSurface(
             source,
-            { blur: 4, shadow: { x: -12, y: 8, blur: 6, color: 'rgba(0,0,0,0.5)' } },
+            {
+                functions: [
+                    { kind: 'blur', value: 4 },
+                    { kind: 'drop-shadow', x: -12, y: 8, blur: 6, color: 'rgba(0,0,0,0.5)' }
+                ]
+            },
             0.25,
             2
         );
@@ -100,7 +105,7 @@ describe('native filter surface', () => {
     });
 
     it('skips probing and serialization for opacity-only layers', async () => {
-        const result = await helper.renderFilterSurface(source, { blur: 0 }, 0.5, 1);
+        const result = await helper.renderFilterSurface(source, { functions: [] }, 0.5, 1);
         expect(contexts.size).toBe(1);
         expect(contexts.get(result)?.globalAlpha).toBe(0.5);
         expect(source.toDataURL).not.toHaveBeenCalled();
@@ -117,7 +122,7 @@ describe('native filter surface', () => {
                 }
             });
         };
-        const result = await helper.renderFilterSurface(source, { blur: 4 }, 0.5, 1);
+        const result = await helper.renderFilterSurface(source, { functions: [{ kind: 'blur', value: 4 }] }, 0.5, 1);
         expect(fail).toBe(false);
         expect(source.toDataURL).toHaveBeenCalledTimes(1);
         for (const canvas of contexts.keys()) if (canvas !== result) expect(canvas.width * canvas.height).toBe(0);
@@ -129,7 +134,7 @@ describe('native filter surface', () => {
         initialize = (context) => {
             Object.defineProperty(context, 'filter', { get: () => 'none', set: () => {} });
         };
-        const result = await helper.renderFilterSurface(source, { blur: 4 }, 0.5, 1);
+        const result = await helper.renderFilterSurface(source, { functions: [{ kind: 'blur', value: 4 }] }, 0.5, 1);
         expect(source.toDataURL).toHaveBeenCalledTimes(1);
         for (const canvas of contexts.keys()) if (canvas !== result) expect(canvas.width * canvas.height).toBe(0);
     });
@@ -140,7 +145,9 @@ describe('native filter surface', () => {
         initialize = (context) => {
             vi.mocked(context.drawImage).mockImplementation(() => controller.abort());
         };
-        await expect(helper.renderFilterSurface(source, { blur: 4 }, 0.5, 1, controller.signal)).rejects.toMatchObject({
+        await expect(
+            helper.renderFilterSurface(source, { functions: [{ kind: 'blur', value: 4 }] }, 0.5, 1, controller.signal)
+        ).rejects.toMatchObject({
             name: 'AbortError'
         });
         expect(source.toDataURL).not.toHaveBeenCalled();
@@ -151,7 +158,9 @@ describe('native filter surface', () => {
     it('honors a pre-aborted signal before probing or allocating', async () => {
         const controller = new AbortController();
         controller.abort();
-        await expect(helper.renderFilterSurface(source, { blur: 4 }, 1, 1, controller.signal)).rejects.toMatchObject({
+        await expect(
+            helper.renderFilterSurface(source, { functions: [{ kind: 'blur', value: 4 }] }, 1, 1, controller.signal)
+        ).rejects.toMatchObject({
             name: 'AbortError'
         });
         expect(contexts.size).toBe(0);

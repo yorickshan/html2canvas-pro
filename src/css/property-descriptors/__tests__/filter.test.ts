@@ -88,7 +88,8 @@ describe('filter', () => {
         });
     });
 
-    it('unknown filter name is skipped', () => {
-        expect(parse('unknown(1)')).toBeNull();
+    it('unknown functions pass through verbatim (ctx.filter applies them natively)', () => {
+        expect(parse('unknown(1)')).toBe('unknown(1)');
+        expect(parse('url(#f) blur(2px)')).toBe('url("#f") blur(2px)');
     });
 });

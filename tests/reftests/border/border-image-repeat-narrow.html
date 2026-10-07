@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Repeating border-image on a narrow tall box</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            body {
+                background: #ffffff;
+            }
+
+            .narrow {
+                width: 25px;
+                height: 200px;
+                margin: 20px;
+                border: 10px solid transparent;
+                border-image-source: repeating-linear-gradient(45deg, #e11d48, #e11d48 6px, #1d4ed8 6px, #1d4ed8 12px);
+                border-image-slice: 10;
+                border-image-repeat: repeat;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- The 5px-wide top/bottom edges are taller than they are wide: the
+             tiling direction used to be derived from the destination aspect
+             ratio instead of the edge identity, and the rasterised gradient
+             ellipse/fill-rect maths clipped on short boxes. -->
+        <div class="narrow"></div>
+    </body>
+</html>

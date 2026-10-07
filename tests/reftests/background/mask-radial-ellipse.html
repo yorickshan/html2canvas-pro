@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Radial-gradient mask on a wide element (ry &lt; rx)</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            body {
+                background: #ffffff;
+                font-family: Arial;
+            }
+
+            .wide {
+                width: 300px;
+                height: 80px;
+                margin: 20px;
+                background: #16a085;
+                -webkit-mask-image: radial-gradient(closest-side, #000000, #000000 55%, transparent);
+                mask-image: radial-gradient(closest-side, #000000, #000000 55%, transparent);
+            }
+        </style>
+    </head>
+    <body>
+        <!-- closest-side on a 300×80 box yields rx=150, ry=40: the flat ellipse
+             used to lose its bottom half (post-scale fill rect) and stopped
+             fading at half the radius (diameter stop normalisation). -->
+        <div class="wide"></div>
+    </body>
+</html>

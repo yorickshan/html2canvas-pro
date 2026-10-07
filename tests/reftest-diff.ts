@@ -1,10 +1,17 @@
-import { sync } from 'glob';
+/**
+ * Visual regression check: compares fresh captures (tmp/reftests/**.png,
+ * produced by `pnpm reftests:pw`) against the committed baselines in
+ * tests/results/, which carry the engine name only (`test!Chrome.png`) so
+ * they survive browser minor updates. Regenerate a baseline by copying the
+ * capture from tmp/reftests after eyeballing it.
+ */
+import { globSync } from 'glob';
 import { resolve, basename } from 'path';
 import { existsSync, promises } from 'fs';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 
-const resultsDir = resolve(__dirname, '../results');
+const resultsDir = resolve(__dirname, 'results');
 const customDiffDir = resolve(__dirname, '../tmp/snapshot-diffs');
 
 async function compareImages(updated: Buffer, previous: Buffer, diffOutputPath: string): Promise<void> {
@@ -28,12 +35,11 @@ async function compareImages(updated: Buffer, previous: Buffer, diffOutputPath: 
 }
 
 describe('Image diff', () => {
-    const files: string[] = sync('../tmp/reftests/**/*.png', {
-        cwd: __dirname,
-        root: resolve(__dirname, '../../')
-    }).filter((path) => existsSync(resolve(resultsDir, basename(path))));
+    const captures: string[] = globSync('tmp/reftests/**/*.png', { cwd: resolve(__dirname, '..') }).filter((path) =>
+        existsSync(resolve(resultsDir, basename(path)))
+    );
 
-    for (const file of files) {
+    for (const file of captures) {
         const filename: string = basename(file);
         it(filename, async () => {
             const previous = resolve(resultsDir, filename);

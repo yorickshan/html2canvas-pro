@@ -27,7 +27,7 @@ describe('optional filter surface lifecycle', () => {
         vi.mocked(source.toDataURL).mockImplementation(() => {
             throw new DOMException('', 'SecurityError');
         });
-        const result = await renderFilterSurface(source, { blur: 0 }, 0.5, 1);
+        const result = await renderFilterSurface(source, { functions: [] }, 0.5, 1);
         expect(result.width).toBe(10);
         expect(source.toDataURL).not.toHaveBeenCalled();
         expect(decode).not.toHaveBeenCalled();
@@ -37,7 +37,9 @@ describe('optional filter surface lifecycle', () => {
         vi.mocked(source.toDataURL).mockImplementation(() => {
             throw new DOMException('', 'SecurityError');
         });
-        await expect(renderFilterSurface(source, { blur: 4 }, 1, 1)).rejects.toBeInstanceOf(FilterSurfaceError);
+        await expect(
+            renderFilterSurface(source, { functions: [{ kind: 'blur', value: 4 }] }, 1, 1)
+        ).rejects.toBeInstanceOf(FilterSurfaceError);
         expect(decode).not.toHaveBeenCalled();
         expect(source.width).toBe(10);
     });
@@ -48,7 +50,9 @@ describe('optional filter surface lifecycle', () => {
             image = this;
             return Promise.reject(new Error('blocked'));
         });
-        await expect(renderFilterSurface(source, { blur: 4 }, 1, 1)).rejects.toBeInstanceOf(FilterSurfaceError);
+        await expect(
+            renderFilterSurface(source, { functions: [{ kind: 'blur', value: 4 }] }, 1, 1)
+        ).rejects.toBeInstanceOf(FilterSurfaceError);
         expect(image?.hasAttribute('src')).toBe(false);
         expect(vi.getTimerCount()).toBe(0);
     });
@@ -57,7 +61,13 @@ describe('optional filter surface lifecycle', () => {
         decode.mockImplementation(() => new Promise(() => {}));
         const controller = new AbortController();
         const remove = vi.spyOn(controller.signal, 'removeEventListener');
-        const result = renderFilterSurface(source, { blur: 4 }, 1, 1, controller.signal);
+        const result = renderFilterSurface(
+            source,
+            { functions: [{ kind: 'blur', value: 4 }] },
+            1,
+            1,
+            controller.signal
+        );
         const assertion = expect(result).rejects.toMatchObject({ name: 'AbortError' });
         controller.abort();
         await assertion;
@@ -67,7 +77,7 @@ describe('optional filter surface lifecycle', () => {
 
     it('times out a decoder that never settles', async () => {
         decode.mockImplementation(() => new Promise(() => {}));
-        const result = renderFilterSurface(source, { blur: 4 }, 1, 1);
+        const result = renderFilterSurface(source, { functions: [{ kind: 'blur', value: 4 }] }, 1, 1);
         const assertion = expect(result).rejects.toThrow('timed out');
         await vi.advanceTimersByTimeAsync(10000);
         await assertion;
@@ -84,7 +94,9 @@ describe('optional filter surface lifecycle', () => {
             });
             return context;
         });
-        await expect(renderFilterSurface(source, { blur: 4 }, 1, 1)).rejects.toBeInstanceOf(FilterSurfaceError);
+        await expect(
+            renderFilterSurface(source, { functions: [{ kind: 'blur', value: 4 }] }, 1, 1)
+        ).rejects.toBeInstanceOf(FilterSurfaceError);
         expect(canvases[0]?.width).toBe(0);
         expect(canvases[0]?.height).toBe(0);
     });

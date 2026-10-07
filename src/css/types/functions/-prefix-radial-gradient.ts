@@ -29,7 +29,7 @@ import {
 import { Context } from '../../../core/context';
 
 export const prefixRadialGradient = (context: Context, tokens: CSSValue[]): CSSRadialGradientImage => {
-    let shape: CSSRadialShape = CSSRadialShape.CIRCLE;
+    let shape: CSSRadialShape = CSSRadialShape.ELLIPSE;
     let size: CSSRadialSize = CSSRadialExtent.FARTHEST_CORNER;
     const stops: UnprocessedGradientColorStop[] = [];
     const position: LengthPercentage[] = [];

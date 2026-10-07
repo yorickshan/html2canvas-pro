@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>object-fit: scale-down keeps small images at their intrinsic size</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            body {
+                background: #ffffff;
+            }
+
+            .frame {
+                width: 200px;
+                height: 120px;
+                margin: 20px;
+                border: 1px solid #cccccc;
+                background: #fde68a;
+            }
+
+            .frame img {
+                width: 100%;
+                height: 100%;
+                object-fit: scale-down;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- The 75×75 source in a 200×120 box must stay 75×75 (none wins the
+             smaller-concrete-size rule). The old width-only comparison picked
+             contain and upscaled the image to 120×120. -->
+        <div class="frame"><img src="../../assets/image.jpg" alt="" /></div>
+    </body>
+</html>

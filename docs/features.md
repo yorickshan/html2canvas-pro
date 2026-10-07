@@ -2,7 +2,7 @@
 
 Below is a list of all the supported CSS properties and values.
 
-> **CSS filters and layer opacity:** the surface-compositing path (shipped in 2.4.4 and included in current releases) is deliberately limited in scope. The filter functions listed below are broader than that path. See [CSS filters and layer opacity](./filter-support.md) for supported combinations, subtree restrictions, and the difference between SVG backend fallback and returning to the previous renderer.
+> **CSS filters and layer opacity:** the surface-compositing path applies the full standard filter function set (via the native canvas backend) to an eligible layer's complete subtree before layer `opacity` is composited once; the SVG fallback only expresses blur + a single drop-shadow. See [CSS filters and layer opacity](./filter-support.md) for the support matrix, subtree restrictions, and fallback behavior.
 
  - accent-color (**Checkbox/radio fill** — checked state of `<input>` elements; `auto` falls back to the built-in colour)
  - background

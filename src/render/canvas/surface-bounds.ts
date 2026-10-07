@@ -1,7 +1,7 @@
 import { Bounds } from '../../css/layout/bounds';
 import { ElementContainer } from '../../dom/element-container';
 import { getAbsoluteValue } from '../../css/types/length-percentage';
-import { filterOutset, parseSimpleFilter } from './filter-surface';
+import { filterOutset, parseFilterChain } from './filter-surface';
 
 // Budget backing stores across all active nested surfaces in one capture.
 // Reserve source, filtered output and decoded SVG/PNG rasters conservatively.
@@ -68,7 +68,7 @@ export function surfaceBounds(container: ElementContainer): Bounds {
     for (const child of container.elements) {
         if (child.styles.isVisible()) bounds = union(bounds, surfaceBounds(child));
     }
-    const filter = parseSimpleFilter(styles.filter);
+    const filter = parseFilterChain(styles.filter);
     return expand(bounds, filter ? filterOutset(filter) : 0);
 }
 

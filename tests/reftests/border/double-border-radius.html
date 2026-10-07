@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Double border with a top-right-only radius</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            body {
+                background: #ffffff;
+                font-family: Arial;
+            }
+
+            .box {
+                width: 160px;
+                height: 100px;
+                margin: 20px;
+                border: 8px double #334155;
+                border-radius: 0 28px 0 0;
+                background: #e2e8f0;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- The double border's top-right corner used to render square: the
+             double/stroke box paths were gated on the TOP-LEFT radii. -->
+        <div class="box"></div>
+    </body>
+</html>

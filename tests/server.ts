@@ -66,9 +66,12 @@ fs.mkdirSync(path.resolve(__dirname, metadataFolder), { recursive: true });
 const writeScreenshot = async (buffer: Buffer, body: ScreenshotRequest) => {
     const { default: filenamifyUrl } = await import('filenamify-url');
 
+    // Baselines in tests/results must survive browser minor updates, so the
+    // capture filename carries only the engine name (metadata keeps the
+    // full version + TARGET_BROWSER id).
     const filename = `${filenamifyUrl(body.test.replace(/^\/tests\/reftests\//, '').replace(/\.html$/, ''), {
         replacement: '-'
-    })}!${[process.env.TARGET_BROWSER, body.platform.name, body.platform.version].join('-')}`;
+    })}!${body.platform.name}`;
 
     fs.writeFileSync(path.resolve(__dirname, screenshotFolder, `${filename}.png`), buffer as Uint8Array);
     return filename;

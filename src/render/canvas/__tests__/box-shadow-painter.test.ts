@@ -144,7 +144,13 @@ describe('box-shadow painter', () => {
         const s = setup();
         s.ctx.getTransform.mockReturnValue({ a: 2, b: 0, c: 0, d: 1, e: 0, f: 0 });
         await s.run();
-        expect(renderFilterSurface).toHaveBeenCalledWith(s.source, { blur: 6 }, 1, 2, undefined);
+        expect(renderFilterSurface).toHaveBeenCalledWith(
+            s.source,
+            { functions: [{ kind: 'blur', value: 6 }] },
+            1,
+            2,
+            undefined
+        );
         expect(s.ctx.drawImage).toHaveBeenCalledOnce();
         expect(s.ctx.fill).not.toHaveBeenCalled();
         expect(s.budget.pixels).toBe(0);
@@ -184,7 +190,13 @@ describe('box-shadow painter', () => {
         const s = setup();
         await s.run(shadow(true));
         expect(s.sourceCtx.fill).toHaveBeenCalledExactlyOnceWith('evenodd');
-        expect(renderFilterSurface).toHaveBeenCalledWith(s.source, { blur: 6 }, 1, 2, undefined);
+        expect(renderFilterSurface).toHaveBeenCalledWith(
+            s.source,
+            { functions: [{ kind: 'blur', value: 6 }] },
+            1,
+            2,
+            undefined
+        );
         expect(s.ctx.fill).not.toHaveBeenCalled();
         expect(s.ctx.drawImage).toHaveBeenCalledOnce();
         expect(s.ctx.clip).toHaveBeenCalledOnce();

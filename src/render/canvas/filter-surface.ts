@@ -1,4 +1,3 @@
-import { FilterEffect } from '../effects';
 import { throwIfAborted } from '../../core/abort-helper';
 
 // Only errors in the optional surface path are eligible for legacy fallback.
@@ -8,64 +7,210 @@ export const releaseSurface = (canvas: HTMLCanvasElement): void => {
     canvas.width = canvas.height = 0;
 };
 
-export interface SimpleFilter {
-    blur: number;
-    shadow?: { x: number; y: number; blur: number; color: string };
+/**
+ * A parsed CSS filter chain. Functions keep their declaration order — CSS
+ * applies them left to right, and the native canvas backend reproduces that
+ * order exactly. Chains containing functions the backends cannot express
+ * (url() references, unknown functions) fail parsing and stay on the legacy
+ * renderer, where ctx.filter receives the full string natively.
+ */
+export type FilterFunction =
+    | { kind: 'blur'; value: number }
+    | { kind: 'drop-shadow'; x: number; y: number; blur: number; color: string }
+    | { kind: 'unitless'; name: UnitlessFilterName; value: number };
+
+export type UnitlessFilterName =
+    'brightness' | 'contrast' | 'grayscale' | 'hue-rotate' | 'invert' | 'opacity' | 'saturate' | 'sepia';
+
+export interface ParsedFilter {
+    functions: FilterFunction[];
 }
 
-// This first renderer integration handles computed blur followed by one shadow.
-// Unsupported chains retain the existing renderer until general filter support lands.
+const UNITLESS_NAMES: readonly UnitlessFilterName[] = [
+    'brightness',
+    'contrast',
+    'grayscale',
+    'hue-rotate',
+    'invert',
+    'opacity',
+    'saturate',
+    'sepia'
+];
 
-// Distinct filter strings are few, but parseSimpleFilter is called for every
-// node of a canComposite() subtree walk, so identical values are memoised with
-// a small LRU bound. Returned objects are treated as read-only by all callers.
-const SIMPLE_FILTER_CACHE_MAX = 256;
-const simpleFilterCache = new Map<string, SimpleFilter | null>();
+// Distinct filter strings are few, but parsing runs for every node of a
+// canComposite() subtree walk, so identical values are memoised with a small
+// LRU bound. Returned objects are treated as read-only by all callers.
+const PARSED_FILTER_CACHE_MAX = 256;
+const parsedFilterCache = new Map<string, ParsedFilter | null>();
 
-export function parseSimpleFilter(value: string | null): SimpleFilter | null {
-    if (!value || value === 'none') return { blur: 0 };
+const EMPTY_FILTER: ParsedFilter = { functions: [] };
 
-    const cached = simpleFilterCache.get(value);
+export function parseFilterChain(value: string | null): ParsedFilter | null {
+    if (!value || value === 'none') return EMPTY_FILTER;
+
+    const cached = parsedFilterCache.get(value);
     if (cached !== undefined) {
-        simpleFilterCache.delete(value);
-        simpleFilterCache.set(value, cached);
+        parsedFilterCache.delete(value);
+        parsedFilterCache.set(value, cached);
         return cached;
     }
 
-    const parsed = computeSimpleFilter(value);
-    if (simpleFilterCache.size >= SIMPLE_FILTER_CACHE_MAX) {
-        const oldest = simpleFilterCache.keys().next().value;
-        if (oldest !== undefined) simpleFilterCache.delete(oldest);
+    const parsed = computeFilterChain(value);
+    if (parsedFilterCache.size >= PARSED_FILTER_CACHE_MAX) {
+        const oldest = parsedFilterCache.keys().next().value;
+        if (oldest !== undefined) parsedFilterCache.delete(oldest);
     }
-    simpleFilterCache.set(value, parsed);
+    parsedFilterCache.set(value, parsed);
     return parsed;
 }
 
-function computeSimpleFilter(value: string): SimpleFilter | null {
-    const effect = new FilterEffect(value);
-    const shadows = value.match(/drop-shadow\(/g) || [];
-    if (shadows.length > 1 || (shadows.length === 1 && !effect.shadow)) return null;
-    const blur = effect.safeFilterString.match(/^blur\((\d+(?:\.\d+)?)px\)$/);
-    if (effect.safeFilterString && !blur) return null;
-    if (blur && shadows.length && value.indexOf('blur(') > value.indexOf('drop-shadow(')) return null;
-    return {
-        blur: blur ? Number(blur[1]) : 0,
-        shadow: effect.shadow
-            ? {
-                  x: effect.shadow.offsetX,
-                  y: effect.shadow.offsetY,
-                  blur: effect.shadow.blur,
-                  color: effect.shadow.color
-              }
-            : undefined
-    };
-}
+const computeFilterChain = (value: string): ParsedFilter | null => {
+    const functions: FilterFunction[] = [];
+    let index = 0;
+    while (index < value.length) {
+        const char = value[index];
+        if (char === ' ' || char === '\n' || char === '\t') {
+            index++;
+            continue;
+        }
+        const open = value.indexOf('(', index);
+        if (open === -1) return null; // stray content between functions
+        const name = value.slice(index, open).trim();
+        if (!/^[a-zA-Z-]+$/.test(name)) return null;
+        const bodyEnd = matchingParenthesis(value, open);
+        if (bodyEnd === -1) return null;
+        const fn = parseFilterFunction(name, value.slice(open + 1, bodyEnd).trim());
+        if (!fn) return null;
+        functions.push(fn);
+        index = bodyEnd + 1;
+    }
+    return { functions };
+};
 
-export function filterOutset(filter: SimpleFilter): number {
-    return Math.ceil(
-        3 * (filter.blur + (filter.shadow?.blur ?? 0)) +
-            Math.max(Math.abs(filter.shadow?.x ?? 0), Math.abs(filter.shadow?.y ?? 0))
-    );
+/** Index of the ')' matching the '(' at `open`, or -1. */
+const matchingParenthesis = (value: string, open: number): number => {
+    let depth = 1;
+    for (let i = open + 1; i < value.length; i++) {
+        const char = value[i];
+        if (char === '(') depth++;
+        else if (char === ')') {
+            depth--;
+            if (depth === 0) return i;
+        }
+    }
+    return -1;
+};
+
+const PX_LENGTH_RE = /^-?\d+(?:\.\d+)?px$/;
+
+const parseFilterFunction = (name: string, body: string): FilterFunction | null => {
+    if (name === 'blur') {
+        // Nonzero unitless lengths are invalid; unitless zero is allowed.
+        if (body === '0') return { kind: 'blur', value: 0 };
+        if (!PX_LENGTH_RE.test(body)) return null;
+        const value = Number.parseFloat(body);
+        return value < 0 ? null : { kind: 'blur', value };
+    }
+    if (name === 'drop-shadow') {
+        return parseDropShadowBody(body);
+    }
+    if ((UNITLESS_NAMES as readonly string[]).indexOf(name) !== -1) {
+        const unitless = name as UnitlessFilterName;
+        if (unitless === 'hue-rotate') {
+            const degrees = parseAngleDegrees(body);
+            return degrees === null ? null : { kind: 'unitless', name: unitless, value: degrees };
+        }
+        const trimmed = body.trim();
+        const percentage = trimmed.endsWith('%');
+        const numeric = percentage ? trimmed.slice(0, -1) : trimmed;
+        if (!/^-?\d+(?:\.\d+)?$/.test(numeric)) return null;
+        const value = Number.parseFloat(numeric) * (percentage ? 1 / 100 : 1);
+        return { kind: 'unitless', name: unitless, value };
+    }
+    return null; // url() references and unknown functions stay on the legacy path
+};
+
+/** Split on whitespace outside parentheses so rgba(...) colours stay one token. */
+const splitTopLevel = (body: string): string[] => {
+    const parts: string[] = [];
+    let depth = 0;
+    let current = '';
+    for (const char of body) {
+        if (char === '(') depth++;
+        else if (char === ')') depth--;
+        if (char === ' ' && depth === 0) {
+            if (current) parts.push(current);
+            current = '';
+            continue;
+        }
+        current += char;
+    }
+    if (current) parts.push(current);
+    return parts;
+};
+
+const parseDropShadowBody = (body: string): FilterFunction | null => {
+    const parts = splitTopLevel(body);
+    const lengths = parts.filter((part) => PX_LENGTH_RE.test(part)).map((part) => Number.parseFloat(part));
+    if (lengths.length < 2 || lengths.length > 3) return null;
+    const colors = parts.filter((part) => !PX_LENGTH_RE.test(part));
+    if (parts.length - colors.length !== lengths.length) return null;
+    return {
+        kind: 'drop-shadow',
+        x: lengths[0] as number,
+        y: lengths[1] as number,
+        blur: (lengths[2] as number) ?? 0,
+        color: colors.join(' ') || 'rgba(0, 0, 0, 0)'
+    };
+};
+
+const parseAngleDegrees = (body: string): number | null => {
+    const trimmed = body.trim();
+    if (trimmed === '0') return 0;
+    const numeric = Number.parseFloat(trimmed);
+    if (Number.isNaN(numeric)) return null;
+    if (trimmed.endsWith('deg')) return numeric;
+    if (trimmed.endsWith('grad')) return numeric * 0.9;
+    if (trimmed.endsWith('rad')) return (numeric * 180) / Math.PI;
+    if (trimmed.endsWith('turn')) return numeric * 360;
+    return null;
+};
+
+/**
+ * Render the chain as a canvas ctx.filter string, scaling all device-space
+ * lengths (blur radii, shadow offsets) by the capture scale. Unitless
+ * functions and hue angles are scale-invariant.
+ */
+export const nativeFilterString = (filter: ParsedFilter, scale: number): string =>
+    filter.functions
+        .map((fn) => {
+            switch (fn.kind) {
+                case 'blur':
+                    return `blur(${fn.value * scale}px)`;
+                case 'drop-shadow':
+                    return `drop-shadow(${fn.x * scale}px ${fn.y * scale}px ${fn.blur * scale}px ${fn.color})`;
+                case 'unitless':
+                    return fn.name === 'hue-rotate' ? `hue-rotate(${fn.value}deg)` : `${fn.name}(${fn.value})`;
+            }
+        })
+        .join(' ');
+
+/**
+ * Outset (in CSS pixels) a surface must grow so blur/shadow spillover is not
+ * cropped. Unitless functions never spread beyond the bounds. Consecutive
+ * blurs compound, so their radii sum.
+ */
+export function filterOutset(filter: ParsedFilter): number {
+    let blurSum = 0;
+    let maxShadowOffset = 0;
+    for (const fn of filter.functions) {
+        if (fn.kind === 'blur') blurSum += fn.value;
+        else if (fn.kind === 'drop-shadow') {
+            blurSum += fn.blur;
+            maxShadowOffset = Math.max(maxShadowOffset, Math.abs(fn.x), Math.abs(fn.y));
+        }
+    }
+    return Math.ceil(3 * blurSum + maxShadowOffset);
 }
 
 function canvasLike(source: HTMLCanvasElement): HTMLCanvasElement {
@@ -139,7 +284,7 @@ export function supportsNativeFilters(owner: Document = document): boolean {
 
 function tryNativeFilterSurface(
     source: HTMLCanvasElement,
-    { blur, shadow }: SimpleFilter,
+    filter: ParsedFilter,
     opacity: number,
     scale: number,
     signal?: AbortSignal
@@ -152,14 +297,8 @@ function tryNativeFilterSurface(
         filtered = canvasLike(source);
         const context = filtered.getContext('2d');
         if (!context || !('filter' in context)) return null;
-        const functions = [];
-        if (blur) functions.push(`blur(${blur * scale}px)`);
-        if (shadow)
-            functions.push(
-                `drop-shadow(${shadow.x * scale}px ${shadow.y * scale}px ${shadow.blur * scale}px ${shadow.color})`
-            );
-        context.filter = functions.join(' ');
-        if (context.filter === 'none') return null;
+        context.filter = nativeFilterString(filter, scale);
+        if (context.filter === 'none' || context.filter === '') return null;
         // Canvas applies globalAlpha before filtering. Filter the complete layer
         // at alpha 1, then composite opacity separately, including its shadow.
         context.drawImage(source, 0, 0);
@@ -183,33 +322,69 @@ function tryNativeFilterSurface(
     }
 }
 
+/**
+ * The SVG fallback predates the ordered-chain parser and only expresses the
+ * blur + single drop-shadow subset (at most one of each, blur before the
+ * shadow). Chains outside that subset reject with FilterSurfaceError so the
+ * caller keeps its legacy renderer instead of rendering a wrong filter.
+ */
+const isSvgExpressible = (filter: ParsedFilter): boolean => {
+    let blurs = 0;
+    let shadows = 0;
+    for (const fn of filter.functions) {
+        if (fn.kind === 'blur') blurs++;
+        else if (fn.kind === 'drop-shadow') shadows++;
+        else return false;
+    }
+    if (blurs > 1 || shadows > 1) return false;
+    if (blurs > 0 && shadows > 0) {
+        const blurIndex = filter.functions.findIndex((fn) => fn.kind === 'blur');
+        const shadowIndex = filter.functions.findIndex((fn) => fn.kind === 'drop-shadow');
+        return blurIndex < shadowIndex;
+    }
+    return true;
+};
+
 // Backend selection is internal; the public html2canvas options are unchanged.
 export async function renderFilterSurface(
     source: HTMLCanvasElement,
-    filter: SimpleFilter,
+    filter: ParsedFilter,
     opacity: number,
     scale: number,
     signal?: AbortSignal
 ): Promise<HTMLCanvasElement> {
     throwIfAborted(signal);
-    if ((filter.blur || filter.shadow) && supportsNativeFilters()) {
+    if (filter.functions.length > 0 && supportsNativeFilters(source.ownerDocument ?? document)) {
         const output = tryNativeFilterSurface(source, filter, opacity, scale, signal);
         if (output) return output;
+    }
+    if (!isSvgExpressible(filter)) {
+        // Native filters are unavailable (older WebKit) and the SVG fallback
+        // cannot express this chain — reject so the caller keeps the legacy
+        // renderer instead of rendering a wrong filter.
+        throw new FilterSurfaceError('Filter chain requires native canvas filters');
     }
     return renderSvgFilterSurface(source, filter, opacity, scale, signal);
 }
 
 // Explicit SVG entry is internal and allows independent fallback benchmarks/tests.
 // No foreignObject or external image is used.
-export async function renderSvgFilterSurface(
+async function renderSvgFilterSurface(
     source: HTMLCanvasElement,
-    { blur, shadow }: SimpleFilter,
+    filter: ParsedFilter,
     opacity: number,
     scale: number,
     signal?: AbortSignal
 ): Promise<HTMLCanvasElement> {
     throwIfAborted(signal);
-    if (!blur && !shadow) {
+    const blur = filter.functions.find((fn) => fn.kind === 'blur');
+    const shadow = filter.functions.find((fn) => fn.kind === 'drop-shadow');
+    const blurValue = blur && blur.kind === 'blur' ? blur.value : 0;
+    const shadowValue =
+        shadow && shadow.kind === 'drop-shadow'
+            ? { x: shadow.x, y: shadow.y, blur: shadow.blur, color: shadow.color }
+            : undefined;
+    if (!blurValue && !shadowValue) {
         const output = canvasLike(source);
         const context = output.getContext('2d');
         if (!context) {
@@ -238,7 +413,7 @@ export async function renderSvgFilterSurface(
         viewBox: `0 0 ${source.width} ${source.height}`
     });
     const defs = element('defs');
-    const filter = element('filter', {
+    const filterElement = element('filter', {
         id: 'composited-filter',
         filterUnits: 'userSpaceOnUse',
         x: 0,
@@ -247,28 +422,30 @@ export async function renderSvgFilterSurface(
         height: source.height,
         'color-interpolation-filters': 'sRGB'
     });
-    if (blur) {
-        filter.appendChild(element('feGaussianBlur', { stdDeviation: blur * scale, result: 'blurred-source' }));
+    if (blurValue) {
+        filterElement.appendChild(
+            element('feGaussianBlur', { stdDeviation: blurValue * scale, result: 'blurred-source' })
+        );
     }
-    if (shadow) {
+    if (shadowValue) {
         // Explicit primitives avoid the narrower feDropShadow blur observed in WebKit.
-        filter.appendChild(
+        filterElement.appendChild(
             element('feGaussianBlur', {
-                in: blur ? 'blurred-source' : 'SourceAlpha',
-                stdDeviation: shadow.blur * scale
+                in: blurValue ? 'blurred-source' : 'SourceAlpha',
+                stdDeviation: shadowValue.blur * scale
             })
         );
-        filter.appendChild(
-            element('feOffset', { dx: shadow.x * scale, dy: shadow.y * scale, result: 'offset-shadow' })
+        filterElement.appendChild(
+            element('feOffset', { dx: shadowValue.x * scale, dy: shadowValue.y * scale, result: 'offset-shadow' })
         );
-        filter.appendChild(element('feFlood', { 'flood-color': shadow.color }));
-        filter.appendChild(element('feComposite', { in2: 'offset-shadow', operator: 'in' }));
+        filterElement.appendChild(element('feFlood', { 'flood-color': shadowValue.color }));
+        filterElement.appendChild(element('feComposite', { in2: 'offset-shadow', operator: 'in' }));
         const merge = element('feMerge');
         merge.appendChild(element('feMergeNode'));
-        merge.appendChild(element('feMergeNode', { in: blur ? 'blurred-source' : 'SourceGraphic' }));
-        filter.appendChild(merge);
+        merge.appendChild(element('feMergeNode', { in: blurValue ? 'blurred-source' : 'SourceGraphic' }));
+        filterElement.appendChild(merge);
     }
-    defs.appendChild(filter);
+    defs.appendChild(filterElement);
     svg.appendChild(defs);
     let sourceUrl: string;
     try {

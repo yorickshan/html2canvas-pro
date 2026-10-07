@@ -28,10 +28,10 @@ import { MIX_BLEND_MODE } from '../../css/property-descriptors/mix-blend-mode';
 import {
     FilterSurfaceError,
     filterOutset,
-    parseSimpleFilter,
+    parseFilterChain,
     releaseSurface,
     renderFilterSurface,
-    SimpleFilter
+    ParsedFilter
 } from './filter-surface';
 import { cropSurface, reserveSurface, surfaceBounds, SurfaceBudget } from './surface-bounds';
 import { Bounds } from '../../css/layout/bounds';
@@ -176,7 +176,8 @@ export class CanvasRenderer {
     async renderStack(stack: StackingContext): Promise<void> {
         const styles = stack.element.container.styles;
         if (styles.isVisible()) {
-            const filter = parseSimpleFilter(styles.filter);
+            const filter = parseFilterChain(styles.filter);
+            const hasFilter = filter !== null && filter.functions.length > 0;
             const hasMask = styles.maskImage.length > 0;
             const reflect = styles.webkitBoxReflect;
             // mix-blend-mode blends the element (background + content) as one
@@ -188,7 +189,7 @@ export class CanvasRenderer {
             if (
                 stack.element !== this.surfaceRoot &&
                 !this.legacySubtree &&
-                (hasMask || reflect || hasBlend || (filter && (styles.filter || styles.opacity < 1))) &&
+                (hasMask || reflect || hasBlend || (filter !== null && (hasFilter || styles.opacity < 1))) &&
                 this.canComposite(stack.element)
             ) {
                 if (!(await this.renderCompositedStack(stack, filter, hasMask, reflect, hasBlend))) {
@@ -216,7 +217,7 @@ export class CanvasRenderer {
                 styles.zoom === 1 &&
                 styles.clipPath.type === CLIP_PATH_TYPE.NONE &&
                 !contains(styles.display, DISPLAY.LIST_ITEM) &&
-                parseSimpleFilter(styles.filter) !== null
+                parseFilterChain(styles.filter) !== null
             );
         };
         const subtree = (container: ElementContainer): boolean =>
@@ -231,7 +232,7 @@ export class CanvasRenderer {
 
     private async renderCompositedStack(
         stack: StackingContext,
-        filter: SimpleFilter | null,
+        filter: ParsedFilter | null,
         hasMask: boolean,
         reflect: BoxReflect | null,
         hasBlend = false
@@ -673,7 +674,13 @@ export class CanvasRenderer {
             );
             ctx.fillStyle = asString(shadow.color);
             ctx.fill();
-            filtered = await renderFilterSurface(source, { blur }, 1, scale, this.options.signal);
+            filtered = await renderFilterSurface(
+                source,
+                { functions: [{ kind: 'blur', value: blur }] },
+                1,
+                scale,
+                this.options.signal
+            );
             this.ctx.save();
             try {
                 this.ctx.beginPath();
@@ -1023,12 +1030,12 @@ export class CanvasRenderer {
 
     /**
      * Filter the already-painted content beneath the element's border box and
-     * paint the result back, approximating CSS backdrop-filter for the
-     * blur/drop-shadow subset supported by parseSimpleFilter.
+     * paint the result back, approximating CSS backdrop-filter for the chain
+     * subset the filter surface backends support.
      */
     private async renderBackdropFilter(paint: ElementPaint): Promise<void> {
-        const filter = parseSimpleFilter(paint.container.styles.backdropFilter);
-        if (!filter || (!filter.blur && !filter.shadow)) {
+        const filter = parseFilterChain(paint.container.styles.backdropFilter);
+        if (!filter || filter.functions.length === 0) {
             return; // unsupported or empty chain
         }
         const bounds = paint.container.bounds;
@@ -1059,7 +1066,19 @@ export class CanvasRenderer {
             const sx = Math.round((bounds.left - this.options.x) * scale);
             const sy = Math.round((bounds.top - this.options.y) * scale);
             srcCtx.drawImage(this.canvas, sx, sy, width, height, 0, 0, width, height);
-            filtered = await renderFilterSurface(source, filter, 1, scale, this.options.signal);
+            try {
+                filtered = await renderFilterSurface(source, filter, 1, scale, this.options.signal);
+            } catch (error) {
+                // Unlike the composited-stack path there is no legacy fallback
+                // for backdrop-filter (tainted canvas, SVG rejection, decode
+                // failure): capture continues without the effect instead of
+                // failing the whole render.
+                if (error instanceof FilterSurfaceError) {
+                    this.context.logger.info(`${error.message}; rendering without the backdrop effect`);
+                    return;
+                }
+                throw error;
+            }
             if (this.options.signal?.aborted) {
                 throw new DOMException('The operation was aborted.', 'AbortError');
             }

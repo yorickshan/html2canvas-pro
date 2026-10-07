@@ -6,22 +6,23 @@ This page describes the limited surface-compositing implementation (introduced i
 
 For an eligible stacking context, the renderer captures the complete subtree, applies its filter, and then composites its CSS `opacity` once. This avoids applying the parent's opacity separately to overlapping children.
 
-The surface path supports **at most one blur followed by at most one drop shadow**, with either function optional:
+The surface path supports **the full standard filter function set** — `blur()`, `brightness()`, `contrast()`, `grayscale()`, `hue-rotate()`, `invert()`, `opacity()`, `saturate()`, `sepia()` and `drop-shadow()` — in any order and any count, via the native canvas backend:
 
 | CSS on the layer | Surface path | Notes |
 | --- | --- | --- |
 | `opacity: 0.5; filter: none` | Supported | Opacity-only composition; no filter capability probe or SVG encoding. |
-| `filter: blur(5px)` | Supported | One blur; an additional CSS `opacity` property is allowed. |
-| `filter: drop-shadow(-12px 8px 6px rgba(0, 0, 0, 0.6))` | Supported | One shadow, signed offsets and a parsed color. |
-| `filter: blur(5px) drop-shadow(-12px 8px 6px rgba(0, 0, 0, 0.6)); opacity: 0.5` | Supported | Blur first, shadow second, layer opacity last. |
-| `filter: blur(5px) brightness(2)` | Previous renderer | The entire chain is outside the surface subset; brightness is not silently removed. |
-| `filter: drop-shadow(0px 2px 4px black) blur(5px)` | Previous renderer | Reversed order is not supported by the surface path. |
-| `filter: blur(2px) blur(3px)` | Previous renderer | Repeated blur functions are not combined by this implementation. |
-| `filter: drop-shadow(0px 2px 4px black) drop-shadow(8px 0px 2px red)` | Previous renderer | Multiple CSS drop shadows are outside the subset. |
-| `filter: opacity(0.5)` | Previous renderer | The filter function is not the CSS `opacity` property. |
-| `filter: url(#my-filter)` | Previous renderer | Arbitrary SVG filter references are outside the subset. |
+| `filter: blur(5px)` | Supported | An additional CSS `opacity` property is allowed. |
+| `filter: drop-shadow(-12px 8px 6px rgba(0, 0, 0, 0.6))` | Supported | Signed offsets and a parsed color. |
+| `filter: blur(5px) brightness(2); opacity: 0.5` | Supported (native) | Unitless functions are scale-invariant; declaration order is preserved. |
+| `filter: drop-shadow(0px 2px 4px black) blur(5px)` | Supported (native) | Reversed order is expressed exactly by the native backend. |
+| `filter: blur(2px) blur(3px)` | Supported (native) | Consecutive blurs compound; the surface outset sums their radii. |
+| `filter: drop-shadow(0px 2px 4px black) drop-shadow(8px 0px 2px red)` | Supported (native) | Multiple CSS drop shadows preserve their order. |
+| `filter: opacity(0.5)` | Supported (native) | Applied during filtering, before the separate layer-opacity pass. |
+| `filter: url(#my-filter)` | Previous renderer | SVG references are passed verbatim to `ctx.filter` on the legacy path, which applies them natively where the runtime supports it. |
 
-The CSS descriptor preserves filter syntax, units and functional colors. The separate internal `parseSimpleFilter` helper recognizes this subset from **computed CSS**, whose supported lengths are in pixels. It is not a public parser for arbitrary authored CSS. Browser-resolved values are what matter; an authored relative length is not the same as passing an unresolved `blur(2em)` string to that helper.
+**SVG fallback subset.** The SVG backend predates the ordered-chain parser and only expresses at most one `blur()` followed by at most one `drop-shadow()`. When native canvas filters are unavailable (older WebKit) and the chain is outside that subset, the surface path rejects the chain and the affected subtree stays on the previous renderer rather than rendering a wrong filter.
+
+The CSS descriptor preserves filter syntax, units, functional colors and `url()` references. The internal `parseFilterChain` helper recognizes the standard set from **computed CSS**, whose supported lengths are in pixels. It is not a public parser for arbitrary authored CSS. Browser-resolved values are what matter; an authored relative length is not the same as passing an unresolved `blur(2em)` string to that helper.
 
 Nonzero `blur(5)` is invalid CSS and is not repaired by appending `px`. Valid `blur(0)`, `blur(0px)` and `blur()` are no-op cases after browser computation. Invalid CSS declarations are handled by the browser before capture and may leave a previous valid declaration in effect.
 

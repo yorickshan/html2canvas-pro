@@ -21,6 +21,13 @@ export const filter: IPropertyListDescriptor<FilterValue> = {
 
         const parts: string[] = [];
         for (const token of tokens) {
+            if (token.type === TokenType.URL_TOKEN) {
+                // url(#svgfilter) references: url() tokenises as a URL token,
+                // not a function — carry it through so the legacy renderer
+                // hands the reference to ctx.filter (native SVG support).
+                parts.push(`url("${token.value}")`);
+                continue;
+            }
             if (token.type === TokenType.FUNCTION) {
                 const fn = token as CSSFunction;
                 // Reconstruct the function string from its name + values
@@ -48,6 +55,12 @@ export const filter: IPropertyListDescriptor<FilterValue> = {
                         parts.push(`drop-shadow(${renderedArgs})`);
                         break;
                     default:
+                        // Pass url() references and unknown functions through
+                        // verbatim: the surface compositor rejects chains it
+                        // cannot express (falling back to the legacy path),
+                        // and the legacy path feeds ctx.filter, which applies
+                        // SVG references natively where supported.
+                        parts.push(`${fn.name}(${renderedArgs})`);
                         break;
                 }
             }

@@ -85,7 +85,13 @@ const paintShadowSurface = async (
         else createCanvasPath(sourceCtx, path);
         sourceCtx.fillStyle = asString(shadow.color);
         sourceCtx.fill(shadow.inset ? 'evenodd' : 'nonzero');
-        filtered = await renderFilterSurface(source, { blur }, 1, space.scale, options.signal);
+        filtered = await renderFilterSurface(
+            source,
+            { functions: [{ kind: 'blur', value: blur }] },
+            1,
+            space.scale,
+            options.signal
+        );
         ctx.save();
         try {
             if (shadow.inset) {

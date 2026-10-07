@@ -123,10 +123,10 @@ the main renderer uses, then composited 1:1 onto the main canvas.
 
 Eligible stacking contexts (see the [support matrix](./filter-support.md)) are rasterized
 into an intermediate surface by `filter-surface.ts` (`surface-bounds.ts` computes the
-bounded outset), the filter chain subset (`blur()` + `drop-shadow()`) is applied to the
-surface, and the layer's CSS `opacity` is composited once afterwards. A runtime pixel
-probe picks the native canvas fast path and falls back to an SVG backend on the same
-surface. Unsupported chains or subtrees stay on the classic per-draw path.
+bounded outset), the parsed filter chain (the full standard function set) is applied to
+the surface by the native canvas backend, and the layer's CSS `opacity` is composited
+once afterwards. A runtime pixel probe picks the native fast path and falls back to an
+SVG backend (blur + single drop-shadow subset) on the same surface. Unsupported chains or subtrees stay on the classic per-draw path.
 
 ### Phase 5: Canvas Rendering (`src/render/canvas/`)
 
