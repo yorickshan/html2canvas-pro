@@ -55,7 +55,7 @@ html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/
 - LRU caches for CSS parsing and gradient patterns
 - Native canvas filter fast path with verified SVG fallback
 
-**Render speed** — html2canvas-pro 2.5.1 vs html2canvas 1.4.1, headless Chromium on Apple M4, `scale: 1`, median of 10 interleaved runs ([benchmark script](scripts/benchmarks/render.bench.mjs), reproduce with `corepack pnpm bench:render`):
+**Render speed** — html2canvas-pro(latest) vs html2canvas 1.4.1, headless Chromium on Apple M4, `scale: 1`, median of 10 interleaved runs ([benchmark script](scripts/benchmarks/render.bench.mjs), reproduce with `corepack pnpm bench:render`):
 
 | Fixture | html2canvas-pro | html2canvas 1.4.1 |
 | --- | --- | --- |
