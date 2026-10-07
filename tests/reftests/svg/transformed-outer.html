@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Transformed outer &lt;svg&gt; elements (issue #244)</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            body {
+                background: #ffffff;
+                font-family: Arial;
+            }
+
+            svg {
+                display: block;
+                margin: 20px;
+            }
+
+            .rotated {
+                transform: rotate(180deg);
+            }
+
+            .shifted {
+                transform: translateX(40px);
+            }
+
+            .attr-rotated {
+                transform: rotate(180deg);
+            }
+        </style>
+    </head>
+    <body>
+        <!-- CSS transform on the outer svg: the triangle points UP on screen.
+             The transform used to apply twice (bounds measured post-transform,
+             then re-applied at paint), flipping it back down. -->
+        <svg class="rotated" width="24" height="24" viewBox="0 0 24 24">
+            <path d="M2 4H22L12 20Z" fill="#000000" />
+        </svg>
+
+        <!-- translateX(40px): the svg must sit 40px right of the margin. -->
+        <svg class="shifted" width="24" height="24" viewBox="0 0 24 24">
+            <path d="M4 2V22L20 12Z" fill="#1d4ed8" />
+        </svg>
+
+        <!-- The SVG transform presentation attribute feeds the same computed
+             transform, so it must behave identically to the CSS form. -->
+        <svg class="attr-rotated" width="24" height="24" viewBox="0 0 24 24" transform="rotate(180)">
+            <path d="M2 4H22L12 20Z" fill="#e11d48" />
+        </svg>
+    </body>
+</html>

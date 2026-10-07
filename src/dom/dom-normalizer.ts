@@ -5,7 +5,7 @@
  */
 
 import { CSSParsedDeclaration } from '../css';
-import { isHTMLElementNode } from './node-type-guards';
+import { isHTMLElementNode, isSVGElementNode } from './node-type-guards';
 
 /**
  * Stored original styles for restoration
@@ -60,7 +60,13 @@ export class DOMNormalizer {
     static normalizeElement(element: Element, styles: CSSParsedDeclaration): OriginalStyles {
         const originalStyles: OriginalStyles = {};
 
-        if (!isHTMLElementNode(element)) {
+        // Both HTML and SVG containers measure the same way: neutralise the
+        // transform before parseBounds so getBoundingClientRect returns
+        // layout-space coordinates and the paint-time TransformEffect applies
+        // the transform exactly once. SVG elements implement
+        // ElementCSSInlineStyle, so element.style works for them too; skipping
+        // them double-applied outer <svg> transforms (issue #244).
+        if (!isHTMLElementNode(element) && !isSVGElementNode(element)) {
             return originalStyles;
         }
 
@@ -126,7 +132,7 @@ export class DOMNormalizer {
      * @param originalStyles - Original styles to restore
      */
     static restoreElement(element: Element, originalStyles: OriginalStyles): void {
-        if (!isHTMLElementNode(element)) {
+        if (!isHTMLElementNode(element) && !isSVGElementNode(element)) {
             return;
         }
 

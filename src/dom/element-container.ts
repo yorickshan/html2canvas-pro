@@ -1,7 +1,7 @@
 import { CSSParsedDeclaration } from '../css/index';
 import { TextContainer } from './text-container';
 import { Bounds, parseBounds } from '../css/layout/bounds';
-import { isHTMLElementNode } from './node-type-guards';
+import { isHTMLElementNode, isSVGElementNode } from './node-type-guards';
 import { Context } from '../core/context';
 import { DebuggerType, isDebugging } from '../core/debugger';
 import { DOMNormalizer, OriginalStyles } from './dom-normalizer';
@@ -43,7 +43,10 @@ export class ElementContainer {
         this.styles = new CSSParsedDeclaration(context, context.config.window.getComputedStyle(element, null));
 
         const shouldNormalize = options.normalizeDom !== false;
-        if (shouldNormalize && isHTMLElementNode(element)) {
+        // Outer <svg> elements normalize like HTML containers: their CSS
+        // transform must not survive bounds measurement, or the paint-time
+        // TransformEffect applies it a second time (issue #244).
+        if (shouldNormalize && (isHTMLElementNode(element) || isSVGElementNode(element))) {
             this.originalStyles = DOMNormalizer.normalizeElement(element, this.styles);
             this.originalElement = element;
         }

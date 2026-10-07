@@ -164,6 +164,62 @@ describe('DOMNormalizer', () => {
         const emptyStyles: OriginalStyles = {};
         expect(() => DOMNormalizer.restoreElement(mockElement as Element, emptyStyles)).not.toThrow();
     });
+
+    describe('outer <svg> elements (issue #244)', () => {
+        // isSVGElementNode detects SVG by className being an SVGAnimatedString
+        // object; the mock mimics that shape.
+        const makeSvgElement = (): Element =>
+            ({
+                nodeType: 1,
+                tagName: 'svg',
+                className: { baseVal: '', animVal: '' },
+                style: {
+                    animationDuration: '1s',
+                    transform: 'matrix(-1, 0, 0, -1, 0, 0)'
+                }
+            }) as unknown as Element;
+
+        it('normalizes the transform of an outer svg element', () => {
+            const svg = makeSvgElement();
+            const styles = new CSSParsedDeclaration(context, {
+                animationDuration: '0s',
+                transform: 'matrix(-1, 0, 0, -1, 0, 0)',
+                rotate: null
+            } as any);
+
+            const original = DOMNormalizer.normalizeElement(svg, styles);
+
+            strictEqual(svg.style.transform, 'translate(0, 0)');
+            strictEqual(original.transform, 'matrix(-1, 0, 0, -1, 0, 0)');
+        });
+
+        it('restores the original svg transform', () => {
+            const svg = makeSvgElement();
+            const styles = new CSSParsedDeclaration(context, {
+                animationDuration: '0s',
+                transform: 'matrix(-1, 0, 0, -1, 0, 0)',
+                rotate: null
+            } as any);
+
+            const original = DOMNormalizer.normalizeElement(svg, styles);
+            DOMNormalizer.restoreElement(svg, original);
+
+            strictEqual(svg.style.transform, 'matrix(-1, 0, 0, -1, 0, 0)');
+        });
+
+        it('neutralizes svg animations alongside the transform', () => {
+            const svg = makeSvgElement();
+            const styles = new CSSParsedDeclaration(context, {
+                animationDuration: '2s',
+                transform: 'matrix(-1, 0, 0, -1, 0, 0)',
+                rotate: null
+            } as any);
+
+            DOMNormalizer.normalizeElement(svg, styles);
+
+            strictEqual(svg.style.animationDuration, '0s');
+        });
+    });
 });
 
 describe('DOMNormalizer translate/scale normalization', () => {
