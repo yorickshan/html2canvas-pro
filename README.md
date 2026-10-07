@@ -55,6 +55,16 @@ html2canvas-pro is a fork of [niklasvh/html2canvas](https://github.com/niklasvh/
 - LRU caches for CSS parsing and gradient patterns
 - Native canvas filter fast path with verified SVG fallback
 
+**Render speed** — html2canvas-pro 2.5.1 vs html2canvas 1.4.1, headless Chromium on Apple M4, `scale: 1`, median of 10 interleaved runs ([benchmark script](scripts/benchmarks/render.bench.mjs), reproduce with `corepack pnpm bench:render`):
+
+| Fixture | html2canvas-pro | html2canvas 1.4.1 |
+| --- | --- | --- |
+| Simple document (~40 elements) | **80 ms** | 87 ms |
+| Large document (~1200 elements) | **295 ms** | 468 ms |
+| Modern-CSS page (`oklch()`, `conic-gradient()`, …) | **166 ms** | ✗ cannot render (throws on `oklch()`) |
+
+On element-heavy pages html2canvas-pro is ~1.6× faster, and it is the only one of the two that can render modern-CSS content at all. Absolute times vary by machine — compare ratios, not milliseconds.
+
 If you found this helpful, don't forget to
 leave a star 🌟.
 

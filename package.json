@@ -93,6 +93,7 @@
     "unittest": "vitest run",
     "unittest:coverage": "vitest run --coverage",
     "bench:css-parse": "tsx scripts/benchmarks/css-parse.bench.ts",
+    "bench:render": "node scripts/benchmarks/render.bench.mjs",
     "reftests-diff": "mkdir -p tmp/snapshots && vitest run --config vitest.reftest.config.ts",
     "watch": "rolldown -w",
     "watch:unittest": "vitest",
