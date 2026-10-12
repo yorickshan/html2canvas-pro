@@ -194,6 +194,16 @@ const iframeLoader = (
 };
 
 /**
+ * Reduce a doctype component to characters that are inert inside a
+ * <!DOCTYPE ...> declaration. Doctype content is parsed as a declaration
+ * token, never as HTML markup, but the fields originate from the captured
+ * document — stripping markup delimiters and control characters here makes
+ * that property locally verifiable (and keeps the sanitizer guarantee even
+ * if a future serializer ever embeds the result elsewhere).
+ */
+const sanitizeDoctypePart = (value: string): string => value.replace(/[<>&"'`\\]|[\u0000-\u001f\u007f]/g, '');
+
+/**
  * Serialise a document type declaration to an HTML string.
  * @internal – exported for testing only, not part of the public API.
  */
@@ -202,18 +212,18 @@ export const serializeDoctype = (doctype?: DocumentType | null): string => {
     if (doctype) {
         str += '<!DOCTYPE ';
         if (doctype.name) {
-            str += doctype.name;
+            str += sanitizeDoctypePart(doctype.name);
         }
         if (doctype.internalSubset) {
-            str += ' ' + doctype.internalSubset.replace(/"/g, '&quot;').replace(/>/g, '&gt;');
+            str += ' ' + sanitizeDoctypePart(doctype.internalSubset);
         }
         if (doctype.publicId) {
-            str += ' PUBLIC "' + doctype.publicId.replace(/"/g, '&quot;') + '"';
+            str += ' PUBLIC "' + sanitizeDoctypePart(doctype.publicId) + '"';
             if (doctype.systemId) {
-                str += ' "' + doctype.systemId.replace(/"/g, '&quot;') + '"';
+                str += ' "' + sanitizeDoctypePart(doctype.systemId) + '"';
             }
         } else if (doctype.systemId) {
-            str += ' SYSTEM "' + doctype.systemId.replace(/"/g, '&quot;') + '"';
+            str += ' SYSTEM "' + sanitizeDoctypePart(doctype.systemId) + '"';
         }
         str += '>';
     }
@@ -318,18 +328,15 @@ export const mountCloneInIFrame = (
      */
     const baseUri = ownerDocument.baseURI;
     documentClone.open();
-    // rawHTML is always a static, internally-generated string:
-    // serializeDoctype(ownerDocument.doctype) + '<html></html>'
-    // No user-controlled input — safe for document.write in the sandbox iframe.
-    // The doctype comes from the source document, not the global one.
+    // The only dynamic content is the doctype declaration, whose components
+    // pass through sanitizeDoctypePart (markup delimiters stripped); the
+    // remainder is the static '<html></html>' skeleton.
     const rawHTML = serializeDoctype(ownerDocument.doctype) + '<html></html>';
     try {
         const policy = resolveTrustedTypesPolicy(ownerDocument.defaultView);
         const html = policy ? policy.createHTML(rawHTML) : rawHTML;
-        // CodeQL:no - rawHTML is a static internal string, never user-controlled
         documentClone.write(html);
     } catch (_e) {
-        // CodeQL:no - rawHTML is a static internal string, never user-controlled
         documentClone.write(rawHTML);
     }
     // Chrome scrolls the parent document for some reason after the write to the cloned window???

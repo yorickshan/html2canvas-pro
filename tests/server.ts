@@ -63,15 +63,30 @@ const metadataFolder = '../tmp/reftests/metadata';
 fs.mkdirSync(path.resolve(__dirname, screenshotFolder), { recursive: true });
 fs.mkdirSync(path.resolve(__dirname, metadataFolder), { recursive: true });
 
-const writeScreenshot = async (buffer: Buffer, body: ScreenshotRequest) => {
-    const { default: filenamifyUrl } = await import('filenamify-url');
+/**
+ * Reduce the test URL to a filesystem-safe filename fragment.
+ *
+ * Whitelist-based (not blacklist): every character outside [A-Za-z0-9._-] is
+ * replaced, so path separators, `..` sequences and URL-encoded traversal
+ * cannot survive into the written path — provable locally, without relying
+ * on filenamify-url's replacement behavior.
+ */
+const safeFilenameFragment = (testUrl: string): string => {
+    return testUrl
+        .replace(/^\/tests\/reftests\//, '')
+        .replace(/\.html$/, '')
+        .replace(/[^A-Za-z0-9._-]+/g, '-')
+        .replace(/\.+/g, '-')
+        .replace(/^-+/, '')
+        .slice(0, 180);
+};
 
+const writeScreenshot = (buffer: Buffer, body: ScreenshotRequest): string => {
     // Baselines in tests/results must survive browser minor updates, so the
     // capture filename carries only the engine name (metadata keeps the
     // full version + TARGET_BROWSER id).
-    const filename = `${filenamifyUrl(body.test.replace(/^\/tests\/reftests\//, '').replace(/\.html$/, ''), {
-        replacement: '-'
-    })}!${body.platform.name}`;
+    const platform = safeFilenameFragment(body.platform?.name ?? 'unknown') || 'unknown';
+    const filename = `${safeFilenameFragment(body.test)}!${platform}`;
 
     fs.writeFileSync(path.resolve(__dirname, screenshotFolder, `${filename}.png`), buffer as Uint8Array);
     return filename;
@@ -84,21 +99,28 @@ screenshotApp.post(
             return res.sendStatus(400);
         }
 
-        const buffer = Buffer.from(req.body.screenshot.substring(prefix.length), 'base64');
-        const filename = writeScreenshot(buffer, req.body);
-        fs.writeFileSync(
-            path.resolve(__dirname, metadataFolder, `${filename}.json`),
-            JSON.stringify({
-                windowWidth: req.body.windowWidth,
-                windowHeight: req.body.windowHeight,
-                platform: req.body.platform,
-                devicePixelRatio: req.body.devicePixelRatio,
-                test: req.body.test,
-                id: process.env.TARGET_BROWSER,
-                screenshot: filename
-            })
-        );
-        return res.sendStatus(200);
+        try {
+            const buffer = Buffer.from(req.body.screenshot.substring(prefix.length), 'base64');
+            const filename = writeScreenshot(buffer, req.body);
+            fs.writeFileSync(
+                path.resolve(__dirname, metadataFolder, `${filename}.json`),
+                JSON.stringify({
+                    windowWidth: req.body.windowWidth,
+                    windowHeight: req.body.windowHeight,
+                    platform: req.body.platform,
+                    devicePixelRatio: req.body.devicePixelRatio,
+                    test: req.body.test,
+                    id: process.env.TARGET_BROWSER,
+                    screenshot: filename
+                })
+            );
+            return res.sendStatus(200);
+        } catch (error) {
+            // Malformed payloads (e.g. invalid base64) must not crash the
+            // upload server mid-suite.
+            console.error(error);
+            return res.sendStatus(400);
+        }
     }
 );
 
@@ -109,14 +131,18 @@ screenshotApp.use((error: Error, _req: express.Request, _res: express.Response, 
 
 const args = yargs(process.argv.slice(2)).number(['port', 'cors']).argv as Argv;
 
+// Test-only servers: bind to loopback so the write-capable screenshot route
+// and the open image proxy are never reachable from other machines.
+const LISTEN_HOST = '127.0.0.1';
+
 if (args.port) {
-    app.listen(args.port, () => {
+    app.listen(args.port, LISTEN_HOST, () => {
         console.log(`Server running on port ${args.port}`);
     });
 }
 
 if (args.cors) {
-    corsApp.listen(args.cors, () => {
+    corsApp.listen(args.cors, LISTEN_HOST, () => {
         console.log(`CORS server running on port ${args.cors}`);
     });
 }
