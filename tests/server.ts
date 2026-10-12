@@ -7,6 +7,7 @@ import path from 'path';
 import serveIndex from 'serve-index';
 import fs from 'fs';
 import bodyParser from 'body-parser';
+import rateLimit from 'express-rate-limit';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const proxy = require('./proxy.cjs');
@@ -108,39 +109,18 @@ const writeScreenshot = (buffer: Buffer, body: ScreenshotRequest): string => {
     return filename;
 };
 
-/**
- * Fixed-window in-memory rate limiter (no dependency): per remote address,
- * at most `max` requests per `windowMs`. Generous for a reftest suite
- * (121 uploads in ~15s from one browser) but bounded against runaway or
- * abusive clients.
- */
-const rateLimit = (max: number, windowMs: number) => {
-    const hits = new Map<string, number[]>();
-    return (_req: express.Request, res: express.Response, next: express.NextFunction): void => {
-        const key = _req.socket.remoteAddress ?? 'unknown';
-        const now = Date.now();
-        const window = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
-        if (window.length >= max) {
-            res.status(429).send('Too many screenshot uploads');
-            return;
-        }
-        window.push(now);
-        hits.set(key, window);
-        // Periodic sweep so the map cannot grow without bound.
-        if (hits.size > 1024) {
-            for (const [k, times] of hits) {
-                if (times.every((t) => now - t >= windowMs)) {
-                    hits.delete(k);
-                }
-            }
-        }
-        next();
-    };
-};
+// Generous for a reftest suite (121 uploads in ~15s from one browser) but
+// bounded against runaway or abusive clients.
+const uploadRateLimit = rateLimit({
+    windowMs: 60_000,
+    limit: 600,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false
+});
 
 screenshotApp.post(
     '/screenshot',
-    rateLimit(600, 60_000),
+    uploadRateLimit,
     (req: express.Request<Record<string, never>, void, ScreenshotRequest>, res: express.Response) => {
         if (!req.body || !req.body.screenshot) {
             return res.sendStatus(400);
