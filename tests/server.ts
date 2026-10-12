@@ -60,25 +60,41 @@ const prefix = 'data:image/png;base64,';
 const screenshotFolder = '../tmp/reftests';
 const metadataFolder = '../tmp/reftests/metadata';
 
-fs.mkdirSync(path.resolve(__dirname, screenshotFolder), { recursive: true });
-fs.mkdirSync(path.resolve(__dirname, metadataFolder), { recursive: true });
+const screenshotDir = path.resolve(__dirname, screenshotFolder);
+const metadataDir = path.resolve(__dirname, metadataFolder);
+
+fs.mkdirSync(screenshotDir, { recursive: true });
+fs.mkdirSync(metadataDir, { recursive: true });
 
 /**
  * Reduce the test URL to a filesystem-safe filename fragment.
  *
- * Whitelist-based (not blacklist): every character outside [A-Za-z0-9._-] is
+ * Whitelist-based (not blacklist): every character outside [A-Za-z0-9!-] is
  * replaced, so path separators, `..` sequences and URL-encoded traversal
- * cannot survive into the written path — provable locally, without relying
- * on filenamify-url's replacement behavior.
+ * cannot survive into the written path.
  */
 const safeFilenameFragment = (testUrl: string): string => {
     return testUrl
         .replace(/^\/tests\/reftests\//, '')
         .replace(/\.html$/, '')
-        .replace(/[^A-Za-z0-9._-]+/g, '-')
-        .replace(/\.+/g, '-')
+        .replace(/[^A-Za-z0-9!]+/g, '-')
         .replace(/^-+/, '')
         .slice(0, 180);
+};
+
+/**
+ * Resolve `filename` inside `dir` and refuse anything that escapes it.
+ *
+ * The containment check on the canonicalized path is what makes the write
+ * verifiably scoped: even if a future sanitizer regressed, a resolved path
+ * outside `dir` throws instead of writing.
+ */
+const resolveInsideDir = (dir: string, filename: string): string => {
+    const resolved = path.resolve(dir, filename);
+    if (!resolved.startsWith(dir + path.sep)) {
+        throw new Error(`Refusing to write outside ${dir}: ${filename}`);
+    }
+    return resolved;
 };
 
 const writeScreenshot = (buffer: Buffer, body: ScreenshotRequest): string => {
@@ -88,12 +104,43 @@ const writeScreenshot = (buffer: Buffer, body: ScreenshotRequest): string => {
     const platform = safeFilenameFragment(body.platform?.name ?? 'unknown') || 'unknown';
     const filename = `${safeFilenameFragment(body.test)}!${platform}`;
 
-    fs.writeFileSync(path.resolve(__dirname, screenshotFolder, `${filename}.png`), buffer as Uint8Array);
+    fs.writeFileSync(resolveInsideDir(screenshotDir, `${filename}.png`), buffer as Uint8Array);
     return filename;
+};
+
+/**
+ * Fixed-window in-memory rate limiter (no dependency): per remote address,
+ * at most `max` requests per `windowMs`. Generous for a reftest suite
+ * (121 uploads in ~15s from one browser) but bounded against runaway or
+ * abusive clients.
+ */
+const rateLimit = (max: number, windowMs: number) => {
+    const hits = new Map<string, number[]>();
+    return (_req: express.Request, res: express.Response, next: express.NextFunction): void => {
+        const key = _req.socket.remoteAddress ?? 'unknown';
+        const now = Date.now();
+        const window = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
+        if (window.length >= max) {
+            res.status(429).send('Too many screenshot uploads');
+            return;
+        }
+        window.push(now);
+        hits.set(key, window);
+        // Periodic sweep so the map cannot grow without bound.
+        if (hits.size > 1024) {
+            for (const [k, times] of hits) {
+                if (times.every((t) => now - t >= windowMs)) {
+                    hits.delete(k);
+                }
+            }
+        }
+        next();
+    };
 };
 
 screenshotApp.post(
     '/screenshot',
+    rateLimit(600, 60_000),
     (req: express.Request<Record<string, never>, void, ScreenshotRequest>, res: express.Response) => {
         if (!req.body || !req.body.screenshot) {
             return res.sendStatus(400);
@@ -103,7 +150,7 @@ screenshotApp.post(
             const buffer = Buffer.from(req.body.screenshot.substring(prefix.length), 'base64');
             const filename = writeScreenshot(buffer, req.body);
             fs.writeFileSync(
-                path.resolve(__dirname, metadataFolder, `${filename}.json`),
+                resolveInsideDir(metadataDir, `${filename}.json`),
                 JSON.stringify({
                     windowWidth: req.body.windowWidth,
                     windowHeight: req.body.windowHeight,
