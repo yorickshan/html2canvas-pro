@@ -102,8 +102,6 @@ jobs:
                   cache: 'pnpm'
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
-            - name: Build
-              run: pnpm build
             - name: Lint
               run: pnpm lint
             - name: Unit tests
@@ -151,6 +149,14 @@ jobs:
                   path: build
             - name: Ensure browser test prerequisites
               run: pnpm prebrowser
+            - name: Cache Playwright browser
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cache/ms-playwright
+                      ~/Library/Caches/ms-playwright
+                  key: ${{ runner.os }}-playwright-${{ matrix.config.playwrightBrowser }}-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: ${{ runner.os }}-playwright-${{ matrix.config.playwrightBrowser }}-
             - name: Install Playwright browser
               run: pnpm exec playwright install --with-deps ${{ matrix.config.playwrightBrowser }}
             - name: Run browser tests
@@ -184,6 +190,14 @@ jobs:
               with:
                   name: build
                   path: build
+            - name: Cache Playwright browser
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cache/ms-playwright
+                      ~/Library/Caches/ms-playwright
+                  key: ${{ runner.os }}-playwright-chromium-webkit-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: ${{ runner.os }}-playwright-chromium-webkit-
             - run: pnpm exec playwright install --with-deps chromium webkit
             - run: node scripts/filter-descriptor-regressions.mjs
             - run: node scripts/filter-surface-benchmark.mjs

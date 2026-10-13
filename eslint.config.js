@@ -28,11 +28,9 @@ export default [
         rules: {
             ...sharedRules,
             '@typescript-eslint/explicit-member-accessibility': ['error', { accessibility: 'no-public' }],
-            '@typescript-eslint/interface-name-prefix': 'off',
             '@typescript-eslint/explicit-function-return-type': 'off',
             '@typescript-eslint/no-use-before-define': 'off',
             '@typescript-eslint/no-unused-vars': 'off',
-            '@typescript-eslint/class-name-casing': 'off',
             '@typescript-eslint/ban-ts-comment': 'off',
         },
     },
