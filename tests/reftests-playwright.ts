@@ -80,7 +80,11 @@ const main = async (): Promise<void> => {
     const { engine, platformName } = selectBrowser(browserArg);
 
     const { testList, ignoredTests } = await loadTestList();
-    const tests = testList.filter((url) => !isIgnored(ignoredTests, url, platformName));
+    // H2C_ONLY=css/slow-css.html filters the run to matching reftests (debug).
+    const only = process.env.H2C_ONLY;
+    const tests = testList
+        .filter((url) => !only || url.includes(only))
+        .filter((url) => !isIgnored(ignoredTests, url, platformName));
     if (tests.length === 0) {
         throw new Error('No reftests found — run "pnpm build" first (generates build/reftests.js)');
     }
@@ -100,6 +104,21 @@ const main = async (): Promise<void> => {
     const path = await import('path');
     const serveIndex = (await import('serve-index')).default;
     const staticApp = express();
+
+    // Issue #245 regression fixture: delay the external stylesheet so the
+    // clone iframe's re-fetch lands well after the mount readiness poll. The
+    // fixture asserts inside onclone that the rules were applied; without the
+    // mount's stylesheet wait the first capture renders unstyled and fails.
+    // Registered BEFORE express.static (which would otherwise serve the file
+    // instantly) and sent with no-store so the clone's re-fetch cannot come
+    // from the browser cache — both are required to make the race fire.
+    const slowCssBody = (await import('fs')).readFileSync(resolve(root, 'tests/reftests/css/slow-css.css'), 'utf8');
+    staticApp.get('/tests/reftests/css/slow-css.css', (_req, res) => {
+        res.set('Cache-Control', 'no-store');
+        res.type('text/css');
+        setTimeout(() => res.send(slowCssBody), 1500);
+    });
+
     staticApp.use('/', serveIndex(resolve(root, 'tests/reftests'), { icons: true }));
     staticApp.use('/', express.static(resolve(root)));
     staticApp.use('/assets', express.static(resolve(root, 'tests/assets')));

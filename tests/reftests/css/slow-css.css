@@ -1,0 +1,11 @@
+/* Stylesheet for the issue #245 reftest (css/slow-css.html).
+   Served by the reftest runner with an artificial delay so the clone
+   iframe's re-fetch always lands after the mount readiness poll. */
+.plot-point {
+    position: absolute;
+    left: 40px;
+    top: 60px;
+    width: 60px;
+    height: 60px;
+    background: #0075ff;
+}

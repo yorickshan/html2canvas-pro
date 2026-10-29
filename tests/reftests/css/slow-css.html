@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--
+  Regression test for Issue #245:
+  https://github.com/yorickshan/html2canvas-pro/issues/245
+
+  The clone iframe re-fetches this page's external stylesheet. Because the
+  clone is mounted with adoptNode() into an already-closed document (required
+  for Chrome uppercase class-name matching, issue #100), the link neither
+  delays the iframe load event nor changes readyState — the mount must
+  explicitly wait for it (DocumentCloner's stylesheetsReady). On a cold cache
+  the first capture would otherwise measure an unstyled layout.
+
+  The reftest runner (tests/reftests-playwright.ts) intercepts requests to
+  slow-css.css and delays them well past the mount readiness poll, making the
+  race deterministic. The assertion runs in h2cOptions.onclone, which the
+  mount calls only after the stylesheet wait: if the wait is removed or
+  broken, the clone's computed style here is the unstyled fallback and the
+  test fails.
+-->
+<html lang="en">
+    <head>
+        <title>Slow external stylesheet on first capture (Issue #245)</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <script type="text/javascript" src="../../test.js"></script>
+        <link rel="stylesheet" href="slow-css.css" />
+    </head>
+    <body>
+        <div id="probe" class="plot-point"></div>
+    </body>
+    <script>
+        h2cOptions = {
+            onclone: function (document) {
+                var probe = document.getElementById('probe');
+                if (!probe) {
+                    throw new Error('issue-245 slow-css: probe element missing from clone');
+                }
+                var style = document.defaultView.getComputedStyle(probe);
+                // .plot-point only applies once the delayed external stylesheet
+                // has been parsed by the clone document.
+                if (style.position !== 'absolute') {
+                    throw new Error(
+                        'issue-245 slow-css: external stylesheet not applied to clone ' +
+                            '(position=' + style.position + ') — mount did not wait for stylesheet readiness'
+                    );
+                }
+                if (style.width !== '60px') {
+                    throw new Error(
+                        'issue-245 slow-css: unexpected clone width ' + style.width + ' (stylesheet partially applied?)'
+                    );
+                }
+            }
+        };
+    </script>
+</html>
