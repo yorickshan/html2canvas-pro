@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { addBase, createIFrameContainer, resolveTrustedTypesPolicy } from '../iframe-mount';
+import { addBase, createIFrameContainer, resolveTrustedTypesPolicy, stylesheetsReady } from '../iframe-mount';
 import { IGNORE_ATTRIBUTE } from '../slot-cloner';
 import { Context } from '../../core/context';
 import { Html2CanvasConfig } from '../../config';
@@ -59,6 +59,87 @@ describe('Context.adjustWindowBounds', () => {
         expect(context.windowBounds.top).toBe(17);
         expect(context.windowBounds.width).toBe(800);
         expect(context.windowBounds.height).toBe(600);
+    });
+});
+
+describe('stylesheetsReady (issue #245)', () => {
+    const makeLink = (doc: Document, attrs: Record<string, string>): HTMLLinkElement => {
+        const link = doc.createElement('link');
+        for (const [name, value] of Object.entries(attrs)) {
+            link.setAttribute(name, value);
+        }
+        doc.head.appendChild(link);
+        return link;
+    };
+
+    it('resolves immediately when the document has no pending stylesheet links', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        makeLink(doc, { rel: 'icon', href: 'favicon.ico' });
+        makeLink(doc, { rel: 'preload', as: 'style', href: 'x.css' });
+
+        await expect(stylesheetsReady(doc)).resolves.toBeUndefined();
+    });
+
+    it('resolves immediately when every stylesheet link already has a sheet', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        const link = makeLink(doc, { rel: 'stylesheet', href: 'applied.css' });
+        Object.defineProperty(link, 'sheet', { value: {} as CSSStyleSheet });
+
+        await expect(stylesheetsReady(doc)).resolves.toBeUndefined();
+    });
+
+    it('skips alternate and disabled links that may never fire load', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        makeLink(doc, { rel: 'stylesheet alternate', href: 'alt.css' });
+        const disabled = makeLink(doc, { rel: 'stylesheet', href: 'off.css' });
+        disabled.disabled = true;
+        makeLink(doc, { rel: 'stylesheet' });
+
+        await expect(stylesheetsReady(doc)).resolves.toBeUndefined();
+    });
+
+    it('waits for the load event of a pending stylesheet', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        const link = makeLink(doc, { rel: 'stylesheet', href: 'slow.css' });
+
+        let settled = false;
+        const wait = stylesheetsReady(doc).then(() => {
+            settled = true;
+        });
+        await new Promise((r) => setTimeout(r, 10));
+        expect(settled).toBe(false);
+
+        link.dispatchEvent(new Event('load'));
+        await expect(wait).resolves.toBeUndefined();
+    });
+
+    it('settles on error instead of waiting out the timeout', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        const link = makeLink(doc, { rel: 'stylesheet', href: 'missing.css' });
+
+        const wait = stylesheetsReady(doc);
+        link.dispatchEvent(new Event('error'));
+        await expect(wait).resolves.toBeUndefined();
+    });
+
+    it('resolves when the sheet appears without any event (already cached)', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        const link = makeLink(doc, { rel: 'stylesheet', href: 'cached.css' });
+
+        const wait = stylesheetsReady(doc);
+        await new Promise((r) => setTimeout(r, 10));
+        Object.defineProperty(link, 'sheet', { value: {} as CSSStyleSheet });
+        link.dispatchEvent(new Event('load'));
+        await expect(wait).resolves.toBeUndefined();
+    });
+
+    it('resolves without waiting when the signal is already aborted', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        makeLink(doc, { rel: 'stylesheet', href: 'never.css' });
+        const controller = new AbortController();
+        controller.abort();
+
+        await expect(stylesheetsReady(doc, undefined, controller.signal)).resolves.toBeUndefined();
     });
 });
 

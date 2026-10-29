@@ -123,6 +123,79 @@ const imagesReady = (document: HTMLDocument): Promise<unknown[]> => {
     return Promise.all([].slice.call(document.images, 0).map(imageReady));
 };
 
+/**
+ * Wait until every external stylesheet link of the clone has been applied or
+ * definitively failed, or the readiness budget expires.
+ *
+ * The clone is mounted by adoptNode() into an already-closed document
+ * (close() must precede adoptNode for Chrome uppercase class-name matching,
+ * see the mount sequence below), so the cloned <link rel="stylesheet">
+ * elements are inserted after the document finished loading: they neither
+ * delay the iframe load event nor change readyState, and the iframeLoader
+ * readiness poll cannot observe them. On a cold cache the first capture
+ * could then measure the clone before its external CSS arrived and render
+ * an unstyled layout (issue #245). Inline <style> clones apply
+ * synchronously and document-level adopted stylesheets are serialised at
+ * clone time, so neither needs this wait.
+ * @internal – exported for testing only.
+ */
+export const stylesheetsReady = (
+    documentClone: Document,
+    logger?: { warn: (msg: string) => void },
+    signal?: AbortSignal
+): Promise<void> => {
+    if (signal?.aborted) {
+        return Promise.resolve();
+    }
+    const pending: Promise<void>[] = [];
+    const links = documentClone.getElementsByTagName('link');
+    for (let i = 0; i < links.length; i++) {
+        const link = links[i];
+        if (!link || link.sheet) {
+            continue;
+        }
+        // Alternate stylesheets are fetched lazily and may never fire load;
+        // disabled links never apply. Neither affects the rendered layout.
+        const rel = (link.getAttribute('rel') ?? '').trim().toLowerCase().split(/\s+/);
+        if (!rel.includes('stylesheet') || rel.includes('alternate') || link.disabled || !link.getAttribute('href')) {
+            continue;
+        }
+        pending.push(
+            new Promise<void>((resolve) => {
+                let timer: ReturnType<typeof setTimeout>;
+                const settle = (): void => {
+                    link.removeEventListener('load', settle);
+                    link.removeEventListener('error', settle);
+                    signal?.removeEventListener('abort', onAbort);
+                    clearTimeout(timer);
+                    resolve();
+                };
+                const onAbort = (): void => settle();
+                timer = setTimeout(() => {
+                    logger?.warn(
+                        `Stylesheet ${link.href} did not finish loading within ${
+                            CLONE_READY_TIMEOUT_MS / 1000
+                        }s; continuing with a possibly unstyled clone`
+                    );
+                    settle();
+                }, CLONE_READY_TIMEOUT_MS);
+                link.addEventListener('load', settle);
+                link.addEventListener('error', settle);
+                signal?.addEventListener('abort', onAbort, { once: true });
+                // The fetch may have completed between listing the links and
+                // registering the listeners above.
+                if (link.sheet) {
+                    settle();
+                }
+            })
+        );
+    }
+    if (pending.length === 0) {
+        return Promise.resolve();
+    }
+    return Promise.all(pending).then(() => undefined);
+};
+
 const iframeLoader = (
     iframe: HTMLIFrameElement,
     logger?: { warn: (msg: string) => void },
@@ -293,6 +366,8 @@ export const mountCloneInIFrame = (
         }
 
         throwIfAborted(mount.signal);
+        await stylesheetWait;
+        throwIfAborted(mount.signal);
         if (documentClone.fonts && documentClone.fonts.ready) {
             await documentClone.fonts.ready;
         }
@@ -361,6 +436,12 @@ export const mountCloneInIFrame = (
     const adoptedNode = documentClone.adoptNode(mount.documentElement);
     addBase(adoptedNode, baseUri);
     documentClone.replaceChild(adoptedNode, documentClone.documentElement);
+
+    // Registered synchronously after the links enter the document and before
+    // any event can dispatch, so a stylesheet that is already cached (or that
+    // 404s immediately) can never slip past the listeners while the iframe
+    // load event is still queued.
+    const stylesheetWait = stylesheetsReady(documentClone, context.logger, mount.signal);
 
     return iframeLoad;
 };
