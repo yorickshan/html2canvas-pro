@@ -775,6 +775,45 @@ describe('parseStackingContexts – tree structure', () => {
         expect(wrapperStack.negativeZIndex[0]?.element.container).toBe(container.elements[0]?.elements[0]);
     });
 
+    it.each([
+        ['isolation: isolate', { isolation: 'isolate' }],
+        ['filter', { filter: 'drop-shadow(transparent 0px 0px 0px)' }],
+        ['backdrop-filter', { backdropFilter: 'blur(2px)' }],
+        ['mask-image', { maskImage: 'linear-gradient(rgb(0, 0, 0), rgb(0, 0, 0))' }],
+        ['-webkit-box-reflect', { webkitBoxReflect: 'below 0px' }]
+    ] as const)('paints a non-positioned %s stacking context in the z-index: 0 layer', (_, targetStyles) => {
+        // root > relative wrapper with a background > block > stacking context.
+        // The wrapper paints in the root's z-index: 0 layer, so the stacking
+        // context must paint there too, after it in tree order. Painting it in
+        // the earlier inline-level layer hides it behind the wrapper's background.
+        const target = document.createElement('div');
+        const block = document.createElement('div');
+        block.appendChild(target);
+        const wrapper = document.createElement('div');
+        wrapper.appendChild(block);
+        const rootEl = document.createElement('div');
+        rootEl.appendChild(wrapper);
+
+        const container = buildContainer(
+            () => rootEl,
+            (el): StyleOverrides | undefined => {
+                if (el === wrapper) return { position: 'relative', backgroundColor: 'rgb(11, 16, 32)' };
+                if (el === target) return targetStyles;
+                return undefined;
+            }
+        );
+        assignLayout(container);
+        const root = parseStackingContexts(container);
+
+        const wrapperContainer = container.elements[0];
+        const targetContainer = wrapperContainer?.elements[0]?.elements[0];
+        expect(targetContainer?.createsRealStackingContext).toBe(true);
+        expect(root.nonPositionedInlineLevel).toHaveLength(0);
+        expect(root.zeroOrAutoZIndexOrTransformedOrOpacity).toHaveLength(2);
+        expect(root.zeroOrAutoZIndexOrTransformedOrOpacity[0]?.element.container).toBe(wrapperContainer);
+        expect(root.zeroOrAutoZIndexOrTransformedOrOpacity[1]?.element.container).toBe(targetContainer);
+    });
+
     it('numbers list items for ol with start/reversed and li value attributes', () => {
         const li1 = document.createElement('li');
         const li2 = document.createElement('li');

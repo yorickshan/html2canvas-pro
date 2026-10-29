@@ -399,7 +399,14 @@ const parseStackTree = (
 
             const stack = new StackingContext(paintContainer);
 
-            if (child.styles.isPositioned() || child.styles.opacity < 1 || child.styles.isTransformed()) {
+            // Stacking contexts formed by non-positioned elements (filter, isolation,
+            // mask, ...) paint in the same layer as a positioned z-index: 0 element.
+            if (
+                treatAsRealStackingContext ||
+                child.styles.isPositioned() ||
+                child.styles.opacity < 1 ||
+                child.styles.isTransformed()
+            ) {
                 const order = child.styles.zIndex.order;
                 if (order < 0) {
                     let index = 0;

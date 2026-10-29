@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>non-positioned stacking contexts paint above positioned ancestors; z-index test #22</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="../../test.js"></script>
+    <style type="text/css">
+    body {
+        font-family: Arial;
+        margin: 8px;
+    }
+
+    /* Each row: a position: relative wrapper (z-index: auto, so it paints in
+       the root's z-index: 0 layer) around a block with a dark background,
+       around a non-positioned element that creates a stacking context.
+       Browsers paint that element in the z-index: 0 layer too, after the
+       wrapper, so its light text stays visible on the dark background. */
+    .wrapper {
+        position: relative;
+        margin-bottom: 8px;
+    }
+
+    .panel {
+        background: #0b1020;
+        color: #9cdcfe;
+        padding: 10px;
+    }
+
+    .context {
+        display: block;
+    }
+
+    .isolate {
+        isolation: isolate;
+    }
+
+    .filter {
+        filter: drop-shadow(0 0 0 transparent);
+    }
+
+    .backdrop-filter {
+        backdrop-filter: blur(0px);
+    }
+
+    .mask-image {
+        -webkit-mask-image: linear-gradient(#000, #000);
+        mask-image: linear-gradient(#000, #000);
+    }
+
+    .box-reflect {
+        -webkit-box-reflect: below 0px linear-gradient(transparent, transparent);
+    }
+    </style></head>
+
+  <body>
+    <div class="wrapper"><div class="panel"><span class="context">control: no stacking context</span></div></div>
+    <div class="wrapper"><div class="panel"><span class="context isolate">isolation: isolate</span></div></div>
+    <div class="wrapper"><div class="panel"><span class="context filter">filter</span></div></div>
+    <div class="wrapper"><div class="panel"><span class="context backdrop-filter">backdrop-filter</span></div></div>
+    <div class="wrapper"><div class="panel"><span class="context mask-image">mask-image</span></div></div>
+    <div class="wrapper"><div class="panel"><span class="context box-reflect">-webkit-box-reflect</span></div></div>
+  </body>
+</html>
