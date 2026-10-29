@@ -1,3 +1,15 @@
+## [2.5.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.5.2...v2.5.3) (2026-10-29)
+
+### Features
+
+* implement stylesheetsReady function to ensure external stylesheets are loaded before rendering ([158a2e9](https://github.com/yorickshan/html2canvas-pro/commit/158a2e908f5396571cc6656013e905bf36adcc71))
+
+### Bug Fixes
+
+* **security:** prove screenshot path containment and rate-limit uploads ([37fceaf](https://github.com/yorickshan/html2canvas-pro/commit/37fceaf6bdbff78b0b9673ae558d6a01dff035da))
+* **security:** resolve open CodeQL alerts on test server and doctype write ([b497e49](https://github.com/yorickshan/html2canvas-pro/commit/b497e496939c37110359a32e99031286866ba232))
+* **security:** use express-rate-limit for the screenshot upload route ([1825b56](https://github.com/yorickshan/html2canvas-pro/commit/1825b567731672ae3d170c721ab431951fa9e7ce))
+
 ## [2.5.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.5.1...v2.5.2) (2026-10-07)
 
 ### Features
