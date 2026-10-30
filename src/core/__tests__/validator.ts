@@ -279,6 +279,42 @@ describe('Validator', () => {
         });
     });
 
+    describe('Background color validation', () => {
+        const validator = createDefaultValidator();
+
+        it('should accept null (transparent)', () => {
+            const result = validator.validateBackgroundColor(null);
+            strictEqual(result.valid, true);
+        });
+
+        it('should accept hex, rgb and hsl colors', () => {
+            for (const color of ['#ffffff', 'rgba(0,0,0,0.5)', 'hsl(120 50% 50%)', 'transparent', 'white']) {
+                strictEqual(validator.validateBackgroundColor(color).valid, true, color);
+            }
+        });
+
+        it('should accept modern color functions', () => {
+            for (const color of ['oklch(0.7 0.1 200)', 'color(display-p3 1 0 0)', 'color-mix(in srgb, red, blue)']) {
+                strictEqual(validator.validateBackgroundColor(color).valid, true, color);
+            }
+        });
+
+        it('should reject non-string values', () => {
+            const result = validator.validateBackgroundColor(123 as any);
+            strictEqual(result.valid, false);
+        });
+
+        it('should reject empty strings', () => {
+            const result = validator.validateBackgroundColor('');
+            strictEqual(result.valid, false);
+        });
+
+        it('should reject strings with characters no CSS color can contain', () => {
+            const result = validator.validateBackgroundColor('red; background:url(evil)');
+            strictEqual(result.valid, false);
+        });
+    });
+
     describe('Element validation', () => {
         const validator = createDefaultValidator();
 

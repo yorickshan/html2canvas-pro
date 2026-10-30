@@ -25,7 +25,8 @@ export interface ValidatorConfig {
     allowedProxyDomains?: string[];
 
     /**
-     * Allow localhost/127.0.0.1 as proxy URL. Only set for development or test (e.g. Karma reftests).
+     * Allow localhost/127.0.0.1 as proxy URL. Only set for development or test
+     * (e.g. the Playwright reftest runner, which proxies through localhost).
      * @default false
      */
     allowLocalhostProxy?: boolean;
@@ -338,6 +339,38 @@ export class Validator {
     }
 
     /**
+     * Validate the backgroundColor option
+     *
+     * @param backgroundColor - CSS color string or null (transparent)
+     * @returns Validation result
+     */
+    validateBackgroundColor(backgroundColor: unknown): ValidationResult {
+        if (backgroundColor === null) {
+            return { valid: true, sanitized: null };
+        }
+
+        if (typeof backgroundColor !== 'string' || backgroundColor.length === 0) {
+            return {
+                valid: false,
+                error: 'backgroundColor must be a CSS color string or null'
+            };
+        }
+
+        // Anything the CSS color grammar accepts is allowed (hex, rgb(a),
+        // hsl(a), named colors, color(), oklch(), …). Only reject values no
+        // parser would accept, so an invalid string errors up front instead
+        // of silently rendering a transparent canvas.
+        if (/[^a-zA-Z0-9%(),.#\s/-]/.test(backgroundColor)) {
+            return {
+                valid: false,
+                error: `backgroundColor contains characters that cannot appear in a CSS color: ${backgroundColor}`
+            };
+        }
+
+        return { valid: true, sanitized: backgroundColor };
+    }
+
+    /**
      * Validate image timeout
      *
      * @param timeout - Timeout in milliseconds
@@ -537,6 +570,14 @@ export class Validator {
             const nonceResult = this.validateCspNonce(options.cspNonce as string);
             if (!nonceResult.valid) {
                 errors.push(`CSP nonce: ${nonceResult.error}`);
+            }
+        }
+
+        // Validate background color
+        if (options.backgroundColor !== undefined) {
+            const colorResult = this.validateBackgroundColor(options.backgroundColor);
+            if (!colorResult.valid) {
+                errors.push(`backgroundColor: ${colorResult.error}`);
             }
         }
 

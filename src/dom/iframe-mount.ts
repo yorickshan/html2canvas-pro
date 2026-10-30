@@ -154,13 +154,19 @@ const isSheetFullyApplied = (sheet: CSSStyleSheet | null, depth = 0): boolean =>
         return true;
     }
     for (let i = 0; i < rules.length; i++) {
-        const rule = rules[i];
-        if (rule && typeof CSSImportRule !== 'undefined' && rule instanceof CSSImportRule) {
-            // An import whose inner sheet is still null (or whose own rules
-            // are not applied yet) means the chain is still loading.
-            if (!rule.styleSheet || !isSheetFullyApplied(rule.styleSheet, depth + 1)) {
-                return false;
-            }
+        const rule = rules[i] as (CSSRule & { styleSheet?: CSSStyleSheet | null }) | undefined;
+        if (!rule || !('styleSheet' in rule)) {
+            continue;
+        }
+        // Duck-typed CSSImportRule: `instanceof` breaks across realms (the
+        // clone iframe's rules come from another JS realm), and jsdom never
+        // constructs real CSSImportRule instances either. Per spec only
+        // CSSImportRule declares a styleSheet member, and it stays null
+        // while the imported sheet is still loading — so a null/missing
+        // inner sheet means the chain is in flight.
+        const inner = rule.styleSheet;
+        if (!inner || !isSheetFullyApplied(inner, depth + 1)) {
+            return false;
         }
     }
     return true;
@@ -215,7 +221,8 @@ const collectLinks = (root: ParentNode, out: HTMLLinkElement[]): void => {
 export const stylesheetsReady = (
     documentClone: Document,
     logger?: { warn: (msg: string) => void },
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    timeoutMs: number = STYLESHEET_READY_TIMEOUT_MS
 ): Promise<void> => {
     if (signal?.aborted) {
         return Promise.resolve();
@@ -260,10 +267,10 @@ export const stylesheetsReady = (
                     elapsed += STYLESHEET_READY_POLL_MS;
                     if (link.sheet) {
                         settle();
-                    } else if (elapsed >= STYLESHEET_READY_TIMEOUT_MS) {
+                    } else if (elapsed >= timeoutMs) {
                         logger?.warn(
                             `Stylesheet ${href} did not finish loading within ${
-                                STYLESHEET_READY_TIMEOUT_MS / 1000
+                                timeoutMs / 1000
                             }s; continuing with a possibly unstyled clone`
                         );
                         settle();
@@ -290,11 +297,11 @@ export const stylesheetsReady = (
                 const timer = setInterval(() => {
                     elapsed += STYLESHEET_READY_POLL_MS;
                     const currentSheet = style.sheet;
-                    if ((currentSheet && isSheetFullyApplied(currentSheet)) || elapsed >= STYLESHEET_READY_TIMEOUT_MS) {
-                        if (elapsed >= STYLESHEET_READY_TIMEOUT_MS && !isSheetFullyApplied(currentSheet ?? null)) {
+                    if ((currentSheet && isSheetFullyApplied(currentSheet)) || elapsed >= timeoutMs) {
+                        if (elapsed >= timeoutMs && !isSheetFullyApplied(currentSheet ?? null)) {
                             logger?.warn(
                                 `@import chain in an inline <style> did not finish loading within ${
-                                    STYLESHEET_READY_TIMEOUT_MS / 1000
+                                    timeoutMs / 1000
                                 }s; continuing with a possibly unstyled clone`
                             );
                         }

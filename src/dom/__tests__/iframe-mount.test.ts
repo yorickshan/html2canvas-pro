@@ -154,13 +154,16 @@ describe('stylesheetsReady (issue #245)', () => {
         style.textContent = '@import url("nested.css");\n.body { color: red; }';
         doc.head.appendChild(style);
 
-        // jsdom attaches a sheet synchronously; simulate the in-flight import
-        // with a CSSImportRule whose styleSheet is still null.
-        const importRule = {
-            cssText: '@import url("nested.css");'
+        // jsdom's attached sheet rejects defineProperty, and no engine builds
+        // a CSSImportRule we can mutate — replace the sheet with a stub whose
+        // import rule models the spec: styleSheet is null while in flight.
+        const importRule: { cssText: string; styleSheet: CSSStyleSheet | null } = {
+            cssText: '@import url("nested.css");',
+            styleSheet: null
         };
-        Object.defineProperty(style.sheet!, 'cssRules', {
-            value: [importRule as unknown as CSSImportRule]
+        Object.defineProperty(style, 'sheet', {
+            configurable: true,
+            value: { cssRules: [importRule] } as unknown as CSSStyleSheet
         });
 
         let settled = false;
@@ -171,9 +174,7 @@ describe('stylesheetsReady (issue #245)', () => {
         expect(settled).toBe(false);
 
         // The import resolves: the rule now exposes an applied inner sheet.
-        Object.defineProperty(importRule, 'styleSheet', {
-            value: { cssRules: [] } as unknown as CSSStyleSheet
-        });
+        importRule.styleSheet = { cssRules: [] } as unknown as CSSStyleSheet;
         await expect(wait).resolves.toBeUndefined();
     });
 
@@ -182,13 +183,16 @@ describe('stylesheetsReady (issue #245)', () => {
         const style = doc.createElement('style');
         style.textContent = '@import url("nested.css");';
         doc.head.appendChild(style);
-        Object.defineProperty(style.sheet!, 'cssRules', {
-            value: [
-                {
-                    cssText: '@import url("nested.css");',
-                    styleSheet: { cssRules: [] }
-                } as unknown as CSSImportRule
-            ]
+        Object.defineProperty(style, 'sheet', {
+            configurable: true,
+            value: {
+                cssRules: [
+                    {
+                        cssText: '@import url("nested.css");',
+                        styleSheet: { cssRules: [] }
+                    }
+                ]
+            } as unknown as CSSStyleSheet
         });
 
         await expect(stylesheetsReady(doc)).resolves.toBeUndefined();
@@ -220,10 +224,10 @@ describe('stylesheetsReady (issue #245)', () => {
         makeLink(doc, { rel: 'stylesheet', href: 'hangs.css' });
         const warn = vi.fn();
 
-        // The budget comes from STYLESHEET_READY_TIMEOUT_MS; assert the
-        // warning path with a generous timeout so slow CI never flakes.
-        await expect(stylesheetsReady(doc, { warn })).resolves.toBeUndefined();
-    }, 20_000);
+        await expect(stylesheetsReady(doc, { warn }, undefined, 100)).resolves.toBeUndefined();
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn.mock.calls[0]?.[0]).toContain('hangs.css');
+    });
 });
 
 describe('mountCloneInIFrame failure cleanup', () => {

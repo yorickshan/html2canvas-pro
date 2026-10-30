@@ -13,8 +13,8 @@
  *      reftest-diff harness consume.
  *
  * Screenshot metadata keeps the `platform.name`/`platform.version` shape of
- * the Karma uploads so downstream consumers (metadata folder, result list)
- * need no changes.
+ * the historical Karma uploads so downstream consumers (metadata folder,
+ * result list) need no changes.
  *
  * Usage: pnpm reftests [-- --browser=chrome]  (default: chromium; also
  * firefox, webkit — mirroring the old TARGET_BROWSER matrix).
@@ -34,8 +34,8 @@ interface ReftestList {
 }
 
 // The reftest pages proxy cross-origin images through localhost:8081; the
-// default Validator rejects localhost proxies, so relax it like the Karma
-// runner did (tests/testrunner.ts).
+// default Validator rejects localhost proxies, so relax it for the runner
+// (tests/reftests-playwright.ts is the only consumer needing this).
 const reftestValidator = createDefaultValidator({ allowLocalhostProxy: true });
 
 const loadTestList = async (): Promise<ReftestList> => {
@@ -94,12 +94,12 @@ const main = async (): Promise<void> => {
 
     // Static reftest pages come from a dedicated static app (port 8080); the
     // screenshot app (8000) only receives uploads; the CORS app (8081) backs
-    // the image proxy — the same service split as the Karma-era runner.
+    // the image proxy.
     //
-    // The static app deliberately does NOT mount /redirect-image: under Karma
-    // that route never resolved either, and the page renders it as a broken
-    // image (which the captures rely on — a live redirect would taint the
-    // canvas with the cross-origin target).
+    // The static app deliberately does NOT mount /redirect-image: that route
+    // never resolved under the historical runner either, and the page renders
+    // it as a broken image (which the captures rely on — a live redirect
+    // would taint the canvas with the cross-origin target).
     const express = (await import('express')).default;
     const path = await import('path');
     const serveIndex = (await import('serve-index')).default;
@@ -162,7 +162,7 @@ const main = async (): Promise<void> => {
                 // the relative test.js script src fails.
                 await page.goto(`${originUrl}/tests/rangetest.html?runner`, { waitUntil: 'load' });
                 const result = await page.evaluateHandle(
-                    /* browser-side render + upload, mirrors tests/testrunner.ts */
+                    /* browser-side render + upload, exactly what this runner asserts on */
                     async ({ url, runnerUrl }: { url: string; runnerUrl: string }) => {
                         const iframe = document.createElement('iframe');
                         iframe.width = '800';

@@ -177,6 +177,9 @@ honest boundary visible:
 
 - **`background-attachment: fixed` / `local`** — not parsed; backgrounds render
   as if `scroll`.
+- **`will-change`** — not parsed. The property creates a stacking context in the
+  browser, but the clone does not reproduce one, so elements stacked via
+  `will-change` alone may capture with a different stacking order.
 - **3D transforms** — `perspective()`, the `perspective` property and
   `transform-style: preserve-3d` are not implemented; `matrix3d()` is projected
   onto its 2D components (the z axis is dropped).

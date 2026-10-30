@@ -353,6 +353,7 @@ export class CanvasRenderer {
         maskCanvas.height = surface.height;
         const maskCtx = maskCanvas.getContext('2d');
         if (!maskCtx) {
+            releaseSurface(maskCanvas);
             return;
         }
         // The surface's device-pixel origin corresponds to the element bounds
@@ -369,6 +370,7 @@ export class CanvasRenderer {
             );
         } catch (error) {
             this.context.logger.error(`Error rendering mask-image: ${error instanceof Error ? error.message : error}`);
+            releaseSurface(maskCanvas);
             return;
         }
         ctx.save();
@@ -378,6 +380,7 @@ export class CanvasRenderer {
             ctx.drawImage(maskCanvas, 0, 0);
         } finally {
             ctx.restore();
+            releaseSurface(maskCanvas);
         }
     }
 
@@ -981,6 +984,7 @@ export class CanvasRenderer {
             ctx.fillStyle = rasterized.lastColor;
             ctx.fillRect(0, 0, width, height);
             ctx.drawImage(rasterized.canvas, cx - rx, cy - ry, rx * 2, ry * 2);
+            releaseSurface(rasterized.canvas);
             return canvas;
         }
         if (source.type === CSSImageType.CONIC_GRADIENT || source.type === CSSImageType.REPEATING_CONIC_GRADIENT) {

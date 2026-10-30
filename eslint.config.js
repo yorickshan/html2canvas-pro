@@ -35,6 +35,24 @@ export default [
         },
     },
     {
+        // Example snippets: consumer-style code importing the published
+        // package; typechecked by tsconfig.examples.json, linted without
+        // type-aware parserOptions.
+        files: ['examples/**/*.ts'],
+        languageOptions: {
+            parser: tsparser,
+            ecmaVersion: 2022,
+            sourceType: 'module',
+        },
+        plugins: {
+            '@typescript-eslint': tseslint,
+            prettier: prettier,
+        },
+        rules: {
+            ...sharedRules,
+        },
+    },
+    {
         // Build/CI helper scripts: run through tsx/node outside any tsconfig
         // project, so lint them without type-aware parserOptions.
         files: ['scripts/**/*.ts', 'scripts/**/*.mjs'],

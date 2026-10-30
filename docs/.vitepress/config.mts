@@ -1,10 +1,26 @@
 import { defineConfig } from 'vitepress'
 
+// Internal engineering reports (design drafts, CI/budget post-mortems,
+// benchmark records) live in docs/ next to the user guides but are not part
+// of the published site: they are linked from the repo, not from the sidebar.
+const internalReports = [
+  'filter-ci.md',
+  'filter-compositing-draft.md',
+  'filter-native-fastpath.md',
+  'filter-overbudget.md',
+  'filter-performance.md'
+]
+
+// Raw evidence folders carry their own READMEs with repo-relative links;
+// they are repo content, not site pages.
+const evidenceReadmes = ['**/assets/filter-compositing/**/README.md']
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "html2canvas-pro",
   base: "/html2canvas-pro/",
   description: "Next generation JavaScript screenshots Tool",
+  srcExclude: [...internalReports.map((file) => `**/${file}`), ...evidenceReadmes],
   head: [
     ['link', { rel: 'icon', href: '/html2canvas-pro/favicon.ico' }]
   ],

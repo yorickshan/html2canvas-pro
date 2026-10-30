@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "strictNullChecks": true,
+        "noUncheckedIndexedAccess": true,
+        "target": "es2022",
+        "module": "esnext",
+        "lib": ["es2022", "dom", "dom.iterable"],
+        "moduleResolution": "bundler",
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "noEmit": true
+    },
+    "include": ["examples"]
+}

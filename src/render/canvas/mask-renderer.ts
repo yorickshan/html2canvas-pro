@@ -40,6 +40,7 @@ import { BACKGROUND_SIZE, BackgroundSizeInfo } from '../../css/property-descript
 import { asString } from '../../css/types/color-utilities';
 import { at } from '../../core/util';
 import { rasterizeRadialGradient, stackRepeatingStops, toCanvasStops } from './gradient-rasterizer';
+import { releaseSurface } from './filter-surface';
 
 /**
  * CSS layer lists cycle: a single mask-size applies to every mask-image
@@ -169,6 +170,7 @@ const paintRadialLayer = (ctx: CanvasRenderingContext2D, layer: CSSRadialGradien
     ctx.fillStyle = rasterized.lastColor;
     ctx.fillRect(area.left, area.top, area.width, area.height);
     ctx.drawImage(rasterized.canvas, area.left + cx - rx, area.top + cy - ry, rx * 2, ry * 2);
+    releaseSurface(rasterized.canvas);
 };
 
 /** Draw one gradient layer filling the whole mask area. */

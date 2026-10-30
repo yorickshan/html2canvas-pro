@@ -104,6 +104,8 @@ jobs:
               run: pnpm install --frozen-lockfile
             - name: Lint
               run: pnpm lint
+            - name: Typecheck examples
+              run: pnpm typecheck:examples
             - name: Unit tests
               run: pnpm unittest:coverage
     browser-test:
