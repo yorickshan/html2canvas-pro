@@ -66,6 +66,10 @@ jobs:
                 echo "| UMD | $UMD_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
                 echo "| UMD (minified) | $MIN_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
                 echo "| ESM | $ESM_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
+            # Examples import the published package name; tsconfig.examples.json
+            # maps it to dist/types, so this must run after the build above.
+            - name: Typecheck examples
+              run: pnpm typecheck:examples
             - name: Pack
               run: |
                   pnpm pack
@@ -104,8 +108,6 @@ jobs:
               run: pnpm install --frozen-lockfile
             - name: Lint
               run: pnpm lint
-            - name: Typecheck examples
-              run: pnpm typecheck:examples
             - name: Unit tests
               run: pnpm unittest:coverage
     browser-test:

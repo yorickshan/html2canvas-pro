@@ -10,7 +10,10 @@
         "moduleResolution": "bundler",
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "noEmit": true
+        "noEmit": true,
+        "paths": {
+            "html2canvas-pro": ["./dist/types/index.d.ts"]
+        }
     },
     "include": ["examples"]
 }

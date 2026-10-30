@@ -169,7 +169,7 @@ export async function downloadPixelArt(filename: string = 'pixel-art.png') {
     });
 
     // Convert to blob and download
-    canvas.toBlob((blob) => {
+    canvas.toBlob((blob: Blob | null) => {
         if (!blob) return;
 
         const url = URL.createObjectURL(blob);
