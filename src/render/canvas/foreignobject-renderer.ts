@@ -1,4 +1,5 @@
 import { RenderConfigurations } from './canvas-renderer';
+import { releaseSurface } from './filter-surface';
 import { createForeignObjectSVG, loadSerializedSVG } from '../../core/features';
 import { asString } from '../../css/types/color-utilities';
 import { Context } from '../../core/context';
@@ -50,23 +51,30 @@ export class ForeignObjectRenderer {
         const imagePromise = loadSerializedSVG(svg);
         restoreRootOffsets();
 
-        const img = await imagePromise;
+        try {
+            const img = await imagePromise;
 
-        if (this.options.signal?.aborted) {
-            throw new DOMException('The operation was aborted.', 'AbortError');
+            if (this.options.signal?.aborted) {
+                throw new DOMException('The operation was aborted.', 'AbortError');
+            }
+
+            if (this.options.backgroundColor) {
+                // The context translates by (-x, -y), so anchor both fills and the
+                // image at (x, y) — mirroring CanvasRenderer.render — or offsets
+                // would be applied twice and the background would miss the canvas.
+                this.ctx.fillStyle = asString(this.options.backgroundColor);
+                this.ctx.fillRect(this.options.x, this.options.y, this.options.width, this.options.height);
+            }
+
+            this.ctx.drawImage(img, this.options.x, this.options.y, this.options.width, this.options.height);
+
+            return this.canvas;
+        } catch (error) {
+            // Failed captures have no returned canvas. Release only our backing
+            // store; a canvas supplied by the caller remains caller-owned.
+            if (!this.options.canvas) releaseSurface(this.canvas);
+            throw error;
         }
-
-        if (this.options.backgroundColor) {
-            // The context translates by (-x, -y), so anchor both fills and the
-            // image at (x, y) — mirroring CanvasRenderer.render — or offsets
-            // would be applied twice and the background would miss the canvas.
-            this.ctx.fillStyle = asString(this.options.backgroundColor);
-            this.ctx.fillRect(this.options.x, this.options.y, this.options.width, this.options.height);
-        }
-
-        this.ctx.drawImage(img, this.options.x, this.options.y, this.options.width, this.options.height);
-
-        return this.canvas;
     }
 }
 

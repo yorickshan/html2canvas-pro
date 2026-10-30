@@ -24,12 +24,25 @@ export const SHADOW_MASK_OFFSET = 10_000;
 /** Polling interval (ms) when waiting for the cloned iframe to become ready. */
 export const IFRAME_READY_POLL_MS = 50;
 
+/** Polling interval (ms) when waiting for clone stylesheets to apply. */
+export const STYLESHEET_READY_POLL_MS = 50;
+
 /**
  * Total time (ms) to wait for the cloned iframe document to become ready
  * after its load event. A missed deadline resolves with a warning (the
  * capture continues with a possibly incomplete document).
  */
 export const CLONE_READY_TIMEOUT_MS = 30_000;
+
+/**
+ * Total time (ms) to wait for the clone's external stylesheets (link and
+ * @import chains) to apply. Shorter than the document readiness window: a
+ * stylesheet that needs longer usually means a hung CDN, and rendering with
+ * a 10s-old layout beats blocking the capture for 30s. A missed deadline
+ * resolves with a warning (the capture continues with a possibly unstyled
+ * clone).
+ */
+export const STYLESHEET_READY_TIMEOUT_MS = 10_000;
 
 /**
  * Hard ceiling (ms) for the cloned iframe's load event itself. If the event

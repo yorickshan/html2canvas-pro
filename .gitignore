@@ -1,6 +1,9 @@
 /dist
 /tmp
 /build
+# Stray root-level bundle artifacts (index.js + its chunk-*.js imports).
+/index.js
+/chunk-*.js
 /nbproject/
 /image.jpg
 /.project

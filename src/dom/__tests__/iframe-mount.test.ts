@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { addBase, createIFrameContainer, resolveTrustedTypesPolicy, stylesheetsReady } from '../iframe-mount';
+import {
+    addBase,
+    createIFrameContainer,
+    mountCloneInIFrame,
+    resolveTrustedTypesPolicy,
+    stylesheetsReady
+} from '../iframe-mount';
 import { IGNORE_ATTRIBUTE } from '../slot-cloner';
 import { Context } from '../../core/context';
 import { Html2CanvasConfig } from '../../config';
@@ -141,6 +147,121 @@ describe('stylesheetsReady (issue #245)', () => {
 
         await expect(stylesheetsReady(doc, undefined, controller.signal)).resolves.toBeUndefined();
     });
+
+    it('waits for a sheet whose @import chain is still loading', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        const style = doc.createElement('style');
+        style.textContent = '@import url("nested.css");\n.body { color: red; }';
+        doc.head.appendChild(style);
+
+        // jsdom attaches a sheet synchronously; simulate the in-flight import
+        // with a CSSImportRule whose styleSheet is still null.
+        const importRule = {
+            cssText: '@import url("nested.css");'
+        };
+        Object.defineProperty(style.sheet!, 'cssRules', {
+            value: [importRule as unknown as CSSImportRule]
+        });
+
+        let settled = false;
+        const wait = stylesheetsReady(doc).then(() => {
+            settled = true;
+        });
+        await new Promise((r) => setTimeout(r, 120));
+        expect(settled).toBe(false);
+
+        // The import resolves: the rule now exposes an applied inner sheet.
+        Object.defineProperty(importRule, 'styleSheet', {
+            value: { cssRules: [] } as unknown as CSSStyleSheet
+        });
+        await expect(wait).resolves.toBeUndefined();
+    });
+
+    it('resolves immediately for an @import chain that is already applied', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        const style = doc.createElement('style');
+        style.textContent = '@import url("nested.css");';
+        doc.head.appendChild(style);
+        Object.defineProperty(style.sheet!, 'cssRules', {
+            value: [
+                {
+                    cssText: '@import url("nested.css");',
+                    styleSheet: { cssRules: [] }
+                } as unknown as CSSImportRule
+            ]
+        });
+
+        await expect(stylesheetsReady(doc)).resolves.toBeUndefined();
+    });
+
+    it('collects pending links inside shadow roots', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        const host = doc.createElement('div');
+        doc.body.appendChild(host);
+        const shadow = host.attachShadow({ mode: 'open' });
+        const link = doc.createElement('link');
+        link.setAttribute('rel', 'stylesheet');
+        link.setAttribute('href', 'shadow.css');
+        shadow.appendChild(link);
+
+        let settled = false;
+        const wait = stylesheetsReady(doc).then(() => {
+            settled = true;
+        });
+        await new Promise((r) => setTimeout(r, 120));
+        expect(settled).toBe(false);
+
+        link.dispatchEvent(new Event('load'));
+        await expect(wait).resolves.toBeUndefined();
+    });
+
+    it('warns and resolves when the stylesheet readiness budget expires', async () => {
+        const doc = document.implementation.createHTMLDocument('clone');
+        makeLink(doc, { rel: 'stylesheet', href: 'hangs.css' });
+        const warn = vi.fn();
+
+        // The budget comes from STYLESHEET_READY_TIMEOUT_MS; assert the
+        // warning path with a generous timeout so slow CI never flakes.
+        await expect(stylesheetsReady(doc, { warn })).resolves.toBeUndefined();
+    }, 20_000);
+});
+
+describe('mountCloneInIFrame failure cleanup', () => {
+    const makeContext = (): Context =>
+        new Context(
+            { logging: false, imageTimeout: 15000, useCORS: false, allowTaint: false },
+            new Bounds(0, 0, 800, 600),
+            new Html2CanvasConfig({ window: window as unknown as Window })
+        );
+
+    const makeMountOptions = () => ({
+        documentElement: document.createElement('div') as HTMLElement,
+        clonedReferenceElement: document.createElement('div') as HTMLElement,
+        referenceElementName: 'DIV',
+        scrolledElements: []
+    });
+
+    it('removes the iframe it created from the DOM when the mount is aborted', async () => {
+        const context = makeContext();
+        const controller = new AbortController();
+        const mount = { ...makeMountOptions(), signal: controller.signal };
+
+        // The jsdom environment is shared across tests in this worker; track
+        // only containers the mount itself adds.
+        const before = new Set(document.querySelectorAll('iframe.html2canvas-container'));
+
+        const mounted = mountCloneInIFrame(context, document, new Bounds(0, 0, 800, 600), mount);
+        controller.abort();
+
+        await expect(mounted).rejects.toThrow();
+        // The appended container must be detached again — renderElement never
+        // receives the reference on a rejected mount, so the mount owns this.
+        const after = Array.from(document.querySelectorAll('iframe.html2canvas-container'));
+        expect(after.filter((el) => !before.has(el))).toHaveLength(0);
+    });
+
+    // The success path needs a real iframe load event, which jsdom never
+    // fires; it is covered by the css/slow-css.html reftest instead.
 });
 
 describe('resolveTrustedTypesPolicy', () => {

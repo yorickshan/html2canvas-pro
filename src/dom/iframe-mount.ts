@@ -10,7 +10,13 @@
 
 import { Bounds } from '../css/layout/bounds';
 import { Context } from '../core/context';
-import { CLONE_READY_TIMEOUT_MS, IFRAME_LOAD_WATCHDOG_MS, IFRAME_READY_POLL_MS } from '../core/constants';
+import {
+    CLONE_READY_TIMEOUT_MS,
+    IFRAME_LOAD_WATCHDOG_MS,
+    IFRAME_READY_POLL_MS,
+    STYLESHEET_READY_POLL_MS,
+    STYLESHEET_READY_TIMEOUT_MS
+} from '../core/constants';
 import { throwIfAborted } from '../core/abort-helper';
 import { IGNORE_ATTRIBUTE } from './slot-cloner';
 
@@ -124,7 +130,68 @@ const imagesReady = (document: HTMLDocument): Promise<unknown[]> => {
 };
 
 /**
- * Wait until every external stylesheet link of the clone has been applied or
+ * Whether every CSS rule of the sheet (and of the @import chains it pulls
+ * in) has been applied. A sheet is "attached" as soon as its rules are
+ * readable; an external @import inside it may still be loading, which shows
+ * up as an inaccessible CSSImportRule.sheet. `cssRules` can throw for
+ * cross-origin sheets without a CORS-approved response — those rules cannot
+ * be inspected, so the sheet counts as ready rather than blocking the render
+ * forever.
+ */
+const isSheetFullyApplied = (sheet: CSSStyleSheet | null, depth = 0): boolean => {
+    if (!sheet || depth > MAX_IMPORT_DEPTH) {
+        return true;
+    }
+    let rules: CSSRuleList | undefined;
+    try {
+        rules = sheet.cssRules;
+    } catch (_e) {
+        // SecurityError: cross-origin sheet. Inspectable or not, the browser
+        // has fetched it by the time cssRules exists.
+        return true;
+    }
+    if (!rules) {
+        return true;
+    }
+    for (let i = 0; i < rules.length; i++) {
+        const rule = rules[i];
+        if (rule && typeof CSSImportRule !== 'undefined' && rule instanceof CSSImportRule) {
+            // An import whose inner sheet is still null (or whose own rules
+            // are not applied yet) means the chain is still loading.
+            if (!rule.styleSheet || !isSheetFullyApplied(rule.styleSheet, depth + 1)) {
+                return false;
+            }
+        }
+    }
+    return true;
+};
+
+const MAX_IMPORT_DEPTH = 32;
+
+/** Collect every <link> in the document, including links inside shadow roots. */
+const collectLinks = (root: ParentNode, out: HTMLLinkElement[]): void => {
+    const links = root.querySelectorAll('link');
+    for (let i = 0; i < links.length; i++) {
+        const link = links[i];
+        if (link) {
+            out.push(link);
+        }
+    }
+    // Shadow roots are not reachable via querySelectorAll.
+    const ownerDocument = (root as Node).ownerDocument ?? (root as Document);
+    const walker = ownerDocument.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+    let current = walker.nextNode();
+    while (current) {
+        const shadowRoot = (current as Element).shadowRoot;
+        if (shadowRoot) {
+            collectLinks(shadowRoot, out);
+        }
+        current = walker.nextNode();
+    }
+};
+
+/**
+ * Wait until every external stylesheet of the clone has been applied or
  * definitively failed, or the readiness budget expires.
  *
  * The clone is mounted by adoptNode() into an already-closed document
@@ -137,6 +204,12 @@ const imagesReady = (document: HTMLDocument): Promise<unknown[]> => {
  * an unstyled layout (issue #245). Inline <style> clones apply
  * synchronously and document-level adopted stylesheets are serialised at
  * clone time, so neither needs this wait.
+ *
+ * Readiness is polled rather than purely event-driven because a <style>
+ * clone serialised from `createStyleClone` re-fetches its external @import
+ * rules without firing link load/error events, and shadow-root links are
+ * equally event-hostile in some engines. The poll covers both; link events
+ * remain as the settle path for plain <link> fetches.
  * @internal – exported for testing only.
  */
 export const stylesheetsReady = (
@@ -148,10 +221,10 @@ export const stylesheetsReady = (
         return Promise.resolve();
     }
     const pending: Promise<void>[] = [];
-    const links = documentClone.getElementsByTagName('link');
-    for (let i = 0; i < links.length; i++) {
-        const link = links[i];
-        if (!link || link.sheet) {
+    const links: HTMLLinkElement[] = [];
+    collectLinks(documentClone, links);
+    for (const link of links) {
+        if (link.sheet) {
             continue;
         }
         // Alternate stylesheets are fetched lazily and may never fire load;
@@ -162,31 +235,73 @@ export const stylesheetsReady = (
         }
         pending.push(
             new Promise<void>((resolve) => {
-                let timer: ReturnType<typeof setTimeout>;
+                const href = link.href;
                 const settle = (): void => {
                     link.removeEventListener('load', settle);
                     link.removeEventListener('error', settle);
                     signal?.removeEventListener('abort', onAbort);
-                    clearTimeout(timer);
+                    clearInterval(timer);
                     resolve();
                 };
                 const onAbort = (): void => settle();
-                timer = setTimeout(() => {
-                    logger?.warn(
-                        `Stylesheet ${link.href} did not finish loading within ${
-                            CLONE_READY_TIMEOUT_MS / 1000
-                        }s; continuing with a possibly unstyled clone`
-                    );
-                    settle();
-                }, CLONE_READY_TIMEOUT_MS);
+                // The load may have completed between listing the links and
+                // registering the listeners below.
+                if (link.sheet) {
+                    resolve();
+                    return;
+                }
                 link.addEventListener('load', settle);
                 link.addEventListener('error', settle);
                 signal?.addEventListener('abort', onAbort, { once: true });
-                // The fetch may have completed between listing the links and
-                // registering the listeners above.
-                if (link.sheet) {
-                    settle();
-                }
+                // Poll as a safety net: link load events are reliable for
+                // plain links, but the deadline is enforced here either way.
+                let elapsed = 0;
+                const timer = setInterval(() => {
+                    elapsed += STYLESHEET_READY_POLL_MS;
+                    if (link.sheet) {
+                        settle();
+                    } else if (elapsed >= STYLESHEET_READY_TIMEOUT_MS) {
+                        logger?.warn(
+                            `Stylesheet ${href} did not finish loading within ${
+                                STYLESHEET_READY_TIMEOUT_MS / 1000
+                            }s; continuing with a possibly unstyled clone`
+                        );
+                        settle();
+                    }
+                }, STYLESHEET_READY_POLL_MS);
+            })
+        );
+    }
+    // Style elements re-fetched over external @import: sheet exists, rules
+    // inside it may still be missing. Wait for those chains via polling.
+    const styleElements = documentClone.getElementsByTagName('style');
+    for (let i = 0; i < styleElements.length; i++) {
+        const style = styleElements[i];
+        const sheet = style?.sheet;
+        if (!sheet || !style?.textContent?.includes('@import')) {
+            continue;
+        }
+        if (isSheetFullyApplied(sheet)) {
+            continue;
+        }
+        pending.push(
+            new Promise<void>((resolve) => {
+                let elapsed = 0;
+                const timer = setInterval(() => {
+                    elapsed += STYLESHEET_READY_POLL_MS;
+                    const currentSheet = style.sheet;
+                    if ((currentSheet && isSheetFullyApplied(currentSheet)) || elapsed >= STYLESHEET_READY_TIMEOUT_MS) {
+                        if (elapsed >= STYLESHEET_READY_TIMEOUT_MS && !isSheetFullyApplied(currentSheet ?? null)) {
+                            logger?.warn(
+                                `@import chain in an inline <style> did not finish loading within ${
+                                    STYLESHEET_READY_TIMEOUT_MS / 1000
+                                }s; continuing with a possibly unstyled clone`
+                            );
+                        }
+                        clearInterval(timer);
+                        resolve();
+                    }
+                }, STYLESHEET_READY_POLL_MS);
             })
         );
     }
@@ -443,5 +558,13 @@ export const mountCloneInIFrame = (
     // load event is still queued.
     const stylesheetWait = stylesheetsReady(documentClone, context.logger, mount.signal);
 
-    return iframeLoad;
+    // The mount owns the iframe it created: when it rejects (load watchdog,
+    // abort, readiness timeout) the container has already been appended to
+    // the document, so it must be removed here — renderElement never receives
+    // the reference and cannot clean it up. A style attribute set before the
+    // removal would be pointless; the node is simply detached.
+    return iframeLoad.catch((error: unknown) => {
+        iframe.parentNode?.removeChild(iframe);
+        throw error;
+    });
 };

@@ -131,40 +131,39 @@ export const renderElement = async (
         throw new Error('Unable to find element in cloned iframe');
     }
 
-    const container = await documentCloner.toIFrame(ownerDocument, windowBounds);
-    perfMonitor.end('clone');
-
-    emitProgress(opts.onProgress, context, ProgressPhase.CLONE, 30);
-
-    if (signal?.aborted) {
-        if (opts.removeContainer ?? true) {
-            DocumentCloner.destroy(container);
-        }
-        throwIfAborted(signal);
-    }
-
-    const { width, height, left, top } =
-        isBodyElement(clonedElement) || isHTMLElement(clonedElement)
-            ? parseDocumentSize(clonedElement.ownerDocument)
-            : parseBounds(context, clonedElement);
-
-    const backgroundColor = parseBackgroundColor(context, clonedElement, opts.backgroundColor);
-
-    const renderOptions: RenderConfigurations = assembleRenderOptions(
-        opts,
-        backgroundColor,
-        left,
-        top,
-        width,
-        height,
-        defaultView.devicePixelRatio ?? 1
-    );
-
-    let canvas;
-
+    // Declared outside the try so the cleanup below can reach the iframe when
+    // a render step after the successful mount throws. A mount REJECTION is
+    // cleaned up by the mount itself (iframe-mount removes the container it
+    // appended); from here on the reference exists and destroy() owns it.
+    let container: HTMLIFrameElement | undefined;
+    let canvas: HTMLCanvasElement;
     let root: ElementContainer | undefined;
 
     try {
+        container = await documentCloner.toIFrame(ownerDocument, windowBounds);
+        perfMonitor.end('clone');
+
+        emitProgress(opts.onProgress, context, ProgressPhase.CLONE, 30);
+
+        throwIfAborted(signal);
+
+        const { width, height, left, top } =
+            isBodyElement(clonedElement) || isHTMLElement(clonedElement)
+                ? parseDocumentSize(clonedElement.ownerDocument)
+                : parseBounds(context, clonedElement);
+
+        const backgroundColor = parseBackgroundColor(context, clonedElement, opts.backgroundColor);
+
+        const renderOptions: RenderConfigurations = assembleRenderOptions(
+            opts,
+            backgroundColor,
+            left,
+            top,
+            width,
+            height,
+            defaultView.devicePixelRatio ?? 1
+        );
+
         if (foreignObjectRendering) {
             context.logger.debug(`Document cloned, using foreign object rendering`);
             perfMonitor.start('render-foreignobject');
@@ -232,7 +231,7 @@ export const renderElement = async (
         try {
             if (root) root.restoreTree();
         } finally {
-            if (opts.removeContainer ?? true) DocumentCloner.destroy(container);
+            if (container && (opts.removeContainer ?? true)) DocumentCloner.destroy(container);
             perfMonitor.end('cleanup');
         }
     }
