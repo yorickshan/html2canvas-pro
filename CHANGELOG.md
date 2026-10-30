@@ -1,3 +1,16 @@
+## [2.6.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.5.3...v2.6.0) (2026-10-30)
+
+### Features
+
+* add background color validation to the Validator class ([4305ee7](https://github.com/yorickshan/html2canvas-pro/commit/4305ee7da3534f8985648a3b1d84af3695481b32))
+* add type checking for examples and update CI workflow ([4e3dda7](https://github.com/yorickshan/html2canvas-pro/commit/4e3dda757200b0819d1a13b02a562b81543e02b2))
+* enhance iframe mounting and stylesheet handling ([b9f57d9](https://github.com/yorickshan/html2canvas-pro/commit/b9f57d9942745e7a1103d67446d81b919977c669))
+* **tests:** add slow-css reftest for issue [#245](https://github.com/yorickshan/html2canvas-pro/issues/245) to ensure stylesheet readiness ([0f97d31](https://github.com/yorickshan/html2canvas-pro/commit/0f97d312029b82fe537778caea312155d36bb157))
+
+### Bug Fixes
+
+* **render:** paint non-positioned stacking contexts in the z-index: 0 layer ([8c51f71](https://github.com/yorickshan/html2canvas-pro/commit/8c51f71ca727748ba60746bd842c6c5cde1e0d8a))
+
 ## [2.5.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.5.2...v2.5.3) (2026-10-29)
 
 ### Features
