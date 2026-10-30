@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!--
+  Page CSS that styles every iframe must not resize the hidden iframe the
+  clone is laid out in. With `iframe { width: 560px; height: 315px }` (a
+  video-embed size) the clone would be laid out in a 560x315 viewport instead
+  of the window: the row of boxes wraps onto two rows and the 50vh boxes
+  shrink to half their height.
+
+  The assertion runs in h2cOptions.onclone, so the reftest runner fails when
+  the clone's viewport differs from the window.
+-->
+<html lang="en">
+    <head>
+        <title>Page CSS that sizes every iframe</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                background: #ffffff;
+            }
+
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+
+            .row > div {
+                width: 132px;
+                height: 50vh;
+                background: #2a9d8f;
+            }
+
+            /* Sized for video embeds. The page itself has no iframe. */
+            iframe {
+                width: 560px;
+                height: 315px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="row">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+    </body>
+    <script>
+        h2cOptions = {
+            onclone: function (clonedDocument) {
+                var cloneWindow = clonedDocument.defaultView;
+                if (cloneWindow.innerWidth !== window.innerWidth || cloneWindow.innerHeight !== window.innerHeight) {
+                    throw new Error(
+                        'iframe-size: clone laid out at ' +
+                            cloneWindow.innerWidth +
+                            'x' +
+                            cloneWindow.innerHeight +
+                            ' instead of the ' +
+                            window.innerWidth +
+                            'x' +
+                            window.innerHeight +
+                            ' window'
+                    );
+                }
+            }
+        };
+    </script>
+</html>

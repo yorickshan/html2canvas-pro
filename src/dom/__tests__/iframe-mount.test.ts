@@ -33,6 +33,52 @@ describe('createIFrameContainer', () => {
         const iframe2 = createIFrameContainer(document, new Bounds(0, 0, 100, 100), custom);
         expect(iframe2.parentNode).toBe(custom);
     });
+
+    // The clone is laid out at the iframe's content box, so page CSS that
+    // styles every iframe must not change it.
+    it.each([
+        ['a responsive-embed width', 'iframe { width: 100%; height: auto; }'],
+        ['an !important width', 'iframe { width: 100% !important; height: 50vh !important; }'],
+        ['min and max sizes', 'iframe { min-width: 900px; max-width: 100%; min-height: 700px; max-height: 50%; }'],
+        ['border-box padding and border', 'iframe { box-sizing: border-box; padding: 8px; border: 4px solid; }']
+    ])('keeps its content box at the bounds size under page CSS with %s', (_name, css) => {
+        const pageStyle = document.createElement('style');
+        pageStyle.textContent = css;
+        document.head.appendChild(pageStyle);
+        const iframe = createIFrameContainer(document, new Bounds(0, 0, 800, 600));
+        try {
+            const computed = getComputedStyle(iframe);
+            expect({
+                width: computed.width,
+                height: computed.height,
+                minWidth: computed.minWidth,
+                maxWidth: computed.maxWidth,
+                minHeight: computed.minHeight,
+                maxHeight: computed.maxHeight,
+                boxSizing: computed.boxSizing,
+                padding: [computed.paddingTop, computed.paddingRight, computed.paddingBottom, computed.paddingLeft],
+                border: [
+                    computed.borderTopWidth,
+                    computed.borderRightWidth,
+                    computed.borderBottomWidth,
+                    computed.borderLeftWidth
+                ]
+            }).toEqual({
+                width: '800px',
+                height: '600px',
+                minWidth: '0px',
+                maxWidth: 'none',
+                minHeight: '0px',
+                maxHeight: 'none',
+                boxSizing: 'content-box',
+                padding: ['0px', '0px', '0px', '0px'],
+                border: ['0px', '0px', '0px', '0px']
+            });
+        } finally {
+            iframe.remove();
+            pageStyle.remove();
+        }
+    });
 });
 
 describe('addBase', () => {

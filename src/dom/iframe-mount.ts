@@ -97,9 +97,27 @@ export const createIFrameContainer = (
     cloneIframeContainer.style.position = 'fixed';
     cloneIframeContainer.style.left = '-10000px';
     cloneIframeContainer.style.top = '0px';
-    cloneIframeContainer.style.border = '0';
     cloneIframeContainer.width = bounds.width.toString();
     cloneIframeContainer.height = bounds.height.toString();
+    // The clone is laid out at the iframe's content box. Page CSS that styles
+    // every iframe (`iframe { width: 100% }` for responsive embeds, a
+    // `max-width: 100%` reset) wins over the width/height attributes and would
+    // lay the clone out at another size, so the content box is pinned with
+    // !important inline declarations, which no page rule overrides.
+    const contentBox: [string, string][] = [
+        ['width', `${bounds.width}px`],
+        ['height', `${bounds.height}px`],
+        ['min-width', '0px'],
+        ['max-width', 'none'],
+        ['min-height', '0px'],
+        ['max-height', 'none'],
+        ['box-sizing', 'content-box'],
+        ['padding', '0px'],
+        ['border', '0']
+    ];
+    for (const [property, value] of contentBox) {
+        cloneIframeContainer.style.setProperty(property, value, 'important');
+    }
     cloneIframeContainer.scrolling = 'no'; // ios won't scroll without it
     cloneIframeContainer.setAttribute(IGNORE_ATTRIBUTE, 'true');
 
