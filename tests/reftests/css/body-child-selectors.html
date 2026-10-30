@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!--
+  Position-based selectors on the direct children of <body> must match the same
+  elements in the clone as in the page. Each box says which rule should style it.
+-->
+<html lang="en">
+    <head>
+        <title>Position-based selectors on the children of body</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+                background: #fff;
+            }
+
+            body > div {
+                width: 360px;
+                height: 40px;
+                padding: 0 12px;
+                line-height: 40px;
+                color: #fff;
+                background: #6c757d;
+            }
+
+            body > :first-child {
+                background: #e63946;
+            }
+
+            body > :nth-child(2) {
+                background: #457b9d;
+            }
+
+            body > * + * {
+                margin-top: 16px;
+            }
+
+            body > :nth-child(3) ~ * {
+                border-left: 24px solid #f4a261;
+            }
+
+            body > :last-child {
+                background: #2a9d8f;
+            }
+        </style>
+    </head>
+    <body>
+        <div>:first-child: red, no top margin</div>
+        <div>:nth-child(2): blue</div>
+        <div>no position rule: grey</div>
+        <div>:nth-child(3) ~ *: orange border</div>
+        <div>:last-child: green, orange border</div>
+    </body>
+</html>

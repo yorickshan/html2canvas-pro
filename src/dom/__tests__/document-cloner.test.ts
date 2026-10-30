@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { copyCSSStyles, serializeDoctype, DocumentCloner, CloneOptions } from '../document-cloner';
+import { describe, it, expect, vi } from 'vitest';
+import { copyCSSStyles, serializeDoctype, DocumentCloner, CloneOptions, CloneConfigurations } from '../document-cloner';
 import { IGNORE_ATTRIBUTE } from '../slot-cloner';
 import { Context } from '../../core/context';
 import { Html2CanvasConfig } from '../../config';
@@ -269,8 +269,8 @@ describe('DocumentCloner document-level adoptedStyleSheets', () => {
                     copyStyles: false
                 });
                 const documentElement = (cloner as unknown as { documentElement: HTMLElement }).documentElement;
-                const style = documentElement.querySelector('head style:last-of-type');
-                expect(style?.textContent).toContain('#doc-adopted-rule');
+                const styles = Array.from(documentElement.querySelectorAll('head style'));
+                expect(styles.some((style) => style.textContent?.includes('#doc-adopted-rule'))).toBe(true);
             } finally {
                 document.body.removeChild(el);
             }
@@ -301,5 +301,62 @@ describe('DocumentCloner document-level adoptedStyleSheets', () => {
         } finally {
             document.adoptedStyleSheets = [];
         }
+    });
+});
+
+describe('DocumentCloner pseudo-element hide styles', () => {
+    const hideStylesCloneOptions: CloneConfigurations = {
+        ignoreElements: undefined,
+        onclone: undefined,
+        allowTaint: false,
+        inlineImages: false,
+        copyStyles: false,
+        cspNonce: 'nonce-123'
+    };
+
+    const cloneBodyWithChildren = (ids: string[]): HTMLElement => {
+        const original = Array.from(document.body.childNodes);
+        document.body.replaceChildren(
+            ...ids.map((id) => {
+                const div = document.createElement('div');
+                div.id = id;
+                return div;
+            })
+        );
+        // jsdom answers a ::before / ::after query with the element's own style, which would give
+        // every element a surrogate. Browsers report `content: none` when there is no pseudo-element.
+        const getComputedStyle = window.getComputedStyle.bind(window);
+        const spy = vi
+            .spyOn(window, 'getComputedStyle')
+            .mockImplementation((element, pseudoElt) =>
+                pseudoElt ? ({ content: 'none' } as CSSStyleDeclaration) : getComputedStyle(element)
+            );
+        try {
+            const cloner = new DocumentCloner(createMockContext(), document.body, hideStylesCloneOptions);
+            return (cloner as unknown as { documentElement: HTMLElement }).documentElement;
+        } finally {
+            spy.mockRestore();
+            document.body.replaceChildren(...original);
+        }
+    };
+
+    it('leaves position-based selectors on the children of <body> matching the same elements', () => {
+        const body = cloneBodyWithChildren(['first', 'second', 'third']).querySelector('body')!;
+        const idsOf = (selector: string) => Array.from(body.querySelectorAll(selector), (element) => element.id);
+
+        expect(idsOf(':scope > :first-child')).toEqual(['first']);
+        expect(idsOf(':scope > :nth-child(2)')).toEqual(['second']);
+        expect(idsOf(':scope > * + *')).toEqual(['second', 'third']);
+        expect(idsOf(':scope > :last-child')).toEqual(['third']);
+        expect(idsOf(':scope > :first-child ~ *')).toEqual(['second', 'third']);
+    });
+
+    it('puts the hide styles in the cloned <head>', () => {
+        const documentElement = cloneBodyWithChildren(['only']);
+        const style = documentElement.querySelector('head > style:last-of-type');
+
+        expect(style?.textContent).toContain('___html2canvas___pseudoelement_before:before');
+        expect(style?.textContent).toContain('___html2canvas___pseudoelement_after:after');
+        expect(style?.getAttribute('nonce')).toBe('nonce-123');
     });
 });

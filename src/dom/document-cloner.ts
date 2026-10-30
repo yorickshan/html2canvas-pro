@@ -1,6 +1,5 @@
 import { Bounds } from '../css/layout/bounds';
 import {
-    isBodyElement,
     isCanvasElement,
     isCustomElement,
     isElementNode,
@@ -116,6 +115,7 @@ export class DocumentCloner {
 
         this.documentElement = this.cloneNode(element.ownerDocument.documentElement, false) as HTMLElement;
         this.appendDocumentAdoptedStyles(element.ownerDocument);
+        this.appendPseudoHideStyles();
     }
 
     /**
@@ -149,6 +149,17 @@ export class DocumentCloner {
         if (style) {
             head.appendChild(style);
         }
+    }
+
+    /**
+     * Add the rules that hide the source ::before / ::after (the clone draws
+     * them as surrogate elements) to the clone's <head>. Inside <body> the
+     * <style> would be one of its children, and `body > :first-child`,
+     * `:nth-child()` and sibling selectors would match the wrong elements.
+     */
+    private appendPseudoHideStyles(): void {
+        const head = this.documentElement.getElementsByTagName('head').item(0);
+        createPseudoHideStyles(head ?? this.documentElement, this.options.cspNonce);
     }
 
     toIFrame(ownerDocument: Document, windowSize: Bounds): Promise<HTMLIFrameElement> {
@@ -373,9 +384,6 @@ export class DocumentCloner {
 
             if (this.referenceElement === node && isHTMLElementNode(clone)) {
                 this.clonedReferenceElement = clone;
-            }
-            if (isBodyElement(clone)) {
-                createPseudoHideStyles(clone, this.options.cspNonce);
             }
 
             const counters = this.counters.parse(new CSSParsedCounterDeclaration(this.context, style));

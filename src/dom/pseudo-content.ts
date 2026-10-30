@@ -35,26 +35,26 @@ const PSEUDO_HIDE_ELEMENT_STYLE = `{
 
 /**
  * Inject the stylesheet that hides pseudo-element surrogate containers.
- * Called on the cloned <body> so the surrogates themselves never render.
+ * Added to the cloned <head> so the surrogates themselves never render.
  */
-export const createPseudoHideStyles = (body: HTMLElement, cspNonce?: string): void => {
+export const createPseudoHideStyles = (parent: Element, cspNonce?: string): void => {
     createStyles(
-        body,
+        parent,
         `.${PSEUDO_HIDE_ELEMENT_CLASS_BEFORE}${PSEUDO_BEFORE}${PSEUDO_HIDE_ELEMENT_STYLE}
          .${PSEUDO_HIDE_ELEMENT_CLASS_AFTER}${PSEUDO_AFTER}${PSEUDO_HIDE_ELEMENT_STYLE}`,
         cspNonce
     );
 };
 
-const createStyles = (body: HTMLElement, styles: string, cspNonce?: string): void => {
-    const document = body.ownerDocument;
+const createStyles = (parent: Element, styles: string, cspNonce?: string): void => {
+    const document = parent.ownerDocument;
     if (document) {
         const style = document.createElement('style');
         style.textContent = styles;
         if (cspNonce) {
             style.nonce = cspNonce;
         }
-        body.appendChild(style);
+        parent.appendChild(style);
     }
 };
 
