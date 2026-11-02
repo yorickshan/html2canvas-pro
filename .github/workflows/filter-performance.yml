@@ -18,7 +18,8 @@ concurrency:
 jobs:
   benchmark:
     name: Native/SVG validity
-    runs-on: ubuntu-latest
+    # Playwright's Linux WebKit build needs libicu74, which ubuntu-26.04 (now ubuntu-latest) lacks.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
