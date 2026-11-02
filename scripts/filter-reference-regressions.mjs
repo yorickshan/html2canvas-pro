@@ -40,6 +40,7 @@ const glowMarkup = (id) => `
   </filter>
 </svg>`;
 const box = 'width:100px;height:100px;background:#8ecae6';
+const glyphs = '<div style="font:bold 40px sans-serif;color:#219ebc">Abc</div>';
 const cases = [
     { name: 'box', filter: 'url(#f-box)', html: `<div style="${box}"></div>` },
     {
@@ -63,7 +64,10 @@ const cases = [
         opacity: 0.5,
         html: `<div style="${box}"></div>`
     },
-    { name: 'text', filter: 'url(#f-glyphs)', html: '<div style="font:bold 40px sans-serif;color:#219ebc">Abc</div>' },
+    // Canvas text can rasterize differently from DOM text (e.g. Linux at scale 2),
+    // so the filtered text is allowed the unfiltered control's difference on top.
+    { name: 'text control', filter: 'none', control: true, html: glyphs },
+    { name: 'text', filter: 'url(#f-glyphs)', controlCase: 'text control', html: glyphs },
     {
         name: 'glow outside the border box',
         filter: 'url(#f-glow)',
@@ -81,8 +85,8 @@ const page = `<!doctype html><html><head><style>
   .tint { flood-color: #ff0000 }
 </style></head><body>${cases
     .map(({ filter, html, markup = filterMarkup, opacity = 1 }, index) => {
-        const id = /#([\w-]+)/.exec(filter)[1];
-        return `<div class="case" style="left:${index * 170}px">${id === 'missing' ? '' : markup(id)}
+        const id = /#([\w-]+)/.exec(filter)?.[1];
+        return `<div class="case" style="left:${index * 170}px">${!id || id === 'missing' ? '' : markup(id)}
   <div style="position:absolute;left:30px;top:30px;filter:${filter};opacity:${opacity}">${html}</div></div>`;
     })
     .join('')}</body></html>`;
@@ -136,6 +140,10 @@ try {
                     );
                     const report = { engine: name, scale, case: testCase.name, ...row };
                     reports.push(report);
+                    if (testCase.control) continue;
+                    const control = reports.find(
+                        (entry) => entry.engine === name && entry.scale === scale && entry.case === testCase.controlCase
+                    );
                     const expectsShadow =
                         testCase.reference !== false && testCase.opacity === undefined && testCase.shadow !== false;
                     if (testCase.reference === false) {
@@ -148,7 +156,7 @@ try {
                     } else {
                         // The glow's wide blur is quantized slightly differently for an
                         // HTML box's filter and for the same filter inside an SVG image.
-                        const tolerance = testCase.matchesWebKit ? 1.5 : 0.5;
+                        const tolerance = (testCase.matchesWebKit ? 1.5 : 0.5) + (control?.rgbMAE ?? 0);
                         assert.ok(row.rgbMAE < tolerance, JSON.stringify(report));
                         if (expectsShadow) {
                             assert.ok(row.liveRed > 0, JSON.stringify(report));
