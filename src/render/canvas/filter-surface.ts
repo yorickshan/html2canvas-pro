@@ -553,7 +553,7 @@ async function renderReferenceSurface(
 
 // Explicit SVG entry is internal and allows independent fallback benchmarks/tests.
 // No foreignObject or external image is used.
-async function renderSvgFilterSurface(
+export async function renderSvgFilterSurface(
     source: HTMLCanvasElement,
     filter: ParsedFilter,
     opacity: number,

@@ -22,6 +22,14 @@ try {
                 const check = (value, message) => {
                     if (!value) throw new Error(message);
                 };
+                // The matrix keeps its readable { blur, shadow } rows; the helpers take
+                // the ordered chain that parseFilterChain produces.
+                const chain = ({ blur, shadow }) => ({
+                    functions: [
+                        ...(blur ? [{ kind: 'blur', value: blur }] : []),
+                        ...(shadow ? [{ kind: 'drop-shadow', ...shadow }] : [])
+                    ]
+                });
                 const source = document.createElement('canvas');
                 source.width = source.height = 384;
                 const context = source.getContext('2d');
@@ -51,9 +59,9 @@ try {
                                 let a, b;
                                 try {
                                     encodes = 0;
-                                    a = await renderFilterSurface(source, filter, opacity, scale);
+                                    a = await renderFilterSurface(source, chain(filter), opacity, scale);
                                     const nativeEncodes = encodes;
-                                    b = await renderSvgFilterSurface(source, filter, opacity, scale);
+                                    b = await renderSvgFilterSurface(source, chain(filter), opacity, scale);
                                     const ad = a.getContext('2d').getImageData(0, 0, 384, 384).data;
                                     const bd = b.getContext('2d').getImageData(0, 0, 384, 384).data;
                                     let rgb = 0,
@@ -132,7 +140,13 @@ try {
                         return draw.apply(this, args);
                     };
                     try {
-                        result = await h.renderFilterSurface(source, { blur: 4 }, 0.5, 1, controller.signal);
+                        result = await h.renderFilterSurface(
+                            source,
+                            { functions: [{ kind: 'blur', value: 4 }] },
+                            0.5,
+                            1,
+                            controller.signal
+                        );
                     } catch (e) {
                         error = e.name;
                     } finally {
@@ -214,7 +228,12 @@ try {
                         source = document.createElement('canvas');
                     source.width = source.height = 100;
                     source.getContext('2d').fillRect(20, 20, 50, 50);
-                    const result = await h.renderFilterSurface(source, { blur: 4 }, 0.5, 1);
+                    const result = await h.renderFilterSurface(
+                        source,
+                        { functions: [{ kind: 'blur', value: 4 }] },
+                        0.5,
+                        1
+                    );
                     const context = result.getContext('2d');
                     const row = {
                         supported,
