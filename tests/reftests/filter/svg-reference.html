@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>SVG filter references on composited surfaces</title>
+        <script src="../../test.js"></script>
+        <style>
+            body {
+                margin: 24px;
+                font:
+                    16px Arial,
+                    sans-serif;
+                background: white;
+            }
+            .samples {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 24px;
+            }
+            h1 {
+                margin: 0 0 16px;
+                font-size: 32px;
+                line-height: 40px;
+            }
+            h2 {
+                margin: 0 0 12px;
+                font-size: 20px;
+                line-height: 28px;
+                min-height: 56px;
+            }
+            p {
+                margin: 0 0 12px;
+                line-height: 24px;
+            }
+            .sample {
+                width: 220px;
+            }
+            .stage {
+                position: relative;
+                width: 220px;
+                height: 160px;
+            }
+            .layer {
+                position: absolute;
+                left: 50px;
+                top: 30px;
+            }
+            .box {
+                width: 120px;
+                height: 100px;
+                background: #8ecae6;
+            }
+            .label {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 20px;
+                font:
+                    bold 32px Arial,
+                    sans-serif;
+                color: #023047;
+            }
+            .glyphs {
+                font:
+                    bold 48px Arial,
+                    sans-serif;
+                color: #219ebc;
+            }
+            /* Rules on primitives must survive serialization into the SVG pass. */
+            .tint {
+                flood-color: #e63946;
+            }
+            .glow-color {
+                flood-color: #ffb703;
+            }
+        </style>
+    </head>
+    <body>
+        <svg aria-hidden="true" style="position: absolute; width: 0; height: 0; overflow: hidden">
+            <!-- Alpha-based inner shadow: inverted alpha, blurred, offset, tinted and clipped to the source. -->
+            <filter id="inner-shadow" color-interpolation-filters="sRGB">
+                <feComponentTransfer in="SourceAlpha" result="inverted">
+                    <feFuncA type="table" tableValues="1 0" />
+                </feComponentTransfer>
+                <feGaussianBlur in="inverted" stdDeviation="4" result="blurred" />
+                <feOffset in="blurred" dx="6" dy="6" result="offset" />
+                <feFlood class="tint" result="flood" />
+                <feComposite in="flood" in2="offset" operator="in" result="tinted" />
+                <feComposite in="tinted" in2="SourceAlpha" operator="in" result="shadow" />
+                <feMerge>
+                    <feMergeNode in="SourceGraphic" />
+                    <feMergeNode in="shadow" />
+                </feMerge>
+            </filter>
+            <!-- Outer glow in a region twice the border box: paints outside the element. -->
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feMorphology in="SourceAlpha" operator="dilate" radius="6" result="grown" />
+                <feGaussianBlur in="grown" stdDeviation="6" result="soft" />
+                <feFlood class="glow-color" result="color" />
+                <feComposite in="color" in2="soft" operator="in" result="glow" />
+                <feMerge>
+                    <feMergeNode in="glow" />
+                    <feMergeNode in="SourceGraphic" />
+                </feMerge>
+            </filter>
+        </svg>
+        <h1>Apply referenced SVG filters to the complete element</h1>
+        <p>Click to compare DOM and capture in the standard reftest viewer.</p>
+        <p>
+            Each element should get one red inner shadow along its own edges: the text inside the rounded box stays
+            unshadowed, and the blur and drop shadow after the reference are not clipped. The glow extends outside its
+            box. WebKit does not paint the inner shadow on HTML boxes in the live page.
+        </p>
+        <div class="samples">
+            <section class="sample">
+                <h2>Inner shadow</h2>
+                <div class="stage" id="box">
+                    <div class="layer box" style="filter: url(#inner-shadow)"></div>
+                </div>
+            </section>
+            <section class="sample">
+                <h2>Box with text, filtered once</h2>
+                <div class="stage" id="label">
+                    <div class="layer box label" style="filter: url(#inner-shadow)">Hi</div>
+                </div>
+            </section>
+            <section class="sample">
+                <h2>Inline SVG</h2>
+                <div class="stage" id="svg">
+                    <div class="layer" style="filter: url(#inner-shadow)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="110" height="110">
+                            <circle cx="55" cy="55" r="52" fill="#8ecae6" />
+                        </svg>
+                    </div>
+                </div>
+            </section>
+            <section class="sample">
+                <h2>Reference, blur and drop shadow</h2>
+                <div class="stage" id="chain">
+                    <div
+                        class="layer box"
+                        style="filter: url(#inner-shadow) blur(1px) drop-shadow(4px 4px 4px rgba(0, 0, 0, 0.6))"
+                    ></div>
+                </div>
+            </section>
+            <section class="sample">
+                <h2>Glyphs</h2>
+                <div class="stage" id="glyphs">
+                    <div class="layer glyphs" style="filter: url(#inner-shadow)">Abc</div>
+                </div>
+            </section>
+            <section class="sample">
+                <h2>Glow outside the border box</h2>
+                <div class="stage" id="glow-sample">
+                    <div class="layer box" style="filter: url(#glow); border-radius: 50%"></div>
+                </div>
+            </section>
+            <section class="sample">
+                <h2>Reference and opacity</h2>
+                <div class="stage" id="opacity">
+                    <div class="layer box" style="filter: url(#inner-shadow); opacity: 0.5"></div>
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

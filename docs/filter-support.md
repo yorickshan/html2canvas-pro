@@ -40,7 +40,7 @@ The referenced filter is resolved while the cloned document is available and cop
 
 These references stay on the previous renderer: external documents (`url(filters.svg#f)`), `primitiveUnits="objectBoundingBox"`, filters inheriting through `href`, `feImage` or other `href` inputs, percentage primitive subregions, `userSpaceOnUse` regions without absolute lengths, and empty regions. The same applies when native canvas filters are needed for the rest of the chain but unavailable, or when the SVG pass cannot serialize/decode the surface (the conditions are those of the SVG backend below).
 
-**WebKit.** WebKit does not paint `filter: url(#id)` on HTML boxes (it does on inline SVG). The capture renders the referenced filter regardless, matching Chromium and Firefox, so it can differ from the live page in WebKit.
+**WebKit.** WebKit's live rendering of some referenced filters on HTML boxes differs from Chromium and Firefox: an alpha-inverting inner shadow (`feComponentTransfer` on `SourceAlpha`) is not painted on an HTML box, while the same filter works on inline SVG and an outer glow works on both. The capture renders the referenced filter the same way in every engine, so it can differ from the live page in WebKit.
 
 ## A supported example
 

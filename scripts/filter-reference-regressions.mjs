@@ -2,9 +2,10 @@
 // Run with: node scripts/filter-reference-regressions.mjs [chromium,firefox,webkit]
 //
 // Chromium and Firefox render referenced SVG filters on HTML elements, so the
-// capture must match the live pixels. WebKit does not apply them to HTML boxes
-// (it does for inline SVG), so there the check is that the capture contains the
-// filter output instead of comparing with the live DOM.
+// capture must match the live pixels. WebKit's live rendering differs for the
+// alpha-inverting inner shadow on HTML boxes (it paints none, or artifacts), so
+// there the check is that the capture contains the filter output; the glow,
+// which WebKit does paint, is compared with the live DOM in every engine.
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -15,9 +16,9 @@ const output = new URL('../tmp/filter-surface-regressions/', import.meta.url);
 await mkdir(output, { recursive: true });
 
 // Inner shadow: inverted alpha, blurred, offset, tinted red and clipped to the source.
-const filterMarkup = (id, extra = '') => `
+const filterMarkup = (id) => `
 <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
-  <filter id="${id}" color-interpolation-filters="sRGB" ${extra}>
+  <filter id="${id}" color-interpolation-filters="sRGB">
     <feComponentTransfer in="SourceAlpha" result="inverted"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>
     <feGaussianBlur in="inverted" stdDeviation="4" result="blurred"/>
     <feOffset in="blurred" dx="6" dy="6" result="offset"/>
@@ -25,6 +26,17 @@ const filterMarkup = (id, extra = '') => `
     <feComposite in="flood" in2="offset" operator="in" result="tinted"/>
     <feComposite in="tinted" in2="SourceAlpha" operator="in" result="shadow"/>
     <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shadow"/></feMerge>
+  </filter>
+</svg>`;
+// Outer glow in a region twice the border box: paints outside the element.
+const glowMarkup = (id) => `
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <filter id="${id}" x="-50%" y="-50%" width="200%" height="200%">
+    <feMorphology in="SourceAlpha" operator="dilate" radius="6" result="grown"/>
+    <feGaussianBlur in="grown" stdDeviation="6" result="soft"/>
+    <feFlood flood-color="#ffb703" result="color"/>
+    <feComposite in="color" in2="soft" operator="in" result="glow"/>
+    <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
   </filter>
 </svg>`;
 const box = 'width:100px;height:100px;background:#8ecae6';
@@ -53,10 +65,12 @@ const cases = [
     },
     { name: 'text', filter: 'url(#f-glyphs)', html: '<div style="font:bold 40px sans-serif;color:#219ebc">Abc</div>' },
     {
-        name: 'region wider than the default',
-        filter: 'url(#f-region)',
-        extra: 'x="-50%" y="-50%" width="200%" height="200%"',
-        html: `<div style="${box}"></div>`
+        name: 'glow outside the border box',
+        filter: 'url(#f-glow)',
+        markup: glowMarkup,
+        shadow: false,
+        matchesWebKit: true,
+        html: `<div style="${box};border-radius:50%"></div>`
     },
     // An unresolved reference keeps the existing renderer and must not throw.
     { name: 'missing reference', filter: 'url(#missing)', html: `<div style="${box}"></div>`, reference: false }
@@ -66,9 +80,9 @@ const page = `<!doctype html><html><head><style>
   .case { position: absolute; top: 0; width: 160px; height: 160px; background: #fff }
   .tint { flood-color: #ff0000 }
 </style></head><body>${cases
-    .map(({ filter, html, extra, opacity = 1 }, index) => {
+    .map(({ filter, html, markup = filterMarkup, opacity = 1 }, index) => {
         const id = /#([\w-]+)/.exec(filter)[1];
-        return `<div class="case" style="left:${index * 170}px">${id === 'missing' ? '' : filterMarkup(id, extra)}
+        return `<div class="case" style="left:${index * 170}px">${id === 'missing' ? '' : markup(id)}
   <div style="position:absolute;left:30px;top:30px;filter:${filter};opacity:${opacity}">${html}</div></div>`;
     })
     .join('')}</body></html>`;
@@ -122,16 +136,20 @@ try {
                     );
                     const report = { engine: name, scale, case: testCase.name, ...row };
                     reports.push(report);
-                    const expectsShadow = testCase.reference !== false && testCase.opacity === undefined;
+                    const expectsShadow =
+                        testCase.reference !== false && testCase.opacity === undefined && testCase.shadow !== false;
                     if (testCase.reference === false) {
                         // Engines disagree on a missing reference: Firefox hides the
                         // element, Chromium paints it unfiltered. Only require that the
                         // capture completed without inventing a filter.
                         assert.equal(row.captureRed, 0, JSON.stringify(report));
-                    } else if (name === 'webkit') {
+                    } else if (name === 'webkit' && !testCase.matchesWebKit) {
                         if (expectsShadow) assert.ok(row.captureRed > 0, JSON.stringify(report));
                     } else {
-                        assert.ok(row.rgbMAE < 0.5, JSON.stringify(report));
+                        // The glow's wide blur is quantized slightly differently for an
+                        // HTML box's filter and for the same filter inside an SVG image.
+                        const tolerance = testCase.matchesWebKit ? 1.5 : 0.5;
+                        assert.ok(row.rgbMAE < tolerance, JSON.stringify(report));
                         if (expectsShadow) {
                             assert.ok(row.liveRed > 0, JSON.stringify(report));
                             assert.ok(
