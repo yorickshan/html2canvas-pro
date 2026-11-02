@@ -16,6 +16,15 @@ describe('bounded filter surfaces', () => {
         const parent = box(new Bounds(0, 0, 50, 50), 'blur(2px)', [child]);
         expect(surfaceBounds(parent)).toEqual(new Bounds(-78, -58, 236, 186));
     });
+    it('grows by the part of a referenced filter region outside the border box', () => {
+        const element = {
+            ...box(new Bounds(0, 0, 100, 50), 'url("#f") blur(1px)'),
+            filterReferences: new Map([['#f', { outset: 25 }]])
+        } as unknown as ElementContainer;
+        expect(surfaceBounds(element)).toEqual(new Bounds(-28, -28, 156, 106));
+        // An unresolved reference adds nothing; the compositor rejects the chain later.
+        expect(surfaceBounds(box(new Bounds(0, 0, 100, 50), 'url("#f")'))).toEqual(new Bounds(0, 0, 100, 50));
+    });
     it('keeps outside contributors and aligns cropped bounds to capture pixels', () => {
         expect(cropSurface(new Bounds(-100, -100, 500, 500), new Bounds(0.5, 0.5, 100, 100), 12, 2)).toEqual(
             new Bounds(-11.5, -11.5, 124, 124)

@@ -204,6 +204,7 @@ jobs:
                   restore-keys: ${{ runner.os }}-playwright-chromium-webkit-
             - run: pnpm exec playwright install --with-deps chromium webkit
             - run: node scripts/filter-descriptor-regressions.mjs
+            - run: node scripts/filter-reference-regressions.mjs
             - run: node scripts/filter-surface-benchmark.mjs
             - uses: actions/upload-artifact@v6
               if: always()

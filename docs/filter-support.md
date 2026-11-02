@@ -18,13 +18,29 @@ The surface path supports **the full standard filter function set** — `blur()`
 | `filter: blur(2px) blur(3px)` | Supported (native) | Consecutive blurs compound; the surface outset sums their radii. |
 | `filter: drop-shadow(0px 2px 4px black) drop-shadow(8px 0px 2px red)` | Supported (native) | Multiple CSS drop shadows preserve their order. |
 | `filter: opacity(0.5)` | Supported (native) | Applied during filtering, before the separate layer-opacity pass. |
-| `filter: url(#my-filter)` | Previous renderer | SVG references are passed verbatim to `ctx.filter` on the legacy path, which applies them natively where the runtime supports it. |
+| `filter: url(#my-filter)` | Supported (SVG pass) | Same-document references to a `<filter>` element; see [SVG filter references](#svg-filter-references). |
+| `filter: url(#my-filter) blur(1px) drop-shadow(4px 4px 4px black)` | Supported | The reference is one step of the chain; the standard functions around it use the native backend. |
+| `filter: url(filters.svg#f)` | Previous renderer | External references are passed verbatim to `ctx.filter` on the legacy path. |
 
 **SVG fallback subset.** The SVG backend predates the ordered-chain parser and only expresses at most one `blur()` followed by at most one `drop-shadow()`. When native canvas filters are unavailable (older WebKit) and the chain is outside that subset, the surface path rejects the chain and the affected subtree stays on the previous renderer rather than rendering a wrong filter.
 
 The CSS descriptor preserves filter syntax, units, functional colors and `url()` references. The internal `parseFilterChain` helper recognizes the standard set from **computed CSS**, whose supported lengths are in pixels. It is not a public parser for arbitrary authored CSS. Browser-resolved values are what matter; an authored relative length is not the same as passing an unresolved `blur(2em)` string to that helper.
 
 Nonzero `blur(5)` is invalid CSS and is not repaired by appending `px`. Valid `blur(0)`, `blur(0px)` and `blur()` are no-op cases after browser computation. Invalid CSS declarations are handled by the browser before capture and may leave a previous valid declaration in effect.
+
+## SVG filter references
+
+A same-document `url(#id)` reference to an SVG `<filter>` is rendered on the composited surface, so the filter sees the element's complete paint (background, borders, text and children together), as the browser applies it. Each reference is a separate SVG pass over the previous step's output; the standard functions between references keep the native canvas backend, and CSS `opacity` is still applied once, after the whole chain.
+
+The referenced filter is resolved while the cloned document is available and copied into a self-contained form:
+
+- The filter region is converted to user space around the element's border box (the `objectBoundingBox` default of `-10% -10% 120% 120%`, fractions, percentages, or absolute `userSpaceOnUse` lengths), and the surface grows by the part of the region outside the border box.
+- The SVG pass uses a CSS-pixel `viewBox`, so the filter's user units (`stdDeviation`, `dx`, light positions, …) scale with the capture `scale` instead of staying device pixels.
+- `flood-color`, `flood-opacity`, `lighting-color` and `color-interpolation-filters` are inlined from computed style, so stylesheet rules on primitives survive serialization.
+
+These references stay on the previous renderer: external documents (`url(filters.svg#f)`), `primitiveUnits="objectBoundingBox"`, filters inheriting through `href`, `feImage` or other `href` inputs, percentage primitive subregions, `userSpaceOnUse` regions without absolute lengths, and empty regions. The same applies when native canvas filters are needed for the rest of the chain but unavailable, or when the SVG pass cannot serialize/decode the surface (the conditions are those of the SVG backend below).
+
+**WebKit.** WebKit does not paint `filter: url(#id)` on HTML boxes (it does on inline SVG). The capture renders the referenced filter regardless, matching Chromium and Firefox, so it can differ from the live page in WebKit.
 
 ## A supported example
 
