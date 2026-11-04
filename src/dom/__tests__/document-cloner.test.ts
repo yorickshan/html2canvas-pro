@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { copyCSSStyles, serializeDoctype, DocumentCloner, CloneOptions, CloneConfigurations } from '../document-cloner';
+import { copySVGStyles, SVG_STYLE_PROPERTIES } from '../copy-css-styles';
 import { IGNORE_ATTRIBUTE } from '../slot-cloner';
 import { Context } from '../../core/context';
 import { Html2CanvasConfig } from '../../config';
@@ -100,6 +101,78 @@ describe('copyCSSStyles', () => {
         const target = document.createElement('div');
         const result = copyCSSStyles(div.style, target);
         expect(result.style.getPropertyPriority('color')).toBe('important');
+    });
+});
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+const declarationOf = (cssText: string): CSSStyleDeclaration => {
+    const div = document.createElement('div');
+    div.style.cssText = cssText;
+    return div.style;
+};
+
+describe('copySVGStyles', () => {
+    it('copies the SVG rendering properties and skips the rest', () => {
+        const target = document.createElementNS(SVG_NS, 'path');
+        copySVGStyles(declarationOf('fill: red; stroke-width: 2px; opacity: 0.5; margin-left: 5px;'), target);
+        expect(target.style.fill).toBe('red');
+        expect(target.style.strokeWidth).toBe('2px');
+        expect(target.style.opacity).toBe('0.5');
+        expect(target.style.marginLeft).toBe('');
+    });
+
+    it("keeps the clone's own inline declarations, letting the computed values win", () => {
+        const target = document.createElementNS(SVG_NS, 'path');
+        target.style.cssText = 'transition-property: none; fill: blue';
+        copySVGStyles(declarationOf('fill: red;'), target);
+        expect(target.style.transitionProperty).toBe('none');
+        expect(target.style.fill).toBe('red');
+    });
+
+    it('never copies `d` (#2483)', () => {
+        expect(SVG_STYLE_PROPERTIES).not.toContain('d');
+    });
+});
+
+describe('DocumentCloner SVG style copying', () => {
+    const svgCloneOptions: CloneConfigurations = {
+        ignoreElements: undefined,
+        onclone: undefined,
+        allowTaint: false,
+        inlineImages: false,
+        copyStyles: false
+    };
+
+    it('inlines only the SVG rendering properties on <svg> elements and their descendants', () => {
+        const host = document.createElement('div');
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('style', 'vertical-align: middle');
+        const path = document.createElementNS(SVG_NS, 'path');
+        svg.appendChild(path);
+        host.appendChild(svg);
+        document.body.appendChild(host);
+        try {
+            const cloner = new DocumentCloner(createMockContext(), host, svgCloneOptions);
+            const spy = vi
+                .spyOn(window, 'getComputedStyle')
+                .mockImplementation(() => declarationOf('fill: red; margin-left: 5px; background-color: blue;'));
+            try {
+                const svgClone = cloner.cloneNode(svg, false) as SVGSVGElement;
+                const pathClone = svgClone.firstChild as SVGPathElement;
+                for (const clone of [svgClone, pathClone]) {
+                    expect(clone.style.fill).toBe('red');
+                    expect(clone.style.marginLeft).toBe('');
+                    expect(clone.style.backgroundColor).toBe('');
+                }
+                // the original's own style attribute is kept
+                expect(svgClone.style.verticalAlign).toBe('middle');
+            } finally {
+                spy.mockRestore();
+            }
+        } finally {
+            document.body.removeChild(host);
+        }
     });
 });
 
