@@ -19,7 +19,7 @@ import { CSSParsedCounterDeclaration } from '../css/index';
 import { Context } from '../core/context';
 import { DebuggerType, isDebugging } from '../core/debugger';
 import { SlotCloner } from './slot-cloner';
-import { copyCSSStyles } from './copy-css-styles';
+import { copyCSSStyles, copySVGStyles } from './copy-css-styles';
 import { createAdoptedStylesElement } from './adopted-styles';
 import { PseudoContentResolver, PseudoElementType, createPseudoHideStyles } from './pseudo-content';
 
@@ -428,11 +428,15 @@ export class DocumentCloner {
 
             this.counters.pop(counters);
 
-            if (
-                (style && (this.options.copyStyles || isSVGElementNode(node)) && !isIFrameElement(node)) ||
-                copyStyles
-            ) {
+            if ((style && this.options.copyStyles && !isIFrameElement(node)) || copyStyles) {
                 copyCSSStyles(style, clone);
+            } else if (style && isSVGElementNode(node) && isSVGElementNode(clone)) {
+                // SVGs are rasterised from their serialized markup, which no
+                // longer sees the page's stylesheets, so the properties SVG
+                // rendering reads are inlined. The outer <svg>'s own box
+                // (layout, background, border) is laid out and painted from
+                // the clone document like any HTML element.
+                copySVGStyles(style, clone);
             }
 
             if (node.scrollTop !== 0 || node.scrollLeft !== 0) {
