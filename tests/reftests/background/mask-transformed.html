@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Mask on a rotated element</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            body {
+                background: #ffffff;
+                font-family: Arial;
+            }
+
+            .rotated {
+                width: 200px;
+                height: 80px;
+                margin: 60px;
+                background: #8e44ad;
+                transform: rotate(-12deg);
+                -webkit-mask-image: linear-gradient(90deg, #000000, transparent);
+                mask-image: linear-gradient(90deg, #000000, transparent);
+            }
+        </style>
+    </head>
+    <body>
+        <!-- A masked element that is itself transformed: the mask layers are
+             anchored to the element's local (pre-transform) border box, so the
+             fade must ride the rotation instead of staying screen-aligned. -->
+        <div class="rotated"></div>
+    </body>
+</html>

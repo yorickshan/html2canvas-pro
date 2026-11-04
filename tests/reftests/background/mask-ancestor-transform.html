@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Mask under a transformed ancestor</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            body {
+                background: #ffffff;
+                font-family: Arial;
+            }
+
+            .stage {
+                width: 360px;
+                height: 220px;
+                margin: 20px;
+                transform: rotate(8deg) scale(0.9);
+                transform-origin: 40px 30px;
+            }
+
+            .masked {
+                width: 260px;
+                height: 120px;
+                background: #2980b9;
+                -webkit-mask-image: radial-gradient(closest-side, #000000 40%, transparent);
+                mask-image: radial-gradient(closest-side, #000000 40%, transparent);
+            }
+
+            .sibling {
+                width: 260px;
+                height: 40px;
+                background: #f39c12;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- The masked child rides an ancestor transform: the ancestor matrix
+             must be baked into the child's composited surface exactly once,
+             and the sibling must paint in tree order above/below correctly. -->
+        <div class="stage">
+            <div class="masked"></div>
+            <div class="sibling"></div>
+        </div>
+    </body>
+</html>
