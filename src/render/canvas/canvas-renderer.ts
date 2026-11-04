@@ -22,7 +22,15 @@ import { at } from '../../core/util';
 import { getBackgroundValueForIndex } from '../background';
 import { contentBox } from '../box-sizing';
 import { ReplacedElementContainer } from '../../dom/replaced-elements';
-import { EffectTarget, isBlendEffect, isClipEffect, isFilterEffect, isOpacityEffect } from '../effects';
+import {
+    EffectTarget,
+    TransformEffect,
+    isBlendEffect,
+    isClipEffect,
+    isFilterEffect,
+    isOpacityEffect,
+    isTransformEffect
+} from '../effects';
 import { CLIP_PATH_TYPE } from '../../css/property-descriptors/clip-path';
 import { MIX_BLEND_MODE } from '../../css/property-descriptors/mix-blend-mode';
 import {
@@ -34,6 +42,14 @@ import {
     ParsedFilter
 } from './filter-surface';
 import { cropSurface, reserveSurface, surfaceBounds, SurfaceBudget } from './surface-bounds';
+import {
+    IDENTITY_MATRIX,
+    inverseTransformBoundsToAabb,
+    isIdentityMatrix,
+    multiplyMatrix,
+    transformBoundsToAabb
+} from '../matrix';
+import type { Matrix } from '../../css/property-descriptors/transform';
 import { Bounds } from '../../css/layout/bounds';
 import { DISPLAY } from '../../css/property-descriptors/display';
 import { contains } from '../../core/bitwise';
@@ -186,9 +202,21 @@ export class CanvasRenderer {
             // the main canvas would blend each paint call separately and,
             // for light-coloured content (white text over multiply), erase it.
             const hasBlend = styles.mixBlendMode !== MIX_BLEND_MODE.NORMAL;
+            // box-reflect draws the reflection by mirroring element-space
+            // coordinates; a non-identity ancestor transform would need a
+            // transformed reflection path, which is not implemented — keep
+            // that rare combination on the legacy path (and say so).
+            const reflectTransformed = reflect && !isIdentityMatrix(this.ancestorTransform(stack.element));
+            if (reflectTransformed) {
+                this.context.logger.warn(
+                    '-webkit-box-reflect under an ancestor transform is not supported; ' +
+                        'the reflection is skipped for this subtree'
+                );
+            }
             if (
                 stack.element !== this.surfaceRoot &&
                 !this.legacySubtree &&
+                !reflectTransformed &&
                 (hasMask || reflect || hasBlend || (filter !== null && (hasFilter || styles.opacity < 1))) &&
                 this.canComposite(stack.element)
             ) {
@@ -207,14 +235,13 @@ export class CanvasRenderer {
         }
     }
 
-    // Draft scope: transformed and clip-path subtrees keep the old path.
-    // The surface root owns its filter/opacity; ancestors are applied at composition.
+    // Draft scope: clip-path and list-item subtrees keep the old path.
+    // Transforms and zoom compose through the accumulated ancestor matrix;
+    // the surface root owns its filter/opacity; ancestors are applied at composition.
     private canComposite(paint: ElementPaint): boolean {
         const supported = (container: ElementContainer): boolean => {
             const styles = container.styles;
             return (
-                !styles.isTransformed() &&
-                styles.zoom === 1 &&
                 styles.clipPath.type === CLIP_PATH_TYPE.NONE &&
                 !contains(styles.display, DISPLAY.LIST_ITEM) &&
                 parseFilterChain(styles.filter) !== null
@@ -230,6 +257,39 @@ export class CanvasRenderer {
         return subtree(paint.container);
     }
 
+    /**
+     * Root-to-element transform accumulated from the ancestor chain's
+     * TransformEffects (including zoom), stopping at the surface root. The
+     * element's own TransformEffect is intentionally excluded: inside the
+     * offscreen surface it is still applied by the normal effects pass, and
+     * at composition time it is filtered from the recomposed effect list.
+     */
+    private ancestorTransform(paint: ElementPaint): Matrix {
+        const chain: TransformEffect[] = [];
+        let node: ElementPaint | null = paint;
+        while (node && node !== this.surfaceRoot) {
+            for (const effect of node.effects) {
+                if (isTransformEffect(effect)) chain.push(effect);
+            }
+            node = node.parent;
+        }
+        if (chain.length === 0) return IDENTITY_MATRIX;
+        // computeEffects unshifts ancestors, so the collected chain is
+        // element-first; reverse it and post-multiply root → element. Each
+        // effect composes as translate(origin) · matrix · translate(-origin) —
+        // the same sequence EffectsRenderer.applyEffects performs on the ctx.
+        let matrix = IDENTITY_MATRIX;
+        for (let i = chain.length - 1; i >= 0; i--) {
+            const effect = at(chain, i);
+            const anchored = multiplyMatrix(
+                multiplyMatrix([1, 0, 0, 1, effect.offsetX, effect.offsetY], effect.matrix),
+                [1, 0, 0, 1, -effect.offsetX, -effect.offsetY]
+            );
+            matrix = multiplyMatrix(matrix, anchored);
+        }
+        return matrix;
+    }
+
     private async renderCompositedStack(
         stack: StackingContext,
         filter: ParsedFilter | null,
@@ -240,8 +300,36 @@ export class CanvasRenderer {
         const signal = this.options.signal;
         if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
         const container = stack.element.container;
+        // surfaceBounds measures the layout-space subtree (normalizeDom strips
+        // transforms before measuring, so bounds are pre-transform). The
+        // surface itself paints in LAYOUT space — the ancestor TransformEffects
+        // are still active on this.ctx and transform the draw-back — so the
+        // crop window must cover the subtree's VISUAL footprint: map the
+        // layout bounds through the full chain matrix (ancestors + own, the
+        // own part is what the surface paints internally) and intersect with
+        // the viewport in visual space.
+        const ancestorMatrix = this.ancestorTransform(stack.element);
+        const ownTransforms = stack.element.effects.filter(isTransformEffect);
+        let chainMatrix = ancestorMatrix;
+        for (const effect of ownTransforms) {
+            chainMatrix = multiplyMatrix(
+                chainMatrix,
+                multiplyMatrix(multiplyMatrix([1, 0, 0, 1, effect.offsetX, effect.offsetY], effect.matrix), [
+                    1,
+                    0,
+                    0,
+                    1,
+                    -effect.offsetX,
+                    -effect.offsetY
+                ])
+            );
+        }
+        const layoutBounds = surfaceBounds(container);
+        const visualBounds = isIdentityMatrix(chainMatrix)
+            ? layoutBounds
+            : transformBoundsToAabb(chainMatrix, layoutBounds);
         const bounds = cropSurface(
-            surfaceBounds(container),
+            visualBounds,
             new Bounds(this.options.x, this.options.y, this.options.width, this.options.height),
             filter ? filterOutset(filter, container.filterReferences) : 0,
             this.options.scale
@@ -253,21 +341,34 @@ export class CanvasRenderer {
             Math.ceil(bounds.height * this.options.scale)
         );
         if (!reserved) {
-            this.context.logger.info('Filter surface budget exceeded; using the existing renderer');
+            this.context.logger.warn(
+                'Filter surface budget exceeded; mask/filter/blend effects are dropped for this subtree'
+            );
             return false;
         }
+        // The surface crop is a VISUAL-space rectangle, but the surface paints
+        // LAYOUT-space content under the active ancestor matrix. Invert the
+        // visual crop through the ancestor matrix to get the layout-space
+        // source window the surface must cover (conservative AABB).
+        const surfaceWindow =
+            isIdentityMatrix(ancestorMatrix) || !hasMask
+                ? bounds
+                : (inverseTransformBoundsToAabb(ancestorMatrix, bounds) ?? bounds);
         const options = {
             ...this.options,
             canvas: undefined,
             backgroundColor: null,
-            x: bounds.left,
-            y: bounds.top,
-            width: bounds.width,
-            height: bounds.height
+            x: surfaceWindow.left,
+            y: surfaceWindow.top,
+            width: surfaceWindow.width,
+            height: surfaceWindow.height
         };
         let source: CanvasRenderer | undefined;
         let filtered: HTMLCanvasElement | undefined;
         try {
+            // The surface paints the subtree in layout space (no preTransform):
+            // the ancestor effects active on this.ctx transform the composited
+            // result at draw-back, exactly as they transform legacy painting.
             source = new CanvasRenderer(this.context, options, stack.element, this.surfaceBudget);
             await source.renderStackContent(stack);
             source.effectsRenderer.applyEffects([]);
@@ -280,26 +381,38 @@ export class CanvasRenderer {
                     signal,
                     {
                         references: container.filterReferences,
-                        origin: { x: container.bounds.left - bounds.left, y: container.bounds.top - bounds.top }
+                        origin: {
+                            x: container.bounds.left - surfaceWindow.left,
+                            y: container.bounds.top - surfaceWindow.top
+                        }
                     }
                 );
             }
             const composited = filtered ?? source.canvas;
             if (hasMask) {
-                await this.applyMask(composited, stack.element.container.styles, bounds);
+                await this.applyMask(
+                    composited,
+                    stack.element.container.styles,
+                    surfaceWindow,
+                    container.bounds,
+                    ownTransforms
+                );
             }
             if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
             const own = stack.element.effects;
-            const effects = stack.element
-                .getEffects(EffectTarget.CONTENT, this.surfaceRoot)
-                .filter(
-                    (effect) =>
-                        !own.includes(effect) ||
-                        (!isFilterEffect(effect) &&
-                            !isOpacityEffect(effect) &&
-                            !isBlendEffect(effect) &&
-                            !isClipEffect(effect))
-                );
+            const effects = stack.element.getEffects(EffectTarget.CONTENT, this.surfaceRoot).filter(
+                (effect) =>
+                    !own.includes(effect) ||
+                    (!isFilterEffect(effect) &&
+                        !isOpacityEffect(effect) &&
+                        !isBlendEffect(effect) &&
+                        !isClipEffect(effect) &&
+                        // The surface already contains the element's own
+                        // transform (painted live inside the surface);
+                        // ancestor effects stay active on this.ctx and
+                        // transform the draw-back.
+                        !isTransformEffect(effect))
+            );
             this.effectsRenderer.applyEffects(effects);
             if (hasBlend) {
                 // The isolated surface already contains the element's full
@@ -347,8 +460,21 @@ export class CanvasRenderer {
      * Composite an alpha mask onto a finished element surface: all mask
      * layers are painted additively into a mask surface, then kept pixels are
      * selected with destination-in.
+     *
+     * Coordinate spaces: the source surface paints in LAYOUT space (the
+     * ancestor TransformEffects stay active on the main canvas and transform
+     * the draw-back), so the mask must be painted in layout space too —
+     * anchored to the element's border box (containerBounds) — riding ONLY
+     * the element's own transform effects, which apply inside the surface
+     * rather than at draw-back.
      */
-    private async applyMask(surface: HTMLCanvasElement, styles: CSSParsedDeclaration, bounds: Bounds): Promise<void> {
+    private async applyMask(
+        surface: HTMLCanvasElement,
+        styles: CSSParsedDeclaration,
+        surfaceWindow: Bounds,
+        containerBounds: Bounds,
+        ownTransforms: TransformEffect[]
+    ): Promise<void> {
         const ctx = surface.getContext('2d');
         if (!ctx) {
             return;
@@ -361,16 +487,30 @@ export class CanvasRenderer {
             releaseSurface(maskCanvas);
             return;
         }
-        // The surface's device-pixel origin corresponds to the element bounds
-        // origin, while mask layers paint in page coordinates — align them.
         maskCtx.scale(this.options.scale, this.options.scale);
-        maskCtx.translate(-bounds.left, -bounds.top);
+        maskCtx.translate(-surfaceWindow.left, -surfaceWindow.top);
+        // The element's own transform is NOT active on the surface ctx when
+        // the mask composites (it is part of the element's effect list), so
+        // replay it here — anchored at the transform origin, exactly as
+        // EffectsRenderer does.
+        for (let i = ownTransforms.length - 1; i >= 0; i--) {
+            const effect = at(ownTransforms, i);
+            maskCtx.translate(effect.offsetX, effect.offsetY);
+            maskCtx.transform(...effect.matrix);
+            maskCtx.translate(-effect.offsetX, -effect.offsetY);
+        }
+        const layoutArea = {
+            left: containerBounds.left,
+            top: containerBounds.top,
+            width: containerBounds.width,
+            height: containerBounds.height
+        };
         try {
             await paintMaskLayers(
                 maskCtx,
                 styles.maskImage,
                 styles,
-                { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height },
+                layoutArea,
                 async (url) => await this.context.cache.match(url)
             );
         } catch (error) {
