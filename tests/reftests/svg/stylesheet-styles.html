@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Inline &lt;svg&gt; content styled from page stylesheets</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            body {
+                background: #ffffff;
+                font-family: Arial;
+                padding: 16px;
+            }
+
+            .row {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                margin-bottom: 16px;
+                color: #1d4ed8;
+            }
+
+            /* Icon-library style: stroke inherited via currentColor. */
+            .icon {
+                width: 48px;
+                height: 48px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+
+            .danger {
+                color: #e11d48;
+            }
+
+            .dashed path {
+                stroke-dasharray: 4 3;
+                stroke-dashoffset: 2;
+            }
+
+            .filled circle {
+                fill: #16a34a;
+                fill-opacity: 0.6;
+                stroke: #14532d;
+                r: 10px;
+            }
+
+            .faded rect {
+                opacity: 0.4;
+                fill: #9333ea;
+            }
+
+            .moved rect {
+                transform: rotate(45deg);
+                transform-box: fill-box;
+                transform-origin: center;
+                fill: #ea580c;
+            }
+
+            .hidden-part .secondary {
+                display: none;
+            }
+
+            .invisible-part .secondary {
+                visibility: hidden;
+            }
+
+            .gradient stop:first-child {
+                stop-color: #0ea5e9;
+            }
+
+            .gradient stop:last-child {
+                stop-color: #f59e0b;
+                stop-opacity: 0.5;
+            }
+
+            .text text {
+                font-family: 'Times New Roman', serif;
+                font-size: 20px;
+                font-weight: bold;
+                font-style: italic;
+                text-anchor: middle;
+                dominant-baseline: middle;
+                fill: #0f172a;
+                letter-spacing: 1px;
+            }
+
+            .clipped g {
+                clip-path: url(#clip-half);
+            }
+
+            .markers line {
+                stroke: #0f172a;
+                stroke-width: 2;
+                marker-end: url(#arrow);
+            }
+
+            .markers marker path {
+                fill: #dc2626;
+            }
+
+            .painted text {
+                font: bold 28px Arial;
+                fill: #facc15;
+                stroke: #0f172a;
+                stroke-width: 4px;
+                paint-order: stroke;
+            }
+
+            /* The outer <svg> box is painted by html2canvas itself; these used
+               to be painted a second time inside the serialized image. */
+            .bordered {
+                border: 3px solid #e11d48;
+            }
+
+            .padded {
+                padding: 8px;
+                border: 1px solid #000000;
+                box-sizing: border-box;
+            }
+
+            .tinted {
+                background: rgba(22, 163, 74, 0.4);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="row">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="M12 5l7 7-7 7" /></svg>
+            <svg class="icon danger" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /></svg>
+            <svg class="icon dashed" viewBox="0 0 24 24"><path d="M3 12h18M12 3v18" /></svg>
+            <svg class="icon filled" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /></svg>
+            <!-- inline style on the outer svg (not covered by the copied list) must survive -->
+            <svg class="icon" viewBox="0 0 24 24" style="position: relative; top: 8px"><path d="M4 4l16 16" /></svg>
+        </div>
+        <div class="row">
+            <svg class="faded" width="48" height="48"><rect width="48" height="48" /></svg>
+            <svg class="moved" width="48" height="48"><rect x="12" y="12" width="24" height="24" /></svg>
+            <svg class="icon hidden-part" viewBox="0 0 24 24">
+                <path d="M4 12h16" /><path class="secondary" d="M12 4v16" />
+            </svg>
+            <svg class="icon invisible-part" viewBox="0 0 24 24">
+                <path d="M4 12h16" /><path class="secondary" d="M12 4v16" />
+            </svg>
+            <svg class="gradient" width="96" height="48">
+                <defs>
+                    <linearGradient id="grad">
+                        <stop offset="0" stop-color="#000000" />
+                        <stop offset="1" stop-color="#000000" />
+                    </linearGradient>
+                </defs>
+                <rect width="96" height="48" fill="url(#grad)" />
+            </svg>
+        </div>
+        <div class="row">
+            <svg class="text" width="160" height="48"><text x="80" y="24">Styled</text></svg>
+            <svg class="clipped" width="48" height="48">
+                <defs>
+                    <clipPath id="clip-half"><rect width="24" height="48" /></clipPath>
+                </defs>
+                <g><rect width="48" height="48" fill="#0891b2" /></g>
+            </svg>
+            <svg class="markers" width="96" height="48">
+                <defs>
+                    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                        <path d="M0 0L10 5L0 10Z" />
+                    </marker>
+                </defs>
+                <line x1="8" y1="24" x2="80" y2="24" />
+            </svg>
+            <svg class="painted" width="96" height="48"><text x="8" y="36">Ab</text></svg>
+        </div>
+        <div class="row">
+            <svg class="icon bordered" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
+            <svg class="icon padded" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
+            <svg class="icon tinted" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
+        </div>
+    </body>
+</html>
