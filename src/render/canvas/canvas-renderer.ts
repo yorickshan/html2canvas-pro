@@ -703,7 +703,9 @@ export class CanvasRenderer {
                 width: this.options.width,
                 height: this.options.height
             },
-            (ctx, opts) => new CanvasRenderer(ctx, opts),
+            // Nested iframe surfaces share this renderer's pixel budget so a
+            // page of many filtered iframes cannot blow past the global cap.
+            (ctx, opts) => new CanvasRenderer(ctx, opts, undefined, this.surfaceBudget),
             container,
             curves,
             styles,

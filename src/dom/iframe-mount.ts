@@ -313,6 +313,12 @@ export const stylesheetsReady = (
             new Promise<void>((resolve) => {
                 let elapsed = 0;
                 const timer = setInterval(() => {
+                    // Abort must not wait out the stylesheet deadline.
+                    if (signal?.aborted) {
+                        clearInterval(timer);
+                        resolve();
+                        return;
+                    }
                     elapsed += STYLESHEET_READY_POLL_MS;
                     const currentSheet = style.sheet;
                     if ((currentSheet && isSheetFullyApplied(currentSheet)) || elapsed >= timeoutMs) {

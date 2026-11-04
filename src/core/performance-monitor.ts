@@ -1,4 +1,4 @@
-import { Context } from './context';
+import { Logger } from './logger';
 
 /**
  * Performance Metric
@@ -36,7 +36,8 @@ export interface PerformanceSummary {
  *
  * Usage:
  * ```typescript
- * const monitor = new PerformanceMonitor(context);
+ * // Standalone (logs disabled) or with the render pipeline's context.
+ * const monitor = new PerformanceMonitor(null);
  *
  * monitor.start('clone');
  * await cloneDocument();
@@ -52,7 +53,7 @@ export class PerformanceMonitor {
     private readonly getTime: () => number;
 
     constructor(
-        private readonly context: Context | null,
+        private readonly logger: Logger | null,
         enabled: boolean = true
     ) {
         this.enabled = enabled;
@@ -76,7 +77,7 @@ export class PerformanceMonitor {
         }
 
         if (this.activeMetrics.has(name)) {
-            this.context?.logger.warn(`Performance metric '${name}' already started. Overwriting.`);
+            this.logger?.warn(`Performance metric '${name}' already started. Overwriting.`);
         }
 
         this.activeMetrics.set(name, {
@@ -100,7 +101,7 @@ export class PerformanceMonitor {
         const metric = this.activeMetrics.get(name);
 
         if (!metric) {
-            this.context?.logger.warn(`Performance metric '${name}' not found. Was start() called?`);
+            this.logger?.warn(`Performance metric '${name}' not found. Was start() called?`);
             return undefined;
         }
 
@@ -110,7 +111,7 @@ export class PerformanceMonitor {
         this.completedMetrics.push(metric);
         this.activeMetrics.delete(name);
 
-        this.context?.logger.debug(`⏱️  ${name}: ${metric.duration.toFixed(2)}ms`, metric.metadata);
+        this.logger?.debug(`⏱️  ${name}: ${metric.duration.toFixed(2)}ms`, metric.metadata);
 
         return metric;
     }
@@ -199,18 +200,19 @@ export class PerformanceMonitor {
      * Log performance summary to console
      */
     logSummary(): void {
-        if (!this.enabled || this.completedMetrics.length === 0 || !this.context) {
+        if (!this.enabled || this.completedMetrics.length === 0 || !this.logger) {
             return;
         }
 
+        const logger = this.logger;
         const summary = this.getSummary();
 
-        this.context.logger.info(`\n📊 Performance Summary (Total: ${summary.totalDuration.toFixed(2)}ms):`);
+        logger.info(`\n📊 Performance Summary (Total: ${summary.totalDuration.toFixed(2)}ms):`);
 
         summary.breakdown
             .sort((a, b) => b.duration - a.duration)
             .forEach((item) => {
-                this.context!.logger.info(
+                logger.info(
                     `  ${item.name.padEnd(20)} ${item.duration.toFixed(2).padStart(8)}ms  ${item.percentage.padStart(6)}`
                 );
             });

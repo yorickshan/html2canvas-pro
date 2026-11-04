@@ -102,7 +102,7 @@ export const renderElement = async (
     const context = new Context(contextOptions, windowBounds, config);
 
     const performanceMonitoring = opts.enablePerformanceMonitoring ?? opts.logging ?? false;
-    const perfMonitor = new PerformanceMonitor(context, performanceMonitoring);
+    const perfMonitor = new PerformanceMonitor(context.logger, performanceMonitoring);
 
     perfMonitor.start('total', {
         width: windowOptions.windowWidth,
