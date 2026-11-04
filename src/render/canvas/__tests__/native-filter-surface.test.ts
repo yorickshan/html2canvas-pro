@@ -165,4 +165,128 @@ describe('native filter surface', () => {
         });
         expect(contexts.size).toBe(0);
     });
+
+    describe('url() references', () => {
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const reference = () => {
+            const element = document.createElementNS(SVG_NS, 'filter') as SVGFilterElement;
+            element.setAttribute('filterUnits', 'userSpaceOnUse');
+            element.appendChild(document.createElementNS(SVG_NS, 'feOffset')).setAttribute('dx', '6');
+            return { element, region: { x: -10, y: -10, width: 120, height: 120 }, outset: 10 };
+        };
+        let markup: string[];
+
+        beforeEach(() => {
+            markup = [];
+            const serialize = XMLSerializer.prototype.serializeToString;
+            vi.spyOn(XMLSerializer.prototype, 'serializeToString').mockImplementation(function (
+                this: XMLSerializer,
+                node: Node
+            ) {
+                const value = serialize.call(this, node);
+                markup.push(value);
+                return value;
+            });
+        });
+
+        it('runs each reference as an SVG pass in user space and the rest natively, in order', async () => {
+            helper.supportsNativeFilters();
+            const draws: Array<{ image: CanvasImageSource; filter: string; alpha: number }> = [];
+            initialize = (context) => {
+                vi.mocked(context.drawImage).mockImplementation((image: CanvasImageSource) => {
+                    draws.push({ image, filter: context.filter, alpha: context.globalAlpha });
+                });
+            };
+            const references = new Map([['#inner', reference()]]);
+            const result = await helper.renderFilterSurface(
+                source,
+                {
+                    functions: [
+                        { kind: 'url', ref: '#inner' },
+                        { kind: 'blur', value: 1 },
+                        { kind: 'drop-shadow', x: 4, y: 4, blur: 4, color: 'black' }
+                    ]
+                },
+                0.5,
+                2,
+                undefined,
+                { references, origin: { x: 15, y: 20 } }
+            );
+
+            // The SVG viewBox is in CSS pixels, so the referenced filter's user
+            // units scale with the capture instead of staying device pixels.
+            expect(markup).toHaveLength(1);
+            const svg = new DOMParser().parseFromString(markup[0] as string, 'image/svg+xml').documentElement;
+            expect(svg.getAttribute('width')).toBe('100');
+            expect(svg.getAttribute('viewBox')).toBe('0 0 50 50');
+            const filter = svg.querySelector('filter');
+            expect(filter?.getAttribute('id')).toBe('composited-reference');
+            expect(filter?.querySelector('feOffset')?.getAttribute('dx')).toBe('6');
+            expect(svg.querySelector('g')?.getAttribute('transform')).toBe('translate(15 20)');
+            const image = svg.querySelector('image');
+            expect([image?.getAttribute('x'), image?.getAttribute('y'), image?.getAttribute('width')]).toEqual([
+                '-15',
+                '-20',
+                '50'
+            ]);
+            expect(image?.getAttribute('filter')).toBe('url(#composited-reference)');
+
+            // SVG pass at alpha 1, then the native pass filters its output at
+            // alpha 1 and applies opacity once, after the whole chain.
+            expect(draws.map(({ filter, alpha }) => [filter, alpha])).toEqual([
+                ['none', 1],
+                ['blur(2px) drop-shadow(8px 8px 8px black)', 1],
+                ['none', 0.5]
+            ]);
+            expect(draws[1]?.image).not.toBe(source);
+            for (const canvas of contexts.keys()) if (canvas !== result) expect(canvas.width * canvas.height).toBe(0);
+            expect(source.width).toBe(100);
+        });
+
+        it('rejects an unresolved reference so the caller keeps the legacy renderer', async () => {
+            await expect(
+                helper.renderFilterSurface(source, { functions: [{ kind: 'url', ref: '#missing' }] }, 1, 1, undefined, {
+                    references: new Map(),
+                    origin: { x: 0, y: 0 }
+                })
+            ).rejects.toBeInstanceOf(helper.FilterSurfaceError);
+            expect(source.toDataURL).not.toHaveBeenCalled();
+        });
+
+        it('rejects when native filters are missing for the standard part of the chain', async () => {
+            initialize = (context) => {
+                Reflect.deleteProperty(context, 'filter');
+            };
+            await expect(
+                helper.renderFilterSurface(
+                    source,
+                    {
+                        functions: [
+                            { kind: 'url', ref: '#inner' },
+                            { kind: 'unitless', name: 'brightness', value: 2 }
+                        ]
+                    },
+                    1,
+                    1,
+                    undefined,
+                    { references: new Map([['#inner', reference()]]), origin: { x: 0, y: 0 } }
+                )
+            ).rejects.toBeInstanceOf(helper.FilterSurfaceError);
+            for (const canvas of contexts.keys()) expect(canvas.width * canvas.height).toBe(0);
+        });
+
+        it('returns the reference pass directly when there is no opacity to apply', async () => {
+            const result = await helper.renderFilterSurface(
+                source,
+                { functions: [{ kind: 'url', ref: '#inner' }] },
+                1,
+                1,
+                undefined,
+                { references: new Map([['#inner', reference()]]), origin: { x: 0, y: 0 } }
+            );
+            expect(result).not.toBe(source);
+            expect(result.width).toBe(100);
+            expect(source.toDataURL).toHaveBeenCalledTimes(1);
+        });
+    });
 });

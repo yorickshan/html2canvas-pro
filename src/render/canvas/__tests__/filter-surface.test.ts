@@ -49,8 +49,25 @@ describe('parseFilterChain', () => {
         expect(parseFilterChain('drop-shadow(1px 2px 3px blue) blur(2px) blur(3px)')).not.toBeNull();
     });
 
+    it('keeps same-document url() references in declaration order', () => {
+        expect(parseFilterChain('url("#inner") blur(1px) drop-shadow(4px 4px 4px rgba(0, 0, 0, 0.6))')).toEqual({
+            functions: [
+                { kind: 'url', ref: '#inner' },
+                { kind: 'blur', value: 1 },
+                { kind: 'drop-shadow', x: 4, y: 4, blur: 4, color: 'rgba(0, 0, 0, 0.6)' }
+            ]
+        });
+        expect(parseFilterChain('brightness(2) url(#f)')).toEqual({
+            functions: [
+                { kind: 'unitless', name: 'brightness', value: 2 },
+                { kind: 'url', ref: '#f' }
+            ]
+        });
+    });
+
     it.each([
-        'url(#filter)',
+        'url("filters.svg#f")',
+        'url("https://example.com/filters.svg#f")',
         'blur(2em)',
         'blur(5)',
         'blur(-5px)',
@@ -59,7 +76,7 @@ describe('parseFilterChain', () => {
         'brightness(gone)',
         'hue-rotate(90)',
         'drop-shadow(0 0 2px red)',
-        'brightness(2) blur(3px) url(#f)'
+        'brightness(2) blur(3px) url(filters.svg#f)'
     ])('rejects chains the backends cannot express: %s', (value) => {
         expect(parseFilterChain(value)).toBeNull();
     });
@@ -98,6 +115,12 @@ describe('filterOutset', () => {
             })
         ).toBe(62);
         expect(filterOutset({ functions: [] })).toBe(0);
+    });
+
+    it('adds the spill of resolved url() filter regions', () => {
+        const filter = parseFilterChain('url("#a") blur(2px) url("#missing")');
+        const references = new Map([['#a', { outset: 20 } as never]]);
+        expect(filterOutset(filter as NonNullable<ReturnType<typeof parseFilterChain>>, references)).toBe(26);
     });
 
     it('sums consecutive blurs', () => {

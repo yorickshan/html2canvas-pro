@@ -69,7 +69,7 @@ export function surfaceBounds(container: ElementContainer): Bounds {
         if (child.styles.isVisible()) bounds = union(bounds, surfaceBounds(child));
     }
     const filter = parseFilterChain(styles.filter);
-    return expand(bounds, filter ? filterOutset(filter) : 0);
+    return expand(bounds, filter ? filterOutset(filter, container.filterReferences) : 0);
 }
 
 export function cropSurface(bounds: Bounds, viewport: Bounds, margin: number, scale: number): Bounds {

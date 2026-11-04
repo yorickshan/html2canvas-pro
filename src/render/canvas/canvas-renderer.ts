@@ -239,10 +239,11 @@ export class CanvasRenderer {
     ): Promise<boolean> {
         const signal = this.options.signal;
         if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+        const container = stack.element.container;
         const bounds = cropSurface(
-            surfaceBounds(stack.element.container),
+            surfaceBounds(container),
             new Bounds(this.options.x, this.options.y, this.options.width, this.options.height),
-            filter ? filterOutset(filter) : 0,
+            filter ? filterOutset(filter, container.filterReferences) : 0,
             this.options.scale
         );
         if (!bounds.width || !bounds.height) return true;
@@ -274,9 +275,13 @@ export class CanvasRenderer {
                 filtered = await renderFilterSurface(
                     source.canvas,
                     filter,
-                    stack.element.container.styles.opacity,
+                    container.styles.opacity,
                     options.scale,
-                    signal
+                    signal,
+                    {
+                        references: container.filterReferences,
+                        origin: { x: container.bounds.left - bounds.left, y: container.bounds.top - bounds.top }
+                    }
                 );
             }
             const composited = filtered ?? source.canvas;

@@ -1,4 +1,5 @@
 import { throwIfAborted } from '../../core/abort-helper';
+import { FilterReference, FilterReferences, parseFilterReference } from '../../dom/filter-reference';
 
 // Only errors in the optional surface path are eligible for legacy fallback.
 export class FilterSurfaceError extends Error {}
@@ -10,14 +11,16 @@ export const releaseSurface = (canvas: HTMLCanvasElement): void => {
 /**
  * A parsed CSS filter chain. Functions keep their declaration order — CSS
  * applies them left to right, and the native canvas backend reproduces that
- * order exactly. Chains containing functions the backends cannot express
- * (url() references, unknown functions) fail parsing and stay on the legacy
- * renderer, where ctx.filter receives the full string natively.
+ * order exactly. Same-document url() references are kept as their own step
+ * and rendered by an SVG pass. Chains containing functions the backends
+ * cannot express (external url() references, unknown functions) fail parsing
+ * and stay on the legacy renderer, where ctx.filter receives the full string.
  */
 export type FilterFunction =
     | { kind: 'blur'; value: number }
     | { kind: 'drop-shadow'; x: number; y: number; blur: number; color: string }
-    | { kind: 'unitless'; name: UnitlessFilterName; value: number };
+    | { kind: 'unitless'; name: UnitlessFilterName; value: number }
+    | { kind: 'url'; ref: string };
 
 export type UnitlessFilterName =
     'brightness' | 'contrast' | 'grayscale' | 'hue-rotate' | 'invert' | 'opacity' | 'saturate' | 'sepia';
@@ -127,7 +130,11 @@ const parseFilterFunction = (name: string, body: string): FilterFunction | null 
         const value = Number.parseFloat(numeric) * (percentage ? 1 / 100 : 1);
         return { kind: 'unitless', name: unitless, value };
     }
-    return null; // url() references and unknown functions stay on the legacy path
+    if (name === 'url') {
+        const ref = parseFilterReference(body);
+        return ref ? { kind: 'url', ref } : null;
+    }
+    return null; // external url() references and unknown functions stay on the legacy path
 };
 
 /** Split on whitespace outside parentheses so rgba(...) colours stay one token. */
@@ -191,6 +198,9 @@ export const nativeFilterString = (filter: ParsedFilter, scale: number): string 
                     return `drop-shadow(${fn.x * scale}px ${fn.y * scale}px ${fn.blur * scale}px ${fn.color})`;
                 case 'unitless':
                     return fn.name === 'hue-rotate' ? `hue-rotate(${fn.value}deg)` : `${fn.name}(${fn.value})`;
+                case 'url':
+                    // Unreachable for surfaces: references render through an SVG pass.
+                    return `url("${fn.ref}")`;
             }
         })
         .join(' ');
@@ -198,19 +208,21 @@ export const nativeFilterString = (filter: ParsedFilter, scale: number): string 
 /**
  * Outset (in CSS pixels) a surface must grow so blur/shadow spillover is not
  * cropped. Unitless functions never spread beyond the bounds. Consecutive
- * blurs compound, so their radii sum.
+ * blurs compound, so their radii sum. A url() reference can paint up to its
+ * filter region, which may extend beyond the border box.
  */
-export function filterOutset(filter: ParsedFilter): number {
+export function filterOutset(filter: ParsedFilter, references?: FilterReferences): number {
     let blurSum = 0;
     let maxShadowOffset = 0;
+    let referenceOutset = 0;
     for (const fn of filter.functions) {
         if (fn.kind === 'blur') blurSum += fn.value;
         else if (fn.kind === 'drop-shadow') {
             blurSum += fn.blur;
             maxShadowOffset = Math.max(maxShadowOffset, Math.abs(fn.x), Math.abs(fn.y));
-        }
+        } else if (fn.kind === 'url') referenceOutset += references?.get(fn.ref)?.outset ?? 0;
     }
-    return Math.ceil(3 * blurSum + maxShadowOffset);
+    return Math.ceil(3 * blurSum + maxShadowOffset + referenceOutset);
 }
 
 function canvasLike(source: HTMLCanvasElement): HTMLCanvasElement {
@@ -345,15 +357,25 @@ const isSvgExpressible = (filter: ParsedFilter): boolean => {
     return true;
 };
 
+/** Where url() references resolve, and the border box origin inside the surface (CSS px). */
+export interface FilterSurfaceReferences {
+    references?: FilterReferences;
+    origin: { x: number; y: number };
+}
+
 // Backend selection is internal; the public html2canvas options are unchanged.
 export async function renderFilterSurface(
     source: HTMLCanvasElement,
     filter: ParsedFilter,
     opacity: number,
     scale: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    references?: FilterSurfaceReferences
 ): Promise<HTMLCanvasElement> {
     throwIfAborted(signal);
+    if (filter.functions.some((fn) => fn.kind === 'url')) {
+        return renderReferencedFilterSurface(source, filter, opacity, scale, signal, references);
+    }
     if (filter.functions.length > 0 && supportsNativeFilters(source.ownerDocument ?? document)) {
         const output = tryNativeFilterSurface(source, filter, opacity, scale, signal);
         if (output) return output;
@@ -367,9 +389,171 @@ export async function renderFilterSurface(
     return renderSvgFilterSurface(source, filter, opacity, scale, signal);
 }
 
+/**
+ * Split a chain at its url() references: each reference is one SVG pass, and
+ * the standard functions between them run through the usual backends. Every
+ * step filters the previous step's complete output at alpha 1, then CSS
+ * opacity is applied once, as for any other chain.
+ */
+async function renderReferencedFilterSurface(
+    source: HTMLCanvasElement,
+    filter: ParsedFilter,
+    opacity: number,
+    scale: number,
+    signal: AbortSignal | undefined,
+    context: FilterSurfaceReferences | undefined
+): Promise<HTMLCanvasElement> {
+    const steps: Array<FilterReference | FilterFunction[]> = [];
+    for (const fn of filter.functions) {
+        if (fn.kind === 'url') {
+            const reference = context?.references?.get(fn.ref);
+            if (!reference) throw new FilterSurfaceError(`Filter reference ${fn.ref} cannot be resolved`);
+            steps.push(reference);
+            continue;
+        }
+        const last = steps[steps.length - 1];
+        if (Array.isArray(last)) last.push(fn);
+        else steps.push([fn]);
+    }
+    const origin = context?.origin ?? { x: 0, y: 0 };
+    const last = steps[steps.length - 1];
+    // A trailing standard step applies opacity itself, after its filter.
+    const opacityApplied = Array.isArray(last);
+    let current = source;
+    try {
+        for (const step of steps) {
+            const next = Array.isArray(step)
+                ? await renderFilterSurface(current, { functions: step }, step === last ? opacity : 1, scale, signal)
+                : await renderReferenceSurface(current, step, origin, scale, signal);
+            if (current !== source) releaseSurface(current);
+            current = next;
+        }
+        if (opacityApplied || opacity === 1) {
+            const output = current;
+            current = source; // ownership moves to the caller
+            return output;
+        }
+        return drawWithOpacity(current, opacity);
+    } finally {
+        if (current !== source) releaseSurface(current);
+    }
+}
+
+function drawWithOpacity(source: HTMLCanvasElement, opacity: number): HTMLCanvasElement {
+    const output = canvasLike(source);
+    const context = output.getContext('2d');
+    if (!context) {
+        releaseSurface(output);
+        throw new FilterSurfaceError('Filter surface canvas is unavailable');
+    }
+    context.globalAlpha = opacity;
+    try {
+        context.drawImage(source, 0, 0);
+        return output;
+    } catch {
+        releaseSurface(output);
+        throw new FilterSurfaceError('Filter surface image cannot be drawn');
+    }
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function createSvgElement(owner: Document, tag: string, attributes: Record<string, string | number> = {}): SVGElement {
+    const node = owner.createElementNS(SVG_NS, tag) as SVGElement;
+    Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
+    return node;
+}
+
+function serializeSurface(source: HTMLCanvasElement): string {
+    try {
+        const url = source.toDataURL('image/png');
+        if (url === 'data:,') throw new Error('Canvas size is unsupported');
+        return url;
+    } catch {
+        // allowTaint may intentionally produce an unreadable canvas. Keep that
+        // API behavior by letting the caller render the subtree on the old path.
+        throw new FilterSurfaceError('Filter surface pixels cannot be serialized');
+    }
+}
+
+/** Decode a filtered SVG image and draw it onto a surface-sized canvas. */
+async function drawSvgSurface(
+    svg: SVGElement,
+    source: HTMLCanvasElement,
+    opacity: number,
+    signal?: AbortSignal
+): Promise<HTMLCanvasElement> {
+    const svgDocument = source.ownerDocument ?? document;
+    const imageWindow = svgDocument.defaultView as (Window & { Image?: typeof Image }) | null;
+    const image = imageWindow?.Image ? new imageWindow.Image() : new Image();
+    let output: HTMLCanvasElement | undefined;
+    try {
+        image.src = `data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
+        await decodeSurface(image, signal);
+        throwIfAborted(signal);
+        output = canvasLike(source);
+        const context = output.getContext('2d');
+        if (!context) throw new FilterSurfaceError('Filter surface canvas is unavailable');
+        context.globalAlpha = opacity;
+        context.drawImage(image, 0, 0);
+        return output;
+    } catch (error) {
+        if (output) releaseSurface(output);
+        if (signal?.aborted) throwIfAborted(signal);
+        throw error instanceof FilterSurfaceError
+            ? error
+            : new FilterSurfaceError('Filter surface image cannot be drawn');
+    } finally {
+        image.removeAttribute('src');
+    }
+}
+
+/**
+ * Apply a referenced SVG filter to the complete surface. The viewBox is in CSS
+ * pixels, so the filter's user units scale with the capture, and the image is
+ * placed so user space starts at the element's border box, as it does for the
+ * live element. Canvas filters cannot express either: their lengths are in
+ * device pixels and their bounding box is the whole canvas.
+ */
+async function renderReferenceSurface(
+    source: HTMLCanvasElement,
+    reference: FilterReference,
+    origin: { x: number; y: number },
+    scale: number,
+    signal?: AbortSignal
+): Promise<HTMLCanvasElement> {
+    throwIfAborted(signal);
+    const owner = source.ownerDocument ?? document;
+    const width = source.width / scale;
+    const height = source.height / scale;
+    const svg = createSvgElement(owner, 'svg', {
+        width: source.width,
+        height: source.height,
+        viewBox: `0 0 ${width} ${height}`
+    });
+    const defs = createSvgElement(owner, 'defs');
+    const filterElement = owner.importNode(reference.element, true);
+    filterElement.setAttribute('id', 'composited-reference');
+    defs.appendChild(filterElement);
+    svg.appendChild(defs);
+    const group = createSvgElement(owner, 'g', { transform: `translate(${origin.x} ${origin.y})` });
+    group.appendChild(
+        createSvgElement(owner, 'image', {
+            x: -origin.x,
+            y: -origin.y,
+            width,
+            height,
+            href: serializeSurface(source),
+            filter: 'url(#composited-reference)'
+        })
+    );
+    svg.appendChild(group);
+    return drawSvgSurface(svg, source, 1, signal);
+}
+
 // Explicit SVG entry is internal and allows independent fallback benchmarks/tests.
 // No foreignObject or external image is used.
-async function renderSvgFilterSurface(
+export async function renderSvgFilterSurface(
     source: HTMLCanvasElement,
     filter: ParsedFilter,
     opacity: number,
@@ -384,29 +568,10 @@ async function renderSvgFilterSurface(
         shadow && shadow.kind === 'drop-shadow'
             ? { x: shadow.x, y: shadow.y, blur: shadow.blur, color: shadow.color }
             : undefined;
-    if (!blurValue && !shadowValue) {
-        const output = canvasLike(source);
-        const context = output.getContext('2d');
-        if (!context) {
-            releaseSurface(output);
-            throw new FilterSurfaceError('Filter surface canvas is unavailable');
-        }
-        context.globalAlpha = opacity;
-        try {
-            context.drawImage(source, 0, 0);
-            return output;
-        } catch {
-            releaseSurface(output);
-            throw new FilterSurfaceError('Filter surface image cannot be drawn');
-        }
-    }
-    const namespace = 'http://www.w3.org/2000/svg';
+    if (!blurValue && !shadowValue) return drawWithOpacity(source, opacity);
     const svgDocument = source.ownerDocument ?? document;
-    const element = (tag: string, attributes: Record<string, string | number> = {}) => {
-        const node = svgDocument.createElementNS(namespace, tag);
-        Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
-        return node;
-    };
+    const element = (tag: string, attributes: Record<string, string | number> = {}) =>
+        createSvgElement(svgDocument, tag, attributes);
     const svg = element('svg', {
         width: source.width,
         height: source.height,
@@ -447,43 +612,13 @@ async function renderSvgFilterSurface(
     }
     defs.appendChild(filterElement);
     svg.appendChild(defs);
-    let sourceUrl: string;
-    try {
-        sourceUrl = source.toDataURL('image/png');
-        if (sourceUrl === 'data:,') throw new Error('Canvas size is unsupported');
-    } catch {
-        // allowTaint may intentionally produce an unreadable canvas. Keep that
-        // API behavior by letting the caller render the subtree on the old path.
-        throw new FilterSurfaceError('Filter surface pixels cannot be serialized');
-    }
     svg.appendChild(
         element('image', {
             width: source.width,
             height: source.height,
-            href: sourceUrl,
+            href: serializeSurface(source),
             filter: 'url(#composited-filter)'
         })
     );
-    const imageWindow = svgDocument.defaultView as (Window & { Image?: typeof Image }) | null;
-    const image = imageWindow?.Image ? new imageWindow.Image() : new Image();
-    let output: HTMLCanvasElement | undefined;
-    try {
-        image.src = `data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`;
-        await decodeSurface(image, signal);
-        throwIfAborted(signal);
-        output = canvasLike(source);
-        const context = output.getContext('2d');
-        if (!context) throw new FilterSurfaceError('Filter surface canvas is unavailable');
-        context.globalAlpha = opacity;
-        context.drawImage(image, 0, 0);
-        return output;
-    } catch (error) {
-        if (output) releaseSurface(output);
-        if (signal?.aborted) throwIfAborted(signal);
-        throw error instanceof FilterSurfaceError
-            ? error
-            : new FilterSurfaceError('Filter surface image cannot be drawn');
-    } finally {
-        image.removeAttribute('src');
-    }
+    return drawSvgSurface(svg, source, opacity, signal);
 }

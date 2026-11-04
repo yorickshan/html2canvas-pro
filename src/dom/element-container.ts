@@ -5,6 +5,7 @@ import { isHTMLElementNode, isSVGElementNode } from './node-type-guards';
 import { Context } from '../core/context';
 import { DebuggerType, isDebugging } from '../core/debugger';
 import { DOMNormalizer, OriginalStyles } from './dom-normalizer';
+import { FilterReferences, resolveFilterReferences } from './filter-reference';
 
 export interface ElementContainerOptions {
     normalizeDom?: boolean;
@@ -22,6 +23,12 @@ export class ElementContainer {
      * bounds to leave a matching gap (issue #227).
      */
     readonly legendBounds?: Bounds;
+
+    /**
+     * Same-document `filter: url(#id)` references, resolved while the cloned
+     * DOM is available. The surface compositor renders them in an SVG pass.
+     */
+    readonly filterReferences?: FilterReferences;
 
     createsStackingContext = false;
     createsRealStackingContext = false;
@@ -74,6 +81,8 @@ export class ElementContainer {
                 );
             }
         }
+
+        this.filterReferences = resolveFilterReferences(element, this.styles.filter, this.bounds);
 
         if (isDebugging(element, DebuggerType.RENDER)) {
             this.debugRender = true;
