@@ -1,11 +1,8 @@
 {
     "compilerOptions": {
-        "noImplicitAny": true,
-        "noImplicitThis": true,
+        "strict": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "strictNullChecks": true,
-        "strictPropertyInitialization": true,
         "noUncheckedIndexedAccess": true,
         "types": ["node", "vitest/globals"],
         "target": "es2022",

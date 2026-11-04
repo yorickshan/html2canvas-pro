@@ -122,7 +122,7 @@ describe('paintMaskLayers', () => {
             }
         };
         const c = ctx() as CanvasRenderingContext2D & { canvas: { ownerDocument: unknown } };
-        c.canvas = { ownerDocument };
+        (c as { canvas: unknown }).canvas = { ownerDocument };
         await paintMaskLayers(
             c,
             [

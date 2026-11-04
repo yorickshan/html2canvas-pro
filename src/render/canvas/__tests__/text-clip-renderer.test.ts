@@ -84,7 +84,7 @@ const setupMockContexts = (): {
         const original = mock.drawImage as unknown as ReturnType<typeof vi.fn>;
         mock.drawImage = vi.fn((img: HTMLCanvasElement, ...rest: unknown[]) => {
             drawSizes.set(img, [img.width, img.height]);
-            return original(img, ...rest);
+            return (original as unknown as (...a: unknown[]) => unknown)(img, ...rest);
         }) as unknown as CanvasRenderingContext2D['drawImage'];
         (mock as { canvas: HTMLCanvasElement }).canvas = this;
         contexts.push(mock);
@@ -102,7 +102,7 @@ const trackDrawSizes = (mock: CanvasRenderingContext2D): Map<HTMLCanvasElement, 
     const original = mock.drawImage as unknown as ReturnType<typeof vi.fn>;
     mock.drawImage = vi.fn((img: HTMLCanvasElement, ...rest: unknown[]) => {
         sizes.set(img, [img.width, img.height]);
-        return original(img, ...rest);
+        return (original as unknown as (...a: unknown[]) => unknown)(img, ...rest);
     }) as unknown as CanvasRenderingContext2D['drawImage'];
     return sizes;
 };

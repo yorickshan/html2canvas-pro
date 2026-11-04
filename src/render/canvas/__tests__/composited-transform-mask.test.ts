@@ -182,12 +182,10 @@ const assignLayout = (container: ElementContainer, left = 0, top = 0, width = 10
 
 describe('composited stack under transforms', () => {
     let contexts: Map<HTMLCanvasElement, CanvasRenderingContext2D>;
-    let warnings: string[];
     let draws: Array<{ image: CanvasImageSource; transform: number[][] }>;
 
     beforeEach(() => {
         contexts = new Map();
-        warnings = [];
         draws = [];
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement) {
             let context = contexts.get(this);
@@ -196,16 +194,15 @@ describe('composited stack under transforms', () => {
                 vi.mocked(context.transform).mockImplementation(function (this: CanvasRenderingContext2D) {
                     // Record every transform call on every context so tests can
                     // verify which matrices were baked where.
-                    (context as CanvasRenderingContext2D & { __transforms?: number[][] }).__transforms ??= [];
-                    (context as CanvasRenderingContext2D & { __transforms: number[][] }).__transforms.push(
-                        Array.from(arguments)
-                    );
+                    const store = context as CanvasRenderingContext2D & { __transforms?: number[][] };
+                    store.__transforms ??= [];
+                    store.__transforms.push(Array.from(arguments) as number[]);
                 });
                 vi.mocked(context.drawImage).mockImplementation((image: CanvasImageSource) => {
                     draws.push({
                         image,
-                        transform: ((context as CanvasRenderingContext2D & { __transforms?: number[] }).__transforms ??
-                            []) as number[][]
+                        transform:
+                            (context as CanvasRenderingContext2D & { __transforms?: number[][] }).__transforms ?? []
                     });
                 });
                 contexts.set(this, context);
@@ -222,7 +219,19 @@ describe('composited stack under transforms', () => {
 
     const renderWith = async (container: ElementContainer): Promise<HTMLCanvasElement> => {
         const renderer = new CanvasRenderer(
-            { logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }, resourceDocument: document },
+            {
+                logger: {
+                    id: 'test',
+                    enabled: false,
+                    start: 0,
+                    getTime: () => 0,
+                    debug: vi.fn(),
+                    info: vi.fn(),
+                    warn: vi.fn(),
+                    error: vi.fn()
+                },
+                resourceDocument: document
+            } as unknown as Context,
             { backgroundColor: null, width: 800, height: 600, x: 0, y: 0, scale: 1 }
         );
         return await renderer.render(container);

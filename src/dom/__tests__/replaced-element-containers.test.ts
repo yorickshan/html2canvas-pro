@@ -166,9 +166,9 @@ describe('IFrameElementContainer', () => {
         const container = new IFrameElementContainer(context, iframe);
 
         expect(onError).toHaveBeenCalledTimes(1);
-        expect(onError.mock.calls[0][0]).toBeInstanceOf(Error);
+        expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
         expect(warn).toHaveBeenCalledTimes(1);
-        expect(String(warn.mock.calls[0][0])).toContain('https://cross-origin.example/frame');
+        expect(String(warn.mock.calls[0]?.[0])).toContain('https://cross-origin.example/frame');
         expect(container.tree).toBeUndefined();
     });
 
@@ -186,7 +186,7 @@ describe('IFrameElementContainer', () => {
         const container = new IFrameElementContainer(context, iframe);
 
         expect(onError).toHaveBeenCalledTimes(1);
-        expect((onError.mock.calls[0][0] as Error).message).toBe('document access denied');
+        expect((onError.mock.calls[0]?.[0] as Error).message).toBe('document access denied');
         expect(container.tree).toBeUndefined();
     });
 

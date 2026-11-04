@@ -53,7 +53,7 @@ describe('stackRepeatingStops', () => {
         // cycle 0: 0, 0.4 — cycle 1: 0.4, 0.8 — cycle 2: 0.8 (0.4 + 0.4), then pad
         expect(positions).toEqual([0, 0.4, 0.4, 0.8, 0.8, 1]);
         // the pad extends the cycle's last colour
-        expect((stacked as Array<{ stop: number; color: string }>)[5].color).toBe('rgb(255,255,255)');
+        expect((stacked as Array<{ stop: number; color: string }>)[5]?.color).toBe('rgb(255,255,255)');
     });
 
     it('returns null for a degenerate period', () => {

@@ -73,7 +73,7 @@ describe('BorderImageRenderer.renderBorderImage', () => {
     // tall — narrower than it is tall, which is what used to mis-route the
     // tiling direction through the dw >= dh heuristic.
     const bounds = new Bounds(0, 0, 25, 30);
-    const borders = [10, 10, 10, 10];
+    const borders: [number, number, number, number] = [10, 10, 10, 10];
     // 8×8 image sliced at 25%: source slices are 2px, the top edge strip is
     // 4×2, the center 4×4.
     const img = image(8, 8);
@@ -140,11 +140,11 @@ describe('BorderImageRenderer.renderBorderImage', () => {
         const center = callsOf(c).filter(([sx, sy, sw, sh]) => sx === 2 && sy === 2 && sw === 4 && sh === 4);
         expect(center.length).toBe(6);
         deepStrictEqual(
-            center.map(([, , , , dx]) => dx).sort((a, b) => a - b),
+            center.map(([, , , , dx]) => dx).sort((a, b) => (a ?? 0) - (b ?? 0)),
             [10, 10, 10, 14, 14, 14]
         );
         deepStrictEqual(
-            center.map(([, , , , , dy]) => dy).sort((a, b) => a - b),
+            center.map(([, , , , , dy]) => dy).sort((a, b) => (a ?? 0) - (b ?? 0)),
             [10, 10, 14, 14, 18, 18]
         );
     });

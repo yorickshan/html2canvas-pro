@@ -1,8 +1,6 @@
 {
     "compilerOptions": {
-        "noImplicitAny": true,
-        "noImplicitThis": true,
-        "strictNullChecks": true,
+        "strict": true,
         "noUncheckedIndexedAccess": true,
         "target": "es2022",
         "module": "esnext",

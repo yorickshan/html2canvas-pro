@@ -168,7 +168,7 @@ describe('DOMNormalizer', () => {
     describe('outer <svg> elements (issue #244)', () => {
         // isSVGElementNode detects SVG by className being an SVGAnimatedString
         // object; the mock mimics that shape.
-        const makeSvgElement = (): Element =>
+        const makeSvgElement = (): SVGElement =>
             ({
                 nodeType: 1,
                 tagName: 'svg',
@@ -177,7 +177,7 @@ describe('DOMNormalizer', () => {
                     animationDuration: '1s',
                     transform: 'matrix(-1, 0, 0, -1, 0, 0)'
                 }
-            }) as unknown as Element;
+            }) as unknown as SVGElement;
 
         it('normalizes the transform of an outer svg element', () => {
             const svg = makeSvgElement();
