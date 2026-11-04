@@ -165,6 +165,20 @@ jobs:
               run: pnpm exec playwright install --with-deps ${{ matrix.config.playwrightBrowser }}
             - name: Run browser tests
               run: pnpm reftests:pw -- --browser=${{ matrix.config.playwrightBrowser }}
+            # Visual regression against the committed baselines in
+            # tests/results/. Captures without a matching baseline are
+            # skipped by tests/reftest-diff.ts, so this only gates the
+            # engine/baseline pairs actually committed (currently Chrome).
+            - name: Visual regression diff
+              if: matrix.config.playwrightBrowser == 'chromium'
+              run: pnpm reftests-diff
+            - name: Upload diffs
+              if: failure() && matrix.config.playwrightBrowser == 'chromium'
+              uses: actions/upload-artifact@v6
+              with:
+                  name: reftest-snapshot-diffs
+                  path: tmp/snapshot-diffs
+                  if-no-files-found: warn
             - name: Upload screenshots
               uses: actions/upload-artifact@v6
               with:

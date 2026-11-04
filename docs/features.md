@@ -432,8 +432,11 @@ resolves them to the standard properties in computed style.
   `mask-composite` operations are not supported.
 - `mask-clip` / `mask-origin` are not parsed; the border box is used as the
   mask positioning area.
-- Like `filter`, an unsupported subtree (transformed ancestors, etc.) keeps the
-  previous renderer without the mask — check the console for the info log.
+- Masked elements support transformed ancestors (rotate/scale/zoom): the
+  ancestor matrix transforms the composited surface exactly once, and the mask
+  gradient rides the element's own transform, matching native rendering.
+  If the surface budget is exhausted, the subtree falls back to the legacy
+  renderer without the mask — check the console for the warning.
 
 ---
 

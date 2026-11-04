@@ -95,7 +95,7 @@
     "unittest:coverage": "vitest run --coverage",
     "bench:css-parse": "tsx scripts/benchmarks/css-parse.bench.ts",
     "bench:render": "node scripts/benchmarks/render.bench.mjs",
-    "reftests-diff": "mkdir -p tmp/snapshots && vitest run --config vitest.reftest.config.ts",
+    "reftests-diff": "vitest run --config vitest.reftest.config.ts",
     "watch": "rolldown -w",
     "watch:unittest": "vitest",
     "start": "tsx tests/server --port=8080 --cors=8081",
