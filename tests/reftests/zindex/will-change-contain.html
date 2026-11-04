@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>will-change / contain stacking isolation</title>
+        <script type="text/javascript" src="../../test.js"></script>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            body {
+                background: #ffffff;
+                font-family: Arial;
+            }
+
+            .row {
+                position: relative;
+                width: 300px;
+                height: 90px;
+                margin: 10px;
+            }
+
+            .first {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 220px;
+                height: 70px;
+                background: #16a085;
+            }
+
+            .second {
+                position: absolute;
+                left: 60px;
+                top: 20px;
+                width: 220px;
+                height: 70px;
+                background: #e67e22;
+            }
+
+            /* The green box is later in nothing: both are siblings, the orange
+               one paints after it in tree order. will-change/contain on the
+               GREEN box must lift it into a stacking context — which for
+               z-index: auto siblings does NOT reorder them (tree order still
+               wins), but it does isolate it from descendants. The real
+               observable ordering effect: give both boxes z-index via
+               positioned stacking and rely on will-change for the green one. */
+            .wc {
+                will-change: transform;
+            }
+
+            .ct {
+                contain: paint;
+            }
+
+            .on-top {
+                z-index: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Row 1: plain siblings — orange paints over green (tree order).
+             Row 2: same DOM but the green box has will-change: transform and
+             z-index: 1, so green must paint OVER orange.
+             Row 3: same via contain: paint + z-index: 1. -->
+        <div class="row">
+            <div class="first"></div>
+            <div class="second"></div>
+        </div>
+        <div class="row">
+            <div class="first wc on-top"></div>
+            <div class="second"></div>
+        </div>
+        <div class="row">
+            <div class="first ct on-top"></div>
+            <div class="second"></div>
+        </div>
+    </body>
+</html>
