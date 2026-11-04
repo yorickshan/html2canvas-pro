@@ -9,6 +9,7 @@
 /.project
 /.settings/
 node_modules/
+.pnpm-store/
 .envrc
 *.sublime-workspace
 *.baseline
