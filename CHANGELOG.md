@@ -1,3 +1,15 @@
+## [2.6.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.0...v2.6.1) (2026-11-04)
+
+### Features
+
+* **badge:** add DeepWiki badge SVG for improved visibility ([0f6976c](https://github.com/yorickshan/html2canvas-pro/commit/0f6976c11ced02e9b19889811569d080aa698ed3))
+* **render:** composite same-document url() filter references on the surface ([5fd004a](https://github.com/yorickshan/html2canvas-pro/commit/5fd004a2201fb4cefdefd5441dfc86166c14ed09)), closes [#id](https://github.com/yorickshan/html2canvas-pro/issues/id)
+
+### Bug Fixes
+
+* **clone:** put the pseudo-element hide styles in the cloned <head> ([c2b6e03](https://github.com/yorickshan/html2canvas-pro/commit/c2b6e030189c590ca29e9832ed2ab6e46979bea6))
+* **dom:** keep page CSS from resizing the clone's iframe container ([fb8f753](https://github.com/yorickshan/html2canvas-pro/commit/fb8f75347df0c745658a27d70dcabbcdc399ecda))
+
 ## [2.6.0](https://github.com/yorickshan/html2canvas-pro/compare/v2.5.3...v2.6.0) (2026-10-30)
 
 ### Features
