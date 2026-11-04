@@ -102,6 +102,41 @@ const LARGE_FIXTURE = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     }).join('\n    ')}
 </body></html>`;
 
+// Icon-library style inline SVGs (stroke: currentColor, 1-4 children each),
+// the shape of a typical app UI built with Lucide / Heroicons / Feather.
+const ICON_SHAPES = [
+    '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+    '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
+    '<path d="M20 6 9 17l-5-5"/>',
+    '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
+];
+
+const ICONS_FIXTURE = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    body { font-family: Arial, sans-serif; margin: 16px; color: #1f2937; }
+    .row { display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+           border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+    .row:nth-child(odd) { color: #2563eb; }
+    .icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round; flex: none; }
+</style></head><body>
+    ${Array.from(
+        { length: 100 },
+        (_, i) =>
+            `<div class="row"><span>Row ${i + 1}</span>` +
+            Array.from(
+                { length: 7 },
+                (_, j) =>
+                    '<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+                    `${ICON_SHAPES[(i + j) % ICON_SHAPES.length]}</svg>`
+            ).join('') +
+            '</div>'
+    ).join('\n    ')}
+</body></html>`;
+
 const startServer = () =>
     new Promise((resolve) => {
         const server = http.createServer((req, res) => {
@@ -233,6 +268,13 @@ try {
         page,
         'large document (300 cards, ~1200 elements, legacy CSS only)',
         () => page.setContent(LARGE_FIXTURE, { waitUntil: 'load' }),
+        pageErrors,
+        upstreamPath
+    );
+    await benchFixture(
+        page,
+        'icon-heavy document (700 inline SVG icons)',
+        () => page.setContent(ICONS_FIXTURE, { waitUntil: 'load' }),
         pageErrors,
         upstreamPath
     );
