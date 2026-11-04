@@ -1,3 +1,15 @@
+## [2.6.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.1...v2.6.2) (2026-11-04)
+
+### Features
+
+* **css:** honor will-change and contain as stacking-context triggers ([043038c](https://github.com/yorickshan/html2canvas-pro/commit/043038c7804a4c01ef31054c59f7826e6bc630d5))
+* **render:** composite masked elements under transformed ancestors ([1f80136](https://github.com/yorickshan/html2canvas-pro/commit/1f80136ebc6caac5fe0b8ab34da48c8f680df1fe))
+* **tests:** add script to recapture Chrome reftest baselines in Linux container ([df17700](https://github.com/yorickshan/html2canvas-pro/commit/df17700aa4c7a369d49c525d5c616bc09edbc13b))
+
+### Bug Fixes
+
+* **core:** misc audit follow-ups ([ca769f7](https://github.com/yorickshan/html2canvas-pro/commit/ca769f7f95efb9aa0ab23d3fe3f676642ddb2099))
+
 ## [2.6.1](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.0...v2.6.1) (2026-11-04)
 
 ### Features
