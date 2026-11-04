@@ -29,6 +29,8 @@ import {
 
 import { contains } from '../core/bitwise';
 import { ISOLATION } from '../css/property-descriptors/isolation';
+import { WILL_CHANGE } from '../css/property-descriptors/will-change';
+import { CONTAIN } from '../css/property-descriptors/contain';
 import { DISPLAY } from '../css/property-descriptors/display';
 import { MIX_BLEND_MODE } from '../css/property-descriptors/mix-blend-mode';
 import { Bounds } from '../css/layout/bounds';
@@ -208,6 +210,8 @@ const createsRealStackingContext = (node: Element, container: ElementContainer, 
         container.styles.maskImage.length > 0 ||
         Boolean(container.styles.webkitBoxReflect) ||
         container.styles.isolation === ISOLATION.ISOLATE ||
+        container.styles.willChange === WILL_CHANGE.STACKING ||
+        container.styles.contain === CONTAIN.PAINT_ISOLATION ||
         container.styles.isTransformed() ||
         (isBodyElement(node) && root.styles.isTransparent())
     );

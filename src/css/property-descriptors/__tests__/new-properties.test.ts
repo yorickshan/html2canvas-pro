@@ -6,6 +6,8 @@ import { outlineColor, outlineOffset, outlineStyle, outlineWidth, OUTLINE_STYLE 
 import { backdropFilter } from '../backdrop-filter';
 import { maskImage, maskPosition, maskRepeat, maskSize } from '../mask';
 import { Parser } from '../../syntax/parser';
+import { willChange, WILL_CHANGE } from '../will-change';
+import { contain, CONTAIN } from '../contain';
 // LIST descriptors take token arrays; VALUE descriptors take a single parsed component value.
 import { BACKGROUND_REPEAT } from '../background-repeat';
 import { CSSImageType } from '../../types/image';
@@ -92,5 +94,40 @@ describe('mask descriptors', () => {
 
         const repeat = maskRepeat.parse(context, Parser.parseValues('no-repeat'));
         expect(repeat).toEqual([BACKGROUND_REPEAT.NO_REPEAT]);
+    });
+
+    describe('will-change', () => {
+        it('auto and scroll-position carry no paint isolation', () => {
+            expect(willChange.parse(context, Parser.parseValues('auto'))).toBe(WILL_CHANGE.AUTO);
+            expect(willChange.parse(context, Parser.parseValues('scroll-position'))).toBe(WILL_CHANGE.AUTO);
+        });
+
+        it('paint-affecting hints force a stacking context', () => {
+            expect(willChange.parse(context, Parser.parseValues('transform'))).toBe(WILL_CHANGE.STACKING);
+            expect(willChange.parse(context, Parser.parseValues('opacity, filter'))).toBe(WILL_CHANGE.STACKING);
+            expect(willChange.parse(context, Parser.parseValues('scroll-position, transform'))).toBe(
+                WILL_CHANGE.STACKING
+            );
+        });
+
+        it('ignores custom identifiers instead of over-isolating', () => {
+            expect(willChange.parse(context, Parser.parseValues('scroll-position, --custom'))).toBe(WILL_CHANGE.AUTO);
+        });
+    });
+
+    describe('contain', () => {
+        it('paint-affecting values isolate painting', () => {
+            expect(contain.parse(context, 'paint' as never)).toBe(CONTAIN.PAINT_ISOLATION);
+            expect(contain.parse(context, 'strict' as never)).toBe(CONTAIN.PAINT_ISOLATION);
+            expect(contain.parse(context, 'content' as never)).toBe(CONTAIN.PAINT_ISOLATION);
+            expect(contain.parse(context, 'size paint' as never)).toBe(CONTAIN.PAINT_ISOLATION);
+        });
+
+        it('size/style-only values do not isolate', () => {
+            expect(contain.parse(context, 'none' as never)).toBe(CONTAIN.NONE);
+            expect(contain.parse(context, 'size' as never)).toBe(CONTAIN.NONE);
+            expect(contain.parse(context, 'style' as never)).toBe(CONTAIN.NONE);
+            expect(contain.parse(context, 'size style' as never)).toBe(CONTAIN.NONE);
+        });
     });
 });

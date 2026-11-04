@@ -107,6 +107,8 @@ import { boxDecorationBreak } from './property-descriptors/box-decoration-break'
 import { accentColor } from './property-descriptors/accent-color';
 import { webkitTextFillColor } from './property-descriptors/webkit-text-fill-color';
 import { isolation } from './property-descriptors/isolation';
+import { willChange } from './property-descriptors/will-change';
+import { contain } from './property-descriptors/contain';
 import { outlineColor, outlineOffset, outlineStyle, outlineWidth } from './property-descriptors/outline';
 import { backdropFilter } from './property-descriptors/backdrop-filter';
 import { maskImage, maskPosition, maskRepeat, maskSize } from './property-descriptors/mask';
@@ -205,6 +207,8 @@ export const STANDARD_PROPERTIES: [string, CSSPropertyDescriptor<unknown>, strin
     ['accentColor', accentColor, 'accentColor'],
     ['webkitTextFillColor', webkitTextFillColor, 'webkitTextFillColor'],
     ['isolation', isolation, 'isolation'],
+    ['willChange', willChange, 'will-change'],
+    ['contain', contain, 'contain'],
     ['outlineColor', outlineColor, 'outlineColor'],
     ['outlineStyle', outlineStyle, 'outlineStyle'],
     ['outlineWidth', outlineWidth, 'outlineWidth'],

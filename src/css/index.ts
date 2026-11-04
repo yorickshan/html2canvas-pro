@@ -97,6 +97,8 @@ import { boxDecorationBreak } from './property-descriptors/box-decoration-break'
 import { type AccentColor } from './property-descriptors/accent-color';
 import { type WebkitTextFillColor } from './property-descriptors/webkit-text-fill-color';
 import { type ISOLATION } from './property-descriptors/isolation';
+import { type WILL_CHANGE } from './property-descriptors/will-change';
+import { type CONTAIN } from './property-descriptors/contain';
 import { type OUTLINE_STYLE, type OutlineColor } from './property-descriptors/outline';
 import { type FilterValue } from './property-descriptors/filter';
 import { type MaskImage, type MaskPosition, type MaskRepeat, type MaskSize } from './property-descriptors/mask';
@@ -201,6 +203,8 @@ export class CSSParsedDeclaration {
     accentColor!: AccentColor;
     webkitTextFillColor!: WebkitTextFillColor;
     isolation!: ISOLATION;
+    willChange!: WILL_CHANGE;
+    contain!: CONTAIN;
     outlineColor!: OutlineColor;
     outlineStyle!: OUTLINE_STYLE;
     outlineWidth!: number;
