@@ -119,6 +119,8 @@ Below is a list of all the supported CSS properties and values.
  - visibility
  - white-space
  - width
+ - contain (**Paint isolation** — `paint`/`strict`/`content` create a stacking context; layout is already resolved by the clone's browser)
+ - will-change (**Paint hints** — lists containing paint-affecting hints create a stacking context, matching the browser's z-index ordering)
  - webkit-line-clamp
  - webkit-box-reflect (**Non-standard** — see [Box reflection](#-webkit-box-reflect-support))
  - webkit-text-fill-color (**Fill override** — falls back to `color` for `currentcolor`)
@@ -132,6 +134,7 @@ Below is a list of all the supported CSS properties and values.
 
 ## What's new in v2.5
 
+- **`will-change` / `contain` stacking** — paint-isolating values of both properties now create stacking contexts, so elements ordered only by `will-change: transform` or `contain: paint` capture in the browser's z-order
 - **Full standard filter chains** (v2.5.2) — any order and count of `blur()`, `brightness()`, `contrast()`, `grayscale()`, `hue-rotate()`, `invert()`, `opacity()`, `saturate()`, `sepia()` and `drop-shadow()` composited on the filter surface; `backdrop-filter` follows the same chain support (see [CSS filters and layer opacity](./filter-support.md))
 - **`background-clip: text`** — gradient (and colour) backgrounds clipped to the glyphs, rendered on a device-pixel surface with text-shadow and `-webkit-text-stroke` interaction (see [background-clip: text support](#background-clip-text-support))
 - **`mask-image` support** — alpha masks with `mask-position` / `mask-size` / `mask-repeat`, composited on a dedicated surface (see [Mask support](#mask-support))
@@ -177,9 +180,6 @@ honest boundary visible:
 
 - **`background-attachment: fixed` / `local`** — not parsed; backgrounds render
   as if `scroll`.
-- **`will-change`** — not parsed. The property creates a stacking context in the
-  browser, but the clone does not reproduce one, so elements stacked via
-  `will-change` alone may capture with a different stacking order.
 - **3D transforms** — `perspective()`, the `perspective` property and
   `transform-style: preserve-3d` are not implemented; `matrix3d()` is projected
   onto its 2D components (the z axis is dropped).

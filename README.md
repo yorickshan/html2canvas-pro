@@ -76,6 +76,12 @@ pnpm add html2canvas-pro
 yarn add html2canvas-pro
 ```
 
+> **Note on the `engines` field:** the published package declares
+> `engines: { node: ">=24" }`. That constraint applies to **building and
+> testing the library from a checkout** (the test toolchain needs Node 24) —
+> the `dist/` bundles are plain browser JavaScript with no Node dependency,
+> so consuming the package at runtime is unaffected on any Node version.
+
 ## Usage
 
 ```javascript

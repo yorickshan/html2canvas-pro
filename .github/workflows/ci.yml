@@ -188,7 +188,9 @@ jobs:
                   compression-level: 6
                   overwrite: false
     filter-pixels:
-        # Playwright's Linux WebKit build needs libicu74, which ubuntu-26.04 (now ubuntu-latest) lacks.
+        # TODO: retry ubuntu-latest when Playwright's Linux WebKit bundles or
+        # depends on a libicu version ubuntu-26.04 ships (it needs libicu74
+        # today, which ubuntu-26.04 lacks).
         runs-on: ubuntu-24.04
         name: Filter pixels (Chromium and WebKit)
         timeout-minutes: 20
