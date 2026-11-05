@@ -114,6 +114,28 @@ corepack pnpm reftests-diff        # Screenshot reftest diffing (Vitest config)
 corepack pnpm bench:css-parse      # CSS parse micro-benchmark
 ```
 
+### Reftest baselines
+
+Visual baselines live in `tests/results/<test>!Chrome.png` and are asserted
+in CI against captures from the **ubuntu-24.04 x86_64 runner**. Font
+rasterisation differs per OS and distro, so a baseline captured on macOS (or
+any non-runner environment) will fail CI even when the render is correct —
+this has happened more than once.
+
+**Always capture baselines with the container script**, which reproduces the
+runner exactly (same distro, architecture, and Playwright-installed fonts):
+
+```bash
+bash scripts/recapture-baselines-linux.sh
+# then copy what you need:
+cp 'tmp/reftests/<test>!Chrome.png' tests/results/
+CI=true corepack pnpm install --frozen-lockfile   # restore the host install
+```
+
+Requires Docker (OrbStack on Apple Silicon is fine). If you cannot run it,
+open the PR without the baseline and ask the maintainer to capture it — do
+not commit a locally captured PNG.
+
 ### Test Structure
 
 Tests are colocated with source in `__tests__/` directories:
