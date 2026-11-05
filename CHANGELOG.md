@@ -1,3 +1,14 @@
+## [2.6.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.2...v2.6.3) (2026-11-05)
+
+### Bug Fixes
+
+* **test:** recapture svg-stylesheet-styles baseline in the Linux container ([af6b65f](https://github.com/yorickshan/html2canvas-pro/commit/af6b65fcd05351b410f46d05c5fc7daa99817b08)), references [#250](https://github.com/yorickshan/html2canvas-pro/issues/250)
+
+### Performance Improvements
+
+* **bench:** add an icon-heavy inline SVG fixture to the render benchmark ([d199dcd](https://github.com/yorickshan/html2canvas-pro/commit/d199dcdc143950b19a3db560a6921f899b4132aa))
+* **clone:** inline only SVG rendering properties on cloned SVG elements ([bf54faa](https://github.com/yorickshan/html2canvas-pro/commit/bf54faa8874e92abde8583c797236aace1065601))
+
 ## [2.6.2](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.1...v2.6.2) (2026-11-04)
 
 ### Features
