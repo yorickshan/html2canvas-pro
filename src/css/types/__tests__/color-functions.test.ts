@@ -38,6 +38,9 @@ describe('color functions', () => {
             }
         });
         it('achromatic keeps alpha 1', () => strictEqual(isTransparent(parse('hsl(120, 0%, 50%)')), false));
+        it('none hue is treated as 0', () => strictEqual(parse('hsl(none 50% 50%)'), parse('hsl(0 50% 50%)')));
+        it('none hue with slash alpha (Chrome 157+ computed color-mix in hsl)', () =>
+            strictEqual(parse('hsl(none 0% 7.05882% / 0.64)'), parse('hsl(0 0% 7.05882% / 0.64)')));
         it('achromatic channels are grey, not corrupted (regression)', () =>
             // hsl2rgb's achromatic branch used to return the 0..255 domain and
             // packHSL multiplied by 255 again — the blue channel packed to 0.
