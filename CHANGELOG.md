@@ -1,3 +1,9 @@
+## [2.6.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.3...v2.6.4) (2026-11-11)
+
+### Bug Fixes
+
+* **css:** treat a none hue in hsl() as 0 ([f2184e2](https://github.com/yorickshan/html2canvas-pro/commit/f2184e272c8aebee2047e1d47d007e27044e321e)), references [#121212](https://github.com/yorickshan/html2canvas-pro/issues/121212)
+
 ## [2.6.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.2...v2.6.3) (2026-11-05)
 
 ### Bug Fixes
