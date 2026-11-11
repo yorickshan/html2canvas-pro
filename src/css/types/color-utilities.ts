@@ -1,5 +1,5 @@
 import { Context } from '../../core/context';
-import { CSSValue, isDimensionToken, isNumberToken, nonFunctionArgSeparator } from '../syntax/parser';
+import { CSSValue, isDimensionToken, isIdentWithValue, isNumberToken, nonFunctionArgSeparator } from '../syntax/parser';
 import { rgb2rgbLinear, rgbLinear2xyz, srgbLinear2rgb, xyz2rgbLinear } from './color-spaces/srgb';
 import { TokenType } from '../syntax/tokenizer';
 import { angle, deg } from './angle';
@@ -148,9 +148,14 @@ export const extractHslComponents = (context: Context, args: CSSValue[]): RGBA4 
         slash = tokens[3],
         alpha =
             slash !== undefined && slash.type === TokenType.DELIM_TOKEN && slash.value === '/' ? tokens[4] : tokens[3],
-        h = hue
-            ? (hue.type === TokenType.NUMBER_TOKEN ? deg(hue.number) : angle.parse(context, hue)) / (Math.PI * 2)
-            : 0,
+        // `none` is a valid hue (CSS Color 4 "missing component") and means 0.
+        // Chrome 157+ serializes powerless hues this way, e.g. the computed
+        // value of `color-mix(in hsl, #121212 64%, transparent)` is
+        // `hsl(none 0% 7.05882% / 0.64)`; passing it to angle.parse threw.
+        h =
+            hue && !isIdentWithValue(hue, 'none')
+                ? (hue.type === TokenType.NUMBER_TOKEN ? deg(hue.number) : angle.parse(context, hue)) / (Math.PI * 2)
+                : 0,
         s = saturation !== undefined && isLengthPercentage(saturation) ? saturation.number / 100 : 0,
         l = lightness !== undefined && isLengthPercentage(lightness) ? lightness.number / 100 : 0,
         a = alpha !== undefined && isLengthPercentage(alpha) ? getAbsoluteValue(alpha, 1) : 1;
