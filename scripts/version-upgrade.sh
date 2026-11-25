@@ -19,8 +19,10 @@ fi
 # Bump version in package.json (no git commit/tag)
 npm version "$VERSION" --no-git-tag-version
 
-# Generate changelog
-npx conventional-changelog -p conventionalcommits -i CHANGELOG.md -r 1
+# Generate changelog. Uses the repo script instead of the bare
+# conventional-changelog CLI: the CLI links prose hex colours in commit
+# bodies as if they were issue numbers (see scripts/generate-changelog.mjs).
+node scripts/generate-changelog.mjs CHANGELOG.md 1
 
 # Commit and tag
 git add package.json CHANGELOG.md

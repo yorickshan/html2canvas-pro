@@ -2,7 +2,7 @@
 
 ### Bug Fixes
 
-* **css:** treat a none hue in hsl() as 0 ([f2184e2](https://github.com/yorickshan/html2canvas-pro/commit/f2184e272c8aebee2047e1d47d007e27044e321e)), references [#121212](https://github.com/yorickshan/html2canvas-pro/issues/121212)
+* **css:** treat a none hue in hsl() as 0 ([f2184e2](https://github.com/yorickshan/html2canvas-pro/commit/f2184e272c8aebee2047e1d47d007e27044e321e))
 
 ## [2.6.3](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.2...v2.6.3) (2026-11-05)
 
@@ -32,7 +32,7 @@
 ### Features
 
 * **badge:** add DeepWiki badge SVG for improved visibility ([0f6976c](https://github.com/yorickshan/html2canvas-pro/commit/0f6976c11ced02e9b19889811569d080aa698ed3))
-* **render:** composite same-document url() filter references on the surface ([5fd004a](https://github.com/yorickshan/html2canvas-pro/commit/5fd004a2201fb4cefdefd5441dfc86166c14ed09)), closes [#id](https://github.com/yorickshan/html2canvas-pro/issues/id)
+* **render:** composite same-document url() filter references on the surface ([5fd004a](https://github.com/yorickshan/html2canvas-pro/commit/5fd004a2201fb4cefdefd5441dfc86166c14ed09))
 
 ### Bug Fixes
 
@@ -75,7 +75,7 @@
 * **ci:** install the chromium engine for Playwright reftests ([c1d6642](https://github.com/yorickshan/html2canvas-pro/commit/c1d6642bd548233f7842720019d9f01d2d225232))
 * **core:** close global audit findings across stacking, cache and tooling ([70815f7](https://github.com/yorickshan/html2canvas-pro/commit/70815f74df589708ac22b9083c89487052de44bf))
 * **css:** repair the hsl() colour parser ([7926efe](https://github.com/yorickshan/html2canvas-pro/commit/7926efe1902b3f75d12d0ffa982a41696986230d))
-* **dom:** normalize outer <svg> transforms like HTML containers ([07bcfba](https://github.com/yorickshan/html2canvas-pro/commit/07bcfbad38682dcb20c83258a0e650ff4f39f72d)), closes [#244](https://github.com/yorickshan/html2canvas-pro/issues/244), references [#244](https://github.com/yorickshan/html2canvas-pro/issues/244)
+* **dom:** normalize outer <svg> transforms like HTML containers ([07bcfba](https://github.com/yorickshan/html2canvas-pro/commit/07bcfbad38682dcb20c83258a0e650ff4f39f72d)), closes [#244](https://github.com/yorickshan/html2canvas-pro/issues/244)
 * **render:** close P0-P2 review gaps across pipeline, CSS and tooling ([1bc20fe](https://github.com/yorickshan/html2canvas-pro/commit/1bc20fe95a6d015169bd4e9c532a9719570fb448))
 * **render:** converge gradient rasterisation and de-O(n²) the tokenizer ([994bf11](https://github.com/yorickshan/html2canvas-pro/commit/994bf1145ef6edfeeae0d93604ae5c031b43ce8a))
 * **render:** correct object-fit scale-down, decoration colour, border ([cab6aab](https://github.com/yorickshan/html2canvas-pro/commit/cab6aab2116f75943aff9cddf5b8c9122c8522a2))
@@ -102,10 +102,10 @@
 * **karma:** skip Firefox launcher with a warning when Firefox is missing ([980934a](https://github.com/yorickshan/html2canvas-pro/commit/980934adb0e6d40311ecc7a4f39dc60a85cc4986))
 * **render:** contain list-style images in the 1em marker box ([31c40e8](https://github.com/yorickshan/html2canvas-pro/commit/31c40e8ddb045f841820d503eab8571e5aa7c5e6))
 * **render:** correct coordinate math in mask, repeating and radial gradients ([36e3ff7](https://github.com/yorickshan/html2canvas-pro/commit/36e3ff74561b55119772ea2772cc15f913375009))
-* **render:** draw list markers as geometric shapes and input accent blue ([116d2a4](https://github.com/yorickshan/html2canvas-pro/commit/116d2a4d45d3af3bdbc872964de821be42b589ec)), references [#2a2a2a](https://github.com/yorickshan/html2canvas-pro/issues/2a2a2a) [#0075ff](https://github.com/yorickshan/html2canvas-pro/issues/0075ff)
+* **render:** draw list markers as geometric shapes and input accent blue ([116d2a4](https://github.com/yorickshan/html2canvas-pro/commit/116d2a4d45d3af3bdbc872964de821be42b589ec)
 * **render:** keep the surface-root overflow clip inside composited surfaces ([00371f0](https://github.com/yorickshan/html2canvas-pro/commit/00371f032087b3ad62c21eada013fa2d281b534f))
 * **render:** scale canvas shadow and filter metrics to device space ([7e42bff](https://github.com/yorickshan/html2canvas-pro/commit/7e42bfff34d2a1cbd7399d4d309f46be19e47dfc))
-* **render:** use browser default accent blue for auto accent-color ([d0778d8](https://github.com/yorickshan/html2canvas-pro/commit/d0778d8208f290ec7f34040c44d9fed299998220)), references [#2a2a2a](https://github.com/yorickshan/html2canvas-pro/issues/2a2a2a) [#0075ff](https://github.com/yorickshan/html2canvas-pro/issues/0075ff)
+* **render:** use browser default accent blue for auto accent-color ([d0778d8](https://github.com/yorickshan/html2canvas-pro/commit/d0778d8208f290ec7f34040c44d9fed299998220)
 * **server:** separate static file serving paths to prevent 404 errors ([8a652b7](https://github.com/yorickshan/html2canvas-pro/commit/8a652b76f821b213a07c0d31d54aeb2029f7f67f))
 * **text:** apply -webkit-line-clamp to flow-root containers ([dfbf14f](https://github.com/yorickshan/html2canvas-pro/commit/dfbf14f74f77bb27a3b19a8699059a444ac58ffc))
 
