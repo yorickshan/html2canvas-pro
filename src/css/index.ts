@@ -74,7 +74,7 @@ import { fontFamily } from './property-descriptors/font-family';
 import { fontStyle } from './property-descriptors/font-style';
 import { fontVariant } from './property-descriptors/font-variant';
 import { fontWeight } from './property-descriptors/font-weight';
-import { duration } from './property-descriptors/duration';
+import { animationDuration } from './property-descriptors/animation-duration';
 import { overflowWrap } from './property-descriptors/overflow-wrap';
 import { textAlign } from './property-descriptors/text-align';
 import { transform } from './property-descriptors/transform';
@@ -111,7 +111,7 @@ import { type BorderImageOutset, type BorderImageWidthSide } from './property-de
 import { type BoxReflectValue } from './property-descriptors/webkit-box-reflect';
 
 export class CSSParsedDeclaration {
-    animationDuration!: ReturnType<typeof duration.parse>;
+    animationDuration!: ReturnType<typeof animationDuration.parse>;
     backgroundClip!: ReturnType<typeof backgroundClip.parse>;
     backgroundColor!: Color;
     backgroundImage!: ReturnType<typeof backgroundImage.parse>;

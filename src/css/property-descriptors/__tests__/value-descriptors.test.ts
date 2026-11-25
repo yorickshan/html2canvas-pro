@@ -242,13 +242,12 @@ describe('counter-reset descriptor', () => {
     it('has defined initialValue', () => expect(counterReset.initialValue).toBeDefined());
 });
 
-// --- duration descriptor ---
-// NOTE: The duration module exports a single 'duration' descriptor, not separate
-// animationDuration / transitionDuration exports as originally templated.
-import { duration } from '../duration';
-describe('duration descriptor', () => {
-    it('has correct name', () => expect(duration.name).toBe('duration'));
-    it('has defined initialValue', () => expect(duration.initialValue).toBeDefined());
+// --- animationDuration descriptor ---
+// Matches the camelCase computed-style property registered in STANDARD_PROPERTIES.
+import { animationDuration } from '../animation-duration';
+describe('animationDuration descriptor', () => {
+    it('has correct name', () => expect(animationDuration.name).toBe('animationDuration'));
+    it('has defined initialValue', () => expect(animationDuration.initialValue).toBeDefined());
 });
 
 // --- list-style-image ---

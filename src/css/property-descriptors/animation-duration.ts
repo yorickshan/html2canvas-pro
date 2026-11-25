@@ -3,8 +3,8 @@ import { Context } from '../../core/context';
 import { CSSValue, isDimensionToken } from '../syntax/parser';
 import { time } from '../types/time';
 
-export const duration: IPropertyListDescriptor<number[]> = {
-    name: 'duration',
+export const animationDuration: IPropertyListDescriptor<number[]> = {
+    name: 'animationDuration',
     initialValue: '0s',
     prefix: false,
     type: PropertyDescriptorParsingType.LIST,

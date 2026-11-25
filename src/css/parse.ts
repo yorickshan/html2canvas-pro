@@ -84,7 +84,7 @@ import { isLength } from './types/length';
 import { fontWeight } from './property-descriptors/font-weight';
 import { fontVariant } from './property-descriptors/font-variant';
 import { fontStyle } from './property-descriptors/font-style';
-import { duration } from './property-descriptors/duration';
+import { animationDuration } from './property-descriptors/animation-duration';
 import { boxShadow } from './property-descriptors/box-shadow';
 import { paintOrder } from './property-descriptors/paint-order';
 import { webkitTextStrokeColor } from './property-descriptors/webkit-text-stroke-color';
@@ -120,7 +120,7 @@ import { scale } from './property-descriptors/scale';
 import { PARSE_CACHE_MAX_PER_DESCRIPTOR } from '../core/constants';
 
 export const STANDARD_PROPERTIES: [string, CSSPropertyDescriptor<unknown>, string][] = [
-    ['animationDuration', duration, 'animationDuration'],
+    ['animationDuration', animationDuration, 'animationDuration'],
     ['backgroundClip', backgroundClip, 'backgroundClip'],
     ['backgroundColor', backgroundColor, 'backgroundColor'],
     ['backgroundImage', backgroundImage, 'backgroundImage'],
