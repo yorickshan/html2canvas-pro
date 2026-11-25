@@ -27,6 +27,10 @@ Then point html2canvas-pro at it:
 html2canvas(element, { proxy: 'http://localhost:8081/proxy' });
 ```
 
+If you adapt it beyond localhost development, add a host allowlist first — the
+handler fetches any URL it is given, so an instance reachable from outside
+localhost is an SSRF relay and abusable bandwidth amplifier.
+
 ## Other options
 
 - **[html2canvas-proxy-nodejs](https://github.com/niklasvh/html2canvas-proxy-nodejs)** — the
