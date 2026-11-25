@@ -211,7 +211,16 @@ export const getAbsoluteValue = (token: LengthPercentage, parent: number): numbe
                 // which are not available in this pure-resolution function.
                 return 16 * token.number;
             case 'px':
+                return token.number;
             default:
+                // Trap, not a live bug: browsers hand computed styles with every
+                // unit already resolved to px (verified for vw/vh/pt/q/cqw on
+                // Chrome 157), so real render pipelines never reach here. What
+                // does reach this branch are raw tokens from a test environment
+                // (jsdom does not resolve dimensions) or a future call site that
+                // passes un-resolved tokens — both then silently treat e.g.
+                // `10vw` as `10px`. There is no logger on this pure function, so
+                // the boundary is documented instead of warned about.
                 return token.number;
         }
     }
