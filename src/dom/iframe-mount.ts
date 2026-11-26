@@ -342,7 +342,13 @@ export const stylesheetsReady = (
     return Promise.all(pending).then(() => undefined);
 };
 
-const iframeLoader = (
+/**
+ * Wait for the clone iframe's load event, then poll until the mounted clone
+ * reports a complete document. The mount is synchronous, so the adopted root
+ * is already in place on the first poll tick — see the readiness check below.
+ * @internal – exported for testing only.
+ */
+export const iframeLoader = (
     iframe: HTMLIFrameElement,
     logger?: { warn: (msg: string) => void },
     signal?: AbortSignal
@@ -383,7 +389,17 @@ const iframeLoader = (
                 attempts++;
                 if (signal?.aborted) {
                     onAbort();
-                } else if (documentClone.body.childNodes.length > 0 && documentClone.readyState === 'complete') {
+                    // The adopted clone root replaces the stub <html> synchronously
+                    // before the load event, so it is always populated by the first
+                    // poll tick. Checking <body> instead dated from when the
+                    // pseudo-hide <style> was the body's first child; since it
+                    // moved to <head> (2.6.1) an empty-body clone never satisfied
+                    // that check and every capture of such a document waited out
+                    // the full readiness budget (issue #252).
+                } else if (
+                    documentClone.documentElement.childNodes.length > 0 &&
+                    documentClone.readyState === 'complete'
+                ) {
                     clearInterval(interval);
                     interval = undefined;
                     clearTimeout(watchdog);
@@ -391,6 +407,7 @@ const iframeLoader = (
                 } else if (attempts >= maxAttempts) {
                     clearInterval(interval);
                     interval = undefined;
+                    clearTimeout(watchdog);
                     // Resolve anyway to avoid hanging, but say so: a timeout
                     // here means the clone may be an empty document and the
                     // capture will come out blank.
@@ -575,8 +592,8 @@ export const mountCloneInIFrame = (
      *
      * Timing: close() queues the iframe 'load' event; because JS is single-threaded,
      * the synchronous adoptNode() and replaceChild() below complete before that
-     * event is dispatched. iframeLoader's setInterval will therefore see the body
-     * already populated on its first tick.
+     * event is dispatched. iframeLoader's setInterval will therefore see the
+     * adopted root already in place on its first tick.
      */
     documentClone.close();
     const adoptedNode = documentClone.adoptNode(mount.documentElement);

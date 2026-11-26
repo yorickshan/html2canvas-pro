@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
     addBase,
     createIFrameContainer,
+    iframeLoader,
     mountCloneInIFrame,
     resolveTrustedTypesPolicy,
     stylesheetsReady
@@ -273,6 +274,64 @@ describe('stylesheetsReady (issue #245)', () => {
         await expect(stylesheetsReady(doc, { warn }, undefined, 100)).resolves.toBeUndefined();
         expect(warn).toHaveBeenCalledTimes(1);
         expect(warn.mock.calls[0]?.[0]).toContain('hangs.css');
+    });
+});
+
+describe('iframeLoader readiness (issue #252)', () => {
+    // Stub iframe window: iframeLoader only touches contentWindow.document,
+    // onload and the poll/timeout timers, so plain objects drive it fully.
+    const makeStub = (rootChildren: number, bodyChildren: number, readyState: Document['readyState']) => {
+        const childNodes = Array.from({ length: rootChildren }, () => ({ nodeName: 'head' }));
+        const bodyChildNodes = Array.from({ length: bodyChildren }, () => ({ nodeName: 'div' }));
+        const documentClone = {
+            documentElement: { childNodes },
+            body: { childNodes: bodyChildNodes },
+            readyState
+        } as unknown as Document;
+        const iframe = {
+            contentWindow: { document: documentClone, onload: null },
+            onload: null
+        } as unknown as HTMLIFrameElement;
+        return { documentClone, iframe };
+    };
+
+    it('resolves on the first poll tick for a clone whose body is empty', async () => {
+        // The adopted root carries the cloned <head>, the body is empty —
+        // exactly the lazy-iframe / style-only-srcdoc case from issue #252.
+        const { iframe } = makeStub(1, 0, 'complete');
+        const loader = iframeLoader(iframe, { warn: vi.fn() });
+
+        // The executor attached the handlers synchronously; jsdom never fires
+        // a real load event, so invoke the handler directly.
+        (iframe.onload as () => void)();
+
+        await expect(loader).resolves.toBe(iframe);
+    });
+
+    it('does not resolve before the root is populated and only warns past the budget', async () => {
+        vi.useFakeTimers();
+        try {
+            const { documentClone, iframe } = makeStub(0, 0, 'loading');
+            const warn = vi.fn();
+            const loader = iframeLoader(iframe, { warn });
+
+            (iframe.onload as () => void)();
+
+            // Still loading: no resolution within the first second.
+            await vi.advanceTimersByTimeAsync(1000);
+            let settled = false;
+            void Promise.resolve(loader).then(() => (settled = true));
+            await vi.advanceTimersByTimeAsync(0);
+            expect(settled).toBe(false);
+
+            // Past CLONE_READY_TIMEOUT_MS: resolves anyway, with the warning.
+            await vi.advanceTimersByTimeAsync(30_000);
+            await expect(loader).resolves.toBe(iframe);
+            expect(warn).toHaveBeenCalledTimes(1);
+            expect(documentClone.body).toBeTruthy();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });
 
