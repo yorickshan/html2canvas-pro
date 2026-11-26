@@ -1,3 +1,9 @@
+## [2.6.5](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.4...v2.6.5) (2026-11-26)
+
+### Bug Fixes
+
+* **clone:** unblock the readiness poll for empty-body clones ([93e56fb](https://github.com/yorickshan/html2canvas-pro/commit/93e56fbbc4d99de420b9e0f9229480fa7eb19540)), closes [#252](https://github.com/yorickshan/html2canvas-pro/issues/252)
+
 ## [2.6.4](https://github.com/yorickshan/html2canvas-pro/compare/v2.6.3...v2.6.4) (2026-11-11)
 
 ### Bug Fixes
